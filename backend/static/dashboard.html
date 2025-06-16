@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Reporter - Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.3rem;
+        }
+
+        .main-content {
+            margin-top: 2rem;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .stats-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+
+
+        .data-table-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
+        }
+
+        .table thead th {
+            border-top: none;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+        }
+
+
+
+        .my-class-tile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        }
+
+
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>
+                Browser Reporter
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>
+                        <span id="navUsername">Loading...</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="refreshData()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh Data
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="logout()">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-content">
+        <!-- Filtering Controls -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="stats-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-filter me-2"></i>
+                            Filter Users
+                        </h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                            <i class="fas fa-times me-1"></i>Clear Filters
+                        </button>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="homegroupFilter" class="form-label">
+                                <i class="fas fa-home me-1"></i>Homegroup
+                            </label>
+                            <select class="form-select" id="homegroupFilter" onchange="applyFilters()">
+                                <option value="">All Homegroups</option>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="activityFilter" class="form-label">
+                                <i class="fas fa-clock me-1"></i>Activity Period
+                            </label>
+                            <select class="form-select" id="activityFilter" onchange="applyFilters()">
+                                <option value="">All Time</option>
+                                <option value="1">Last 24 Hours</option>
+                                <option value="7">Last 7 Days</option>
+                                <option value="30">Last 30 Days</option>
+                                <option value="90">Last 3 Months</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="searchInput" class="form-label">
+                                <i class="fas fa-search me-1"></i>Search Users
+                            </label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Name, email, username..." oninput="applyFilters()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="applyFilters()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="d-flex align-items-center">
+                                <small class="text-muted me-3">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <span id="filterStatus">Showing all users</span>
+                                </small>
+                                <div class="ms-auto">
+                                    <small class="text-muted">
+                                        Total: <span id="totalUserCount" class="fw-bold">0</span> users
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="data-table-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    User Activity Summary
+                </h5>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-primary me-2" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh Data
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="exportData()">
+                        <i class="fas fa-download me-2"></i>Export Data
+                    </button>
+                </div>
+            </div>
+
+            <div id="loadingSpinner" class="loading-spinner">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading user data...</p>
+            </div>
+
+            <div id="dataTableContainer" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Homegroup</th>
+                                <th>Total Visits</th>
+                                <th>Unique URLs</th>
+                                <th>Last Activity</th>
+                                <th>Computer</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userDataTable">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="noDataMessage" style="display: none;" class="alert alert-info alert-custom">
+                <i class="fas fa-info-circle me-2"></i>
+                No user data available. The system is ready to receive data from browser extensions.
+            </div>
+        </div>
+    </div>
+
+    <!-- User Details Modal -->
+    <div class="modal fade" id="userDetailsModal" tabindex="-1" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="userDetailsModalLabel">
+                        <i class="fas fa-user me-2"></i>
+                        <span id="modalUsername">User Details</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="userDetailsLoading" class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading user details...</p>
+                    </div>
+                    
+                    <div id="userDetailsContent" style="display: none;">
+                        <!-- User Info Summary -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-chart-bar fa-2x text-primary mb-2"></i>
+                                        <h5 id="detailTotalVisits">-</h5>
+                                        <small class="text-muted">Total Visits</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-globe fa-2x text-success mb-2"></i>
+                                        <h5 id="detailUniqueUrls">-</h5>
+                                        <small class="text-muted">Unique URLs</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                                        <h5 id="detailLastActivity">-</h5>
+                                        <small class="text-muted">Last Activity</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="dayFilter" class="form-label">Filter by Days</label>
+                                <select class="form-select" id="dayFilter" onchange="filterUserDetails()">
+                                    <option value="">All Time</option>
+                                    <option value="1">Last 24 Hours</option>
+                                    <option value="7">Last 7 Days</option>
+                                    <option value="30">Last 30 Days</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="urlSearch" class="form-label">Search URLs/Titles</label>
+                                <input type="text" class="form-control" id="urlSearch" placeholder="Search..." oninput="filterUserDetails()">
+                            </div>
+                        </div>
+
+                        <!-- Browsing History Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Title</th>
+                                        <th>URL</th>
+                                        <th>Computer</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userDetailsTable">
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="noUserDetailsMessage" style="display: none;" class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No browsing data found for this user.
+                        </div>
+                    </div>
+
+                    <div id="userDetailsError" style="display: none;" class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="userDetailsErrorMessage">Failed to load user details.</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary" onclick="exportUserDetails()">
+                        <i class="fas fa-download me-2"></i>Export Data
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let currentUser = null;
+        let allUserData = [];
+        let filteredUserData = [];
+        let availableHomegroups = [];
+
+        // Initialize dashboard
+        async function initDashboard() {
+            try {
+                // Check authentication and get user info
+                const response = await fetch('/api/auth/user');
+                if (!response.ok) {
+                    // Redirect to login if not authenticated
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                currentUser = await response.json();
+                displayUserInfo(currentUser);
+                
+                // Load dashboard data
+                await loadDashboardData();
+                
+            } catch (error) {
+                console.error('Dashboard initialization error:', error);
+                showError('Failed to initialize dashboard');
+            }
+        }
+
+        // Display user information
+        function displayUserInfo(user) {
+            document.getElementById('navUsername').textContent = user.displayName || user.username;
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/reports/all');
+                if (response.ok) {
+                    allUserData = await response.json();
+                    
+                    // Process homegroups and initialize filters
+                    extractHomegroups();
+                    populateHomegroupFilter();
+                    
+                    // Initialize with all data
+                    filteredUserData = [...allUserData];
+                    displayUserTable(filteredUserData);
+                    updateFilterStatus();
+                } else {
+                    throw new Error(`Failed to load data: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showError('Failed to load user data');
+            } finally {
+                document.getElementById('loadingSpinner').style.display = 'none';
+            }
+        }
+
+        // Extract unique homegroups from user data
+        function extractHomegroups() {
+            const homegroupSet = new Set();
+            allUserData.forEach(user => {
+                if (user.department) {
+                    homegroupSet.add(user.department);
+                }
+            });
+            availableHomegroups = Array.from(homegroupSet).sort();
+        }
+
+        // Populate homegroup filter dropdown
+        function populateHomegroupFilter() {
+            const select = document.getElementById('homegroupFilter');
+            const currentValue = select.value;
+            
+            // Clear existing options except "All Homegroups"
+            select.innerHTML = '<option value="">All Homegroups</option>';
+            
+            // Add homegroup options
+            availableHomegroups.forEach(homegroup => {
+                const option = document.createElement('option');
+                option.value = homegroup;
+                option.textContent = homegroup;
+                if (homegroup === currentValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+
+
+
+        // Display user table
+        function displayUserTable(data) {
+            const tableBody = document.getElementById('userDataTable');
+            const container = document.getElementById('dataTableContainer');
+            const noDataMsg = document.getElementById('noDataMessage');
+
+            if (data.length === 0) {
+                container.style.display = 'none';
+                noDataMsg.style.display = 'block';
+                return;
+            }
+
+            tableBody.innerHTML = data.map(user => `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="me-2">
+                                <i class="fas fa-user-circle text-muted"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">${user.displayName || user.username}</div>
+                                <small class="text-muted">${user.email || ''}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge" style="background: linear-gradient(135deg, #007bff, #6f42c1); color: white;">
+                            <i class="fas fa-home me-1"></i>${user.department || 'Unknown'}
+                        </span>
+                    </td>
+                    <td><span class="badge bg-primary">${user.totalVisits || 0}</span></td>
+                    <td><span class="badge bg-info">${user.uniqueUrls || 0}</span></td>
+                    <td>
+                        <small class="text-muted">
+                            ${user.lastActivity ? new Date(user.lastActivity).toLocaleDateString() : 'Never'}
+                        </small>
+                    </td>
+                    <td>
+                        <small class="text-muted">${user.computers || 'Unknown'}</small>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewUserDetails('${user.username}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            container.style.display = 'block';
+            noDataMsg.style.display = 'none';
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const homegroupFilter = document.getElementById('homegroupFilter').value;
+            const activityFilter = document.getElementById('activityFilter').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredUserData = allUserData.filter(user => {
+                // Homegroup filter
+                if (homegroupFilter && user.department !== homegroupFilter) {
+                    return false;
+                }
+
+                // Activity filter
+                if (activityFilter) {
+                    const daysAgo = parseInt(activityFilter);
+                    const cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
+                    
+                    if (!user.lastActivity || new Date(user.lastActivity) < cutoffDate) {
+                        return false;
+                    }
+                }
+
+                // Search filter
+                if (searchTerm) {
+                    const matchesSearch = 
+                        (user.username || '').toLowerCase().includes(searchTerm) ||
+                        (user.displayName || '').toLowerCase().includes(searchTerm) ||
+                        (user.email || '').toLowerCase().includes(searchTerm) ||
+                        (user.department || '').toLowerCase().includes(searchTerm);
+                    
+                    if (!matchesSearch) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            displayUserTable(filteredUserData);
+            updateFilterStatus();
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            document.getElementById('homegroupFilter').value = '';
+            document.getElementById('activityFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            
+            filteredUserData = [...allUserData];
+            displayUserTable(filteredUserData);
+            updateFilterStatus();
+        }
+
+        // Update filter status display
+        function updateFilterStatus() {
+            const homegroupFilter = document.getElementById('homegroupFilter').value;
+            const activityFilter = document.getElementById('activityFilter').value;
+            const searchTerm = document.getElementById('searchInput').value;
+            
+            let statusText = 'Showing all users';
+            const filters = [];
+            
+            if (homegroupFilter) {
+                filters.push(`homegroup: ${homegroupFilter}`);
+            }
+            
+            if (activityFilter) {
+                const periods = {
+                    '1': 'last 24 hours',
+                    '7': 'last 7 days', 
+                    '30': 'last 30 days',
+                    '90': 'last 3 months'
+                };
+                filters.push(`active in ${periods[activityFilter]}`);
+            }
+            
+            if (searchTerm) {
+                filters.push(`matching "${searchTerm}"`);
+            }
+            
+            if (filters.length > 0) {
+                statusText = `Filtered by: ${filters.join(', ')}`;
+            }
+            
+            document.getElementById('filterStatus').textContent = statusText;
+            document.getElementById('totalUserCount').textContent = filteredUserData.length;
+        }
+
+        // Refresh data
+        async function refreshData() {
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('dataTableContainer').style.display = 'none';
+            
+            // Clear filters when refreshing
+            clearFilters();
+            
+            await loadDashboardData();
+        }
+
+        // Global variables for user details
+        let currentUserDetails = [];
+        let allUserDetails = [];
+        let currentUserForDetails = '';
+
+        // View user details
+        async function viewUserDetails(username) {
+            currentUserForDetails = username;
+            document.getElementById('modalUsername').textContent = username;
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
+            modal.show();
+            
+            // Reset modal state
+            document.getElementById('userDetailsLoading').style.display = 'block';
+            document.getElementById('userDetailsContent').style.display = 'none';
+            document.getElementById('userDetailsError').style.display = 'none';
+            document.getElementById('dayFilter').value = '';
+            document.getElementById('urlSearch').value = '';
+            
+            try {
+                await loadUserDetails(username);
+            } catch (error) {
+                showUserDetailsError('Failed to load user details: ' + error.message);
+            }
+        }
+
+        // Load user details from API
+        async function loadUserDetails(username, days = null) {
+            const url = `/api/reports/user/${encodeURIComponent(username)}${days ? `?days=${days}` : ''}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+            
+            allUserDetails = await response.json();
+            currentUserDetails = allUserDetails;
+            
+            displayUserDetails();
+        }
+
+        // Display user details in modal
+        function displayUserDetails() {
+            document.getElementById('userDetailsLoading').style.display = 'none';
+            
+            if (currentUserDetails.length === 0) {
+                document.getElementById('userDetailsContent').style.display = 'none';
+                document.getElementById('noUserDetailsMessage').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('userDetailsContent').style.display = 'block';
+            document.getElementById('noUserDetailsMessage').style.display = 'none';
+            
+            // Update summary stats
+            const totalVisits = currentUserDetails.length;
+            const uniqueUrls = new Set(currentUserDetails.map(d => d.url)).size;
+            const lastActivity = currentUserDetails.length > 0 ? 
+                new Date(Math.max(...currentUserDetails.map(d => new Date(d.timestamp)))).toLocaleDateString() : 'Never';
+            
+            document.getElementById('detailTotalVisits').textContent = totalVisits.toLocaleString();
+            document.getElementById('detailUniqueUrls').textContent = uniqueUrls.toLocaleString();
+            document.getElementById('detailLastActivity').textContent = lastActivity;
+            
+            // Display table
+            const tableBody = document.getElementById('userDetailsTable');
+            tableBody.innerHTML = currentUserDetails.map(item => `
+                <tr>
+                    <td>
+                        <small class="text-muted">
+                            ${new Date(item.timestamp).toLocaleString()}
+                        </small>
+                    </td>
+                    <td>
+                        <div class="text-truncate" style="max-width: 300px;" title="${item.title || 'No Title'}">
+                            ${item.title || 'No Title'}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-truncate" style="max-width: 400px;">
+                            <a href="${item.url}" target="_blank" class="text-decoration-none" title="${item.url}">
+                                ${item.url}
+                                <i class="fas fa-external-link-alt ms-1 small"></i>
+                            </a>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary">${item.computerName || 'Unknown'}</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Filter user details
+        async function filterUserDetails() {
+            const days = document.getElementById('dayFilter').value;
+            const searchTerm = document.getElementById('urlSearch').value.toLowerCase();
+            
+            // If days filter changed, reload from server
+            if (days && currentUserDetails === allUserDetails) {
+                document.getElementById('userDetailsLoading').style.display = 'block';
+                document.getElementById('userDetailsContent').style.display = 'none';
+                try {
+                    await loadUserDetails(currentUserForDetails, parseInt(days));
+                } catch (error) {
+                    showUserDetailsError('Failed to filter data: ' + error.message);
+                    return;
+                }
+            } else if (!days) {
+                currentUserDetails = allUserDetails;
+            }
+            
+            // Apply search filter
+            if (searchTerm) {
+                currentUserDetails = (days ? currentUserDetails : allUserDetails).filter(item =>
+                    (item.title || '').toLowerCase().includes(searchTerm) ||
+                    (item.url || '').toLowerCase().includes(searchTerm)
+                );
+            } else if (!days) {
+                currentUserDetails = allUserDetails;
+            }
+            
+            displayUserDetails();
+        }
+
+        // Show error in user details modal
+        function showUserDetailsError(message) {
+            document.getElementById('userDetailsLoading').style.display = 'none';
+            document.getElementById('userDetailsContent').style.display = 'none';
+            document.getElementById('userDetailsError').style.display = 'block';
+            document.getElementById('userDetailsErrorMessage').textContent = message;
+        }
+
+        // Export user details
+        function exportUserDetails() {
+            if (currentUserDetails.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['Timestamp', 'Title', 'URL', 'Computer'];
+            const csvContent = [
+                headers.join(','),
+                ...currentUserDetails.map(item => [
+                    `"${new Date(item.timestamp).toISOString()}"`,
+                    `"${(item.title || 'No Title').replace(/"/g, '""')}"`,
+                    `"${item.url.replace(/"/g, '""')}"`,
+                    `"${(item.computerName || 'Unknown').replace(/"/g, '""')}"`
+                ].join(','))
+            ].join('\n');
+            
+            // Download file
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentUserForDetails}_browsing_history.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Export data
+        function exportData() {
+            if (filteredUserData.length === 0) {
+                alert('No data to export. Please check your filters.');
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['User', 'Display Name', 'Email', 'Homegroup', 'Total Visits', 'Unique URLs', 'Last Activity', 'Computer'];
+            const csvContent = [
+                headers.join(','),
+                ...filteredUserData.map(user => [
+                    `"${user.username || ''}"`,
+                    `"${user.displayName || ''}"`,
+                    `"${user.email || ''}"`,
+                    `"${user.department || 'Unknown'}"`,
+                    user.totalVisits || 0,
+                    user.uniqueUrls || 0,
+                    `"${user.lastActivity ? new Date(user.lastActivity).toISOString() : 'Never'}"`,
+                    `"${user.computers || 'Unknown'}"`
+                ].join(','))
+            ].join('\n');
+
+            // Download file
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `browser_reporter_users_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+
+
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                // Clear any cached auth and redirect with logout parameter
+                // This helps prevent auto-login issues
+                if (navigator.credentials && navigator.credentials.preventSilentAccess) {
+                    await navigator.credentials.preventSilentAccess();
+                }
+                window.location.href = '/login.html?logout=true';
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const container = document.querySelector('.main-content');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger alert-custom';
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}`;
+            container.insertBefore(errorDiv, container.firstChild);
+        }
+
+        // Add filter on Enter key for search input
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        applyFilters();
+                    }
+                });
+            }
+        });
+
+        // Initialize dashboard when page loads
+        window.addEventListener('load', initDashboard);
+    </script>
+
+
+</body>
+</html> 

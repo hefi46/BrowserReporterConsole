@@ -1,0 +1,9 @@
+username,password,role
+john.admin,SecurePass123,admin
+jane.user,UserPass456,user
+bob.manager,ManagerPass789,admin
+alice.analyst,AnalystPass321,user
+charlie.dev,DevPass654,user
+sarah.coordinator,CoordPass987,user
+mike.supervisor,SuperPass246,admin
+lisa.specialist,SpecialPass135,user 
