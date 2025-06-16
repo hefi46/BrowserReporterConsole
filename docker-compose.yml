@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: browser_reporter
+      POSTGRES_PASSWORD: browser_reporter
+      POSTGRES_DB: browser_reporter
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      API_KEY: ${API_KEY:-your-secure-api-key-here}
+      SESSION_SECRET: ${SESSION_SECRET:-changeme-session-secret}
+      DATABASE_URL: postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
+    ports:
+      - "8000:8000"
+
+volumes:
+  db_data: 

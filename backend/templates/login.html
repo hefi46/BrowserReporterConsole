@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Browser Reporter{% endblock %}
+
+{% block content %}
+<div class="max-w-sm mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-xl font-semibold mb-4">Login</h1>
+    {% if error %}
+    <p class="text-red-600 mb-2">{{ error }}</p>
+    {% endif %}
+    <form method="post" action="/login" class="flex flex-col gap-4">
+        <div>
+            <label for="username" class="block text-sm font-medium">Username</label>
+            <input id="username" name="username" type="text" required class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+            <label for="password" class="block text-sm font-medium">Password</label>
+            <input id="password" name="password" type="password" required class="w-full border rounded px-3 py-2" />
+        </div>
+        <button type="submit" class="bg-blue-700 text-white py-2 rounded">Login</button>
+    </form>
+</div>
+{% endblock %} 
