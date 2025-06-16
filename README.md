@@ -34,6 +34,7 @@ A comprehensive dashboard system for collecting and analyzing browsing history d
    
 1. **Clone the repository:**
    ```bash
+   sudo apt-get install python3-distutils-extra   #Needed for Ubuntu 24.04
    sudo apt-get install docker-compose git python3-distutils
    git clone https://github.com/hefi46/BrowserReporterConsole
    cd BrowserReporterConsole
