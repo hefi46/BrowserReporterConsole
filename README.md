@@ -31,25 +31,28 @@ A comprehensive dashboard system for collecting and analyzing browsing history d
 - **Containerization**: Docker & Docker Compose
 
 ## Quick Start
-
+   
 1. **Clone the repository:**
    ```bash
+   sudo apt-get install docker docker-compose git
    git clone <repository-url>
-   cd BRV2
+   cd BrowserReporterConsole
    ```
 
 2. **Start the application:**
    ```bash
-   docker-compose up -d
+   sudo docker-compose up -d
    ```
 
 3. **Access the dashboard:**
-   - Open http://localhost:8000
+   -Add DNS record for BrowserReporter pointing to your server
+   - Open http://browserreporter:8000  
    - Login with default admin credentials: `admin` / `admin`
+   - click admin panel in top bar and create users or upload users with CSV
 
-4. **Configure your browser extension:**
+5. **Configure your browser extension:**
    - API Endpoint: `http://localhost:8000/api/reports/data`
-   - API Key: `your-secure-api-key-here` (change in environment)
+   - API Key: `your-secure-api-key-here` (default)
 
 ## Project Structure
 
