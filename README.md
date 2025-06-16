@@ -34,7 +34,7 @@ A comprehensive dashboard system for collecting and analyzing browsing history d
    
 1. **Clone the repository:**
    ```bash
-   sudo apt-get install docker docker-compose git
+   sudo apt-get install docker-compose git
    git clone https://github.com/hefi46/BrowserReporterConsole
    cd BrowserReporterConsole
    ```
