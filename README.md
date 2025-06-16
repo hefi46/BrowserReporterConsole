@@ -1,4 +1,4 @@
-# Browser Extension Dashboard (BRV2)
+# Browser Extension Dashboard
 
 A comprehensive dashboard system for collecting and analyzing browsing history data from browser extensions, built with FastAPI and PostgreSQL.
 
