@@ -24,6 +24,7 @@ from .crud import (
     delete_dashboard_user, verify_password, get_password_hash
 )
 from .models import DashboardUser, DashboardRoleEnum, User, Visit
+from .utils import encrypt_secure_config
 
 import uvicorn
 
@@ -243,9 +244,6 @@ async def admin_get_users(request: Request, db: AsyncSession = Depends(get_db)):
     return users
 
 
-
-
-
 @app.post("/api/admin/users", response_model=DashboardUserResponse)
 async def admin_create_user(user_data: DashboardUserCreate, request: Request, db: AsyncSession = Depends(get_db)):
     """Create a new dashboard user (admin only)."""
@@ -309,9 +307,6 @@ async def admin_delete_user(username: str, request: Request, db: AsyncSession = 
     
     await db.commit()
     return {"success": True, "message": "User deleted successfully"}
-
-
-
 
 
 @app.post("/api/admin/users/bulk-import")
@@ -460,6 +455,50 @@ async def on_startup():
         await conn.run_sync(Base.metadata.create_all)
     # ensure initial admin exists
     await create_initial_admin()
+
+
+# -------------------------- Secure Config -------------------------------
+
+# Location of the generated secureconfig.json (project root by default)
+SECURECONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "secureconfig.json")
+
+
+@app.post("/api/admin/secureconfig")
+async def admin_generate_secureconfig(
+    request: Request,
+    plain_config: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate an encrypted *secureconfig.json* file and persist it.
+    Admins only.
+    """
+    await require_admin(request, db)
+
+    encrypted = encrypt_secure_config(plain_config)
+
+    # Persist to disk so that the Windows collector can fetch it via GET /secureconfig.json
+    try:
+        with open(SECURECONFIG_PATH, "w", encoding="utf-8") as f:
+            import json
+
+            json.dump(encrypted, f, indent=2)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to write secureconfig.json: {exc}")
+
+    return {"success": True}
+
+
+@app.get("/secureconfig.json")
+async def download_secureconfig():
+    """Serve the generated *secureconfig.json*.
+
+    No auth on purpose – the Windows collector expects to fetch it anonymously.
+    You may wrap this with auth/IP restrictions if desired.
+    """
+    if not os.path.exists(SECURECONFIG_PATH):
+        raise HTTPException(status_code=404, detail="secureconfig.json not found. Generate it first via the admin panel.")
+
+    return FileResponse(SECURECONFIG_PATH, media_type="application/json")
 
 
 if __name__ == "__main__":
