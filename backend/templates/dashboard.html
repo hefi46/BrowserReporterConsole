@@ -632,9 +632,9 @@
                             
                             <div id="securityGroupSettings" style="display: none;">
                                 <div class="mb-3">
-                                    <label for="allowedGroups" class="form-label">Allowed Groups</label>
-                                    <textarea class="form-control" id="allowedGroups" rows="3" placeholder="Domain Users&#10;IT Staff&#10;Administrators" oninput="updateConfigJson()"></textarea>
-                                    <div class="form-text">One group name per line. Example: "Domain Users", "IT Staff"</div>
+                                    <label for="allowedGroups" class="form-label">Allowed Groups (Distinguished Names)</label>
+                                    <textarea class="form-control" id="allowedGroups" rows="4" placeholder="CN=Domain Users,CN=Users,DC=company,DC=com&#10;CN=IT Staff,OU=SecurityGroups,DC=company,DC=com&#10;CN=Administrators,CN=Builtin,DC=company,DC=com" oninput="updateConfigJson()"></textarea>
+                                    <div class="form-text">One group DN per line. Use full Distinguished Names (CN=GroupName,OU=...,DC=...)</div>
                                 </div>
                             </div>
                         </div>
@@ -698,6 +698,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button class="btn btn-info" onclick="loadCurrentConfig(event)">
+                        <i class="fas fa-download me-2"></i>Load Current Config
+                    </button>
                     <button class="btn btn-secondary" onclick="resetToDefaults()">
                         <i class="fas fa-undo me-2"></i>Reset to Defaults
                     </button>
@@ -1517,26 +1520,114 @@
 
         // Client Config Functions
         function openClientConfig() {
-            // Initialize form with defaults and update JSON
-            resetToDefaults();
-            updateConfigJson();
-            
             const modal = new bootstrap.Modal(document.getElementById('clientConfigModal'));
             modal.show();
+            
+            // Try to load current config, fall back to defaults if it fails
+            loadCurrentConfig().catch(() => {
+                resetToDefaults();
+                updateConfigJson();
+            });
+        }
+
+        async function loadCurrentConfig(event = null) {
+            try {
+                const response = await fetch('/api/admin/secureconfig/current');
+                if (!response.ok) {
+                    throw new Error(`Failed to load current config: ${response.status}`);
+                }
+                
+                const config = await response.json();
+                populateFormFromConfig(config);
+                updateConfigJson();
+                
+                // Show success feedback only if called from button click
+                if (event && event.target) {
+                    const btn = event.target;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check me-2"></i>Loaded!';
+                    btn.classList.remove('btn-info');
+                    btn.classList.add('btn-success');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-info');
+                    }, 2000);
+                }
+                
+            } catch (error) {
+                console.error('Error loading current config:', error);
+                // Only show alert if called manually, not on auto-load
+                if (event) {
+                    alert('Failed to load current config: ' + error.message);
+                }
+            }
+        }
+
+        function populateFormFromConfig(config) {
+            // Populate organization settings
+            document.getElementById('orgName').value = config.organization || 'YourCompany';
+            
+            // Populate server settings
+            document.getElementById('serverUrl').value = config.server?.url || 'http://browserreporter:8000';
+            document.getElementById('apiKey').value = config.server?.api_key || 'your-secure-api-key-here';
+            
+            // Populate LDAP settings
+            document.getElementById('ldapEnabled').checked = config.ldap?.enabled !== false;
+            document.getElementById('ldapServer').value = config.ldap?.server || 'ldap://dc.company.com:389';
+            document.getElementById('bindDn').value = config.ldap?.bind_dn || 'CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com';
+            document.getElementById('bindPassword').value = config.ldap?.bind_password || 'service-account-password';
+            document.getElementById('baseDn').value = config.ldap?.base_dn || 'DC=company,DC=com';
+            
+            // Populate security groups (handle both old object format and new array format)
+            let groupsEnabled = false;
+            let groupsList = [];
+            
+            if (config.enable_group_filtering !== undefined) {
+                // New format: enable_group_filtering boolean + security_groups array
+                groupsEnabled = config.enable_group_filtering === true;
+                if (Array.isArray(config.security_groups)) {
+                    groupsList = config.security_groups;
+                }
+            } else if (config.security_groups?.enabled !== undefined) {
+                // Old format: security_groups.enabled + security_groups.allowed_groups
+                groupsEnabled = config.security_groups.enabled === true;
+                if (Array.isArray(config.security_groups.allowed_groups)) {
+                    groupsList = config.security_groups.allowed_groups;
+                }
+            }
+            
+            document.getElementById('securityGroupsEnabled').checked = groupsEnabled;
+            if (groupsList.length > 0) {
+                document.getElementById('allowedGroups').value = groupsList.join('\n');
+            } else {
+                document.getElementById('allowedGroups').value = 'CN=Domain Users,CN=Users,DC=company,DC=com\nCN=IT Staff,OU=SecurityGroups,DC=company,DC=com\nCN=Administrators,CN=Builtin,DC=company,DC=com';
+            }
+            
+            // Populate browser settings
+            document.getElementById('chromeEnabled').checked = config.browsers?.chrome !== false;
+            document.getElementById('edgeEnabled').checked = config.browsers?.edge !== false;
+            document.getElementById('firefoxEnabled').checked = config.browsers?.firefox === true;
+            
+            // Populate collection settings
+            document.getElementById('intervalMinutes').value = config.collection?.interval_minutes || 5;
+            document.getElementById('maxHistoryDays').value = config.collection?.max_history_days || 30;
+            document.getElementById('deduplicationEnabled').checked = config.collection?.deduplication !== false;
         }
 
         function resetToDefaults() {
             // Reset all form fields to defaults
             document.getElementById('orgName').value = 'YourCompany';
             document.getElementById('serverUrl').value = 'http://browserreporter:8000';
-            document.getElementById('apiKey').value = 'your-api-key';
+            document.getElementById('apiKey').value = 'your-secure-api-key-here';
             document.getElementById('ldapEnabled').checked = true;
             document.getElementById('ldapServer').value = 'ldap://dc.company.com:389';
             document.getElementById('bindDn').value = 'CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com';
             document.getElementById('bindPassword').value = 'service-account-password';
             document.getElementById('baseDn').value = 'DC=company,DC=com';
             document.getElementById('securityGroupsEnabled').checked = false;
-            document.getElementById('allowedGroups').value = 'Domain Users\nIT Staff\nAdministrators';
+            document.getElementById('allowedGroups').value = 'CN=Domain Users,CN=Users,DC=company,DC=com\nCN=IT Staff,OU=SecurityGroups,DC=company,DC=com\nCN=Administrators,CN=Builtin,DC=company,DC=com';
             document.getElementById('chromeEnabled').checked = true;
             document.getElementById('edgeEnabled').checked = true;
             document.getElementById('firefoxEnabled').checked = false;
@@ -1556,7 +1647,7 @@
             const securityGroupsEnabled = document.getElementById('securityGroupsEnabled').checked;
             document.getElementById('securityGroupSettings').style.display = securityGroupsEnabled ? 'block' : 'none';
             
-            // Build config object from form values
+            // Build config object from form values (Windows app format)
             const config = {
                 organization: document.getElementById('orgName').value,
                 server: {
@@ -1572,12 +1663,11 @@
                     user_filter: "(sAMAccountName={username})",
                     attributes: ["sAMAccountName", "displayName", "mail", "department"]
                 },
-                security_groups: {
-                    enabled: securityGroupsEnabled,
-                    allowed_groups: securityGroupsEnabled ? 
-                        document.getElementById('allowedGroups').value.split('\n').map(g => g.trim()).filter(g => g) : 
-                        []
-                },
+                // Windows app expects security_groups as an array, not an object
+                security_groups: securityGroupsEnabled ? 
+                    document.getElementById('allowedGroups').value.split('\n').map(g => g.trim()).filter(g => g) : 
+                    [],
+                enable_group_filtering: securityGroupsEnabled,
                 browsers: {
                     chrome: document.getElementById('chromeEnabled').checked,
                     edge: document.getElementById('edgeEnabled').checked,
@@ -1602,7 +1692,16 @@
                     return;
                 }
 
-                const plain = JSON.parse(rawText);
+                // Better JSON parsing error handling
+                let plain;
+                try {
+                    plain = JSON.parse(rawText);
+                } catch (jsonError) {
+                    console.error('JSON Parse Error:', jsonError);
+                    console.log('Raw text that failed to parse:', rawText);
+                    alert('Invalid JSON configuration. Please check the format.');
+                    return;
+                }
 
                 const resp = await fetch('/api/admin/secureconfig', {
                     method: 'POST',

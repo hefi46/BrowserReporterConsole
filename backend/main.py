@@ -24,7 +24,7 @@ from .crud import (
     delete_dashboard_user, verify_password, get_password_hash
 )
 from .models import DashboardUser, DashboardRoleEnum, User, Visit
-from .utils import encrypt_secure_config
+from .utils import encrypt_secure_config, decrypt_secure_config
 
 import uvicorn
 
@@ -486,6 +486,65 @@ async def admin_generate_secureconfig(
         raise HTTPException(status_code=500, detail=f"Failed to write secureconfig.json: {exc}")
 
     return {"success": True}
+
+
+@app.get("/api/admin/secureconfig/current")
+async def admin_get_current_config(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the current decrypted configuration for editing.
+    Admins only.
+    """
+    await require_admin(request, db)
+
+    if not os.path.exists(SECURECONFIG_PATH):
+        # Return default config if no config exists yet
+        return {
+            "organization": "YourCompany",
+            "server": {
+                "url": "http://browserreporter:8000",
+                "api_key": "your-secure-api-key-here"
+            },
+            "ldap": {
+                "enabled": True,
+                "server": "ldap://dc.company.com:389",
+                "bind_dn": "CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com",
+                "bind_password": "service-account-password",
+                "base_dn": "DC=company,DC=com",
+                "user_filter": "(sAMAccountName={username})",
+                "attributes": ["sAMAccountName", "displayName", "mail", "department"]
+            },
+            "security_groups": [
+                "CN=Domain Users,CN=Users,DC=company,DC=com",
+                "CN=IT Staff,OU=SecurityGroups,DC=company,DC=com", 
+                "CN=Administrators,CN=Builtin,DC=company,DC=com"
+            ],
+            "enable_group_filtering": False,
+            "browsers": {
+                "chrome": True,
+                "edge": True,
+                "firefox": False
+            },
+            "collection": {
+                "interval_minutes": 5,
+                "max_history_days": 30,
+                "deduplication": True
+            }
+        }
+
+    try:
+        # Read and decrypt the current config
+        import json
+        with open(SECURECONFIG_PATH, "r", encoding="utf-8") as f:
+            encrypted_data = json.load(f)
+        
+        # Decrypt the config to get the actual values
+        decrypted_config = decrypt_secure_config(encrypted_data)
+        return decrypted_config
+        
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read current config: {exc}")
 
 
 @app.get("/secureconfig.json")
