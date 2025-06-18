@@ -1566,12 +1566,19 @@
         }
 
         function populateFormFromConfig(config) {
-            // Populate organization settings
+            // Populate organization settings (keep for backward compatibility)
             document.getElementById('orgName').value = config.organization || 'YourCompany';
             
-            // Populate server settings
-            document.getElementById('serverUrl').value = config.server?.url || 'http://browserreporter:8000';
-            document.getElementById('apiKey').value = config.server?.api_key || 'your-secure-api-key-here';
+            // Populate server settings (handle both old nested and new flat format)
+            if (config.server_url) {
+                // New format
+                document.getElementById('serverUrl').value = config.server_url;
+                document.getElementById('apiKey').value = config.api_key || 'your-secure-api-key-here';
+            } else {
+                // Old format
+                document.getElementById('serverUrl').value = config.server?.url || 'http://browserreporter:8000';
+                document.getElementById('apiKey').value = config.server?.api_key || 'your-secure-api-key-here';
+            }
             
             // Populate LDAP settings
             document.getElementById('ldapEnabled').checked = config.ldap?.enabled !== false;
@@ -1602,17 +1609,24 @@
             if (groupsList.length > 0) {
                 document.getElementById('allowedGroups').value = groupsList.join('\n');
             } else {
-                document.getElementById('allowedGroups').value = 'CN=Domain Users,CN=Users,DC=company,DC=com\nCN=IT Staff,OU=SecurityGroups,DC=company,DC=com\nCN=Administrators,CN=Builtin,DC=company,DC=com';
+                document.getElementById('allowedGroups').value = 'CN=RegularUsers,OU=SecurityGroups,DC=yourdomain,DC=com\nCN=SalesTeam,OU=SecurityGroups,DC=yourdomain,DC=com\nCN=MarketingTeam,OU=SecurityGroups,DC=yourdomain,DC=com';
             }
             
-            // Populate browser settings
+            // Populate browser settings (handle old format if present)
             document.getElementById('chromeEnabled').checked = config.browsers?.chrome !== false;
             document.getElementById('edgeEnabled').checked = config.browsers?.edge !== false;
             document.getElementById('firefoxEnabled').checked = config.browsers?.firefox === true;
             
-            // Populate collection settings
-            document.getElementById('intervalMinutes').value = config.collection?.interval_minutes || 5;
-            document.getElementById('maxHistoryDays').value = config.collection?.max_history_days || 30;
+            // Populate collection settings (handle both old and new format)
+            if (config.sync_interval_minutes) {
+                // New format
+                document.getElementById('intervalMinutes').value = config.sync_interval_minutes;
+                document.getElementById('maxHistoryDays').value = Math.floor(config.max_history_age_hours / 24); // Convert hours to days
+            } else {
+                // Old format
+                document.getElementById('intervalMinutes').value = config.collection?.interval_minutes || 5;
+                document.getElementById('maxHistoryDays').value = config.collection?.max_history_days || 30;
+            }
             document.getElementById('deduplicationEnabled').checked = config.collection?.deduplication !== false;
         }
 
@@ -1627,7 +1641,7 @@
             document.getElementById('bindPassword').value = 'service-account-password';
             document.getElementById('baseDn').value = 'DC=company,DC=com';
             document.getElementById('securityGroupsEnabled').checked = false;
-            document.getElementById('allowedGroups').value = 'CN=Domain Users,CN=Users,DC=company,DC=com\nCN=IT Staff,OU=SecurityGroups,DC=company,DC=com\nCN=Administrators,CN=Builtin,DC=company,DC=com';
+            document.getElementById('allowedGroups').value = 'CN=RegularUsers,OU=SecurityGroups,DC=yourdomain,DC=com\nCN=SalesTeam,OU=SecurityGroups,DC=yourdomain,DC=com\nCN=MarketingTeam,OU=SecurityGroups,DC=yourdomain,DC=com';
             document.getElementById('chromeEnabled').checked = true;
             document.getElementById('edgeEnabled').checked = true;
             document.getElementById('firefoxEnabled').checked = false;
@@ -1647,36 +1661,26 @@
             const securityGroupsEnabled = document.getElementById('securityGroupsEnabled').checked;
             document.getElementById('securityGroupSettings').style.display = securityGroupsEnabled ? 'block' : 'none';
             
-            // Build config object from form values (Windows app format)
+            // Build config object from form values (Windows collector format)
             const config = {
-                organization: document.getElementById('orgName').value,
-                server: {
-                    url: document.getElementById('serverUrl').value,
-                    api_key: document.getElementById('apiKey').value
-                },
+                server_url: document.getElementById('serverUrl').value,
+                api_key: document.getElementById('apiKey').value,
+                sync_interval_minutes: parseInt(document.getElementById('intervalMinutes').value),
+                max_history_age_hours: parseInt(document.getElementById('maxHistoryDays').value) * 24, // Convert days to hours
+                cleanup_interval_hours: 24,
+                enable_group_filtering: securityGroupsEnabled,
+                security_groups: securityGroupsEnabled ? 
+                    document.getElementById('allowedGroups').value.split('\n').map(g => g.trim()).filter(g => g) : 
+                    [],
+                config_server: document.getElementById('serverUrl').value.replace(/\/$/, '') + "/secureconfig.json",
+                config_refresh_hours: 24,
                 ldap: {
-                    enabled: ldapEnabled,
                     server: document.getElementById('ldapServer').value,
                     bind_dn: document.getElementById('bindDn').value,
                     bind_password: document.getElementById('bindPassword').value,
                     base_dn: document.getElementById('baseDn').value,
-                    user_filter: "(sAMAccountName={username})",
-                    attributes: ["sAMAccountName", "displayName", "mail", "department"]
-                },
-                // Windows app expects security_groups as an array, not an object
-                security_groups: securityGroupsEnabled ? 
-                    document.getElementById('allowedGroups').value.split('\n').map(g => g.trim()).filter(g => g) : 
-                    [],
-                enable_group_filtering: securityGroupsEnabled,
-                browsers: {
-                    chrome: document.getElementById('chromeEnabled').checked,
-                    edge: document.getElementById('edgeEnabled').checked,
-                    firefox: document.getElementById('firefoxEnabled').checked
-                },
-                collection: {
-                    interval_minutes: parseInt(document.getElementById('intervalMinutes').value),
-                    max_history_days: parseInt(document.getElementById('maxHistoryDays').value),
-                    deduplication: document.getElementById('deduplicationEnabled').checked
+                    user_search_base: document.getElementById('baseDn').value,
+                    attributes: ["sAMAccountName", "givenName", "sn", "department", "mail", "displayName"]
                 }
             };
             

@@ -501,35 +501,26 @@ async def admin_get_current_config(
     if not os.path.exists(SECURECONFIG_PATH):
         # Return default config if no config exists yet
         return {
-            "organization": "YourCompany",
-            "server": {
-                "url": "http://browserreporter:8000",
-                "api_key": "your-secure-api-key-here"
-            },
-            "ldap": {
-                "enabled": True,
-                "server": "ldap://dc.company.com:389",
-                "bind_dn": "CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com",
-                "bind_password": "service-account-password",
-                "base_dn": "DC=company,DC=com",
-                "user_filter": "(sAMAccountName={username})",
-                "attributes": ["sAMAccountName", "displayName", "mail", "department"]
-            },
-            "security_groups": [
-                "CN=Domain Users,CN=Users,DC=company,DC=com",
-                "CN=IT Staff,OU=SecurityGroups,DC=company,DC=com", 
-                "CN=Administrators,CN=Builtin,DC=company,DC=com"
-            ],
+            "server_url": "http://localhost:8000",
+            "api_key": "your-secure-api-key-here",
+            "sync_interval_minutes": 5,
+            "max_history_age_hours": 24,
+            "cleanup_interval_hours": 24,
             "enable_group_filtering": False,
-            "browsers": {
-                "chrome": True,
-                "edge": True,
-                "firefox": False
-            },
-            "collection": {
-                "interval_minutes": 5,
-                "max_history_days": 30,
-                "deduplication": True
+            "security_groups": [
+                "CN=RegularUsers,OU=SecurityGroups,DC=yourdomain,DC=com",
+                "CN=SalesTeam,OU=SecurityGroups,DC=yourdomain,DC=com",
+                "CN=MarketingTeam,OU=SecurityGroups,DC=yourdomain,DC=com"
+            ],
+            "config_server": "http://localhost:8000/secureconfig.json",
+            "config_refresh_hours": 24,
+            "ldap": {
+                "server": "ldap://dc01.yourdomain.com:389",
+                "bind_dn": "CN=BrowserReporterService,OU=ServiceAccounts,DC=yourdomain,DC=com",
+                "bind_password": "SecurePassword123!",
+                "base_dn": "DC=yourdomain,DC=com",
+                "user_search_base": "OU=Users,DC=yourdomain,DC=com",
+                "attributes": ["sAMAccountName", "givenName", "sn", "department", "mail", "displayName"]
             }
         }
 
