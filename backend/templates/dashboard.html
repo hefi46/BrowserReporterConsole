@@ -127,6 +127,11 @@
                         <i class="fas fa-users-cog me-1"></i>Admin Panel
                     </button>
                 </div>
+                <div id="clientConfigSection" class="nav-item me-3" style="display: none;">
+                    <button class="btn btn-outline-light btn-sm" onclick="openClientConfig()">
+                        <i class="fab fa-windows me-1"></i>Client Config
+                    </button>
+                </div>
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-user-circle me-1"></i>
@@ -541,6 +546,172 @@
         </div>
     </div>
 
+    <!-- Client Config Modal -->
+    <div class="modal fade" id="clientConfigModal" tabindex="-1" aria-labelledby="clientConfigModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="clientConfigModalLabel">
+                        <i class="fab fa-windows me-2"></i>Generate Windows Client Config
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Configuration Form -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-info mb-3"><i class="fas fa-building me-2"></i>Organization Settings</h6>
+                            
+                            <div class="mb-3">
+                                <label for="orgName" class="form-label">Organization Name</label>
+                                <input type="text" class="form-control" id="orgName" value="YourCompany" oninput="updateConfigJson()">
+                                <div class="form-text">Display name for your organization</div>
+                            </div>
+
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-server me-2"></i>Server Settings</h6>
+                            
+                            <div class="mb-3">
+                                <label for="serverUrl" class="form-label">Server URL</label>
+                                <input type="url" class="form-control" id="serverUrl" value="http://browserreporter:8000" oninput="updateConfigJson()">
+                                <div class="form-text">Full URL where the BrowserReporter server is accessible</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="apiKey" class="form-label">API Key</label>
+                                <input type="text" class="form-control" id="apiKey" value="your-api-key" oninput="updateConfigJson()">
+                                <div class="form-text">Secure API key for client authentication</div>
+                            </div>
+
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-directory-tree me-2"></i>LDAP Settings</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="ldapEnabled" checked onchange="updateConfigJson()">
+                                    <label class="form-check-label" for="ldapEnabled">
+                                        Enable LDAP Authentication
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div id="ldapSettings">
+                                <div class="mb-3">
+                                    <label for="ldapServer" class="form-label">LDAP Server</label>
+                                    <input type="text" class="form-control" id="ldapServer" value="ldap://dc.company.com:389" oninput="updateConfigJson()">
+                                    <div class="form-text">LDAP server URL with port</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="bindDn" class="form-label">Bind DN</label>
+                                    <input type="text" class="form-control" id="bindDn" value="CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com" oninput="updateConfigJson()">
+                                    <div class="form-text">Service account for LDAP binding</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="bindPassword" class="form-label">Bind Password</label>
+                                    <input type="password" class="form-control" id="bindPassword" value="service-account-password" oninput="updateConfigJson()">
+                                    <div class="form-text">Service account password</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="baseDn" class="form-label">Base DN</label>
+                                    <input type="text" class="form-control" id="baseDn" value="DC=company,DC=com" oninput="updateConfigJson()">
+                                    <div class="form-text">LDAP search base</div>
+                                </div>
+                            </div>
+
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-users me-2"></i>Security Groups</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="securityGroupsEnabled" onchange="updateConfigJson()">
+                                    <label class="form-check-label" for="securityGroupsEnabled">
+                                        Enable Security Group Filtering
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div id="securityGroupSettings" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="allowedGroups" class="form-label">Allowed Groups (Distinguished Names)</label>
+                                    <textarea class="form-control" id="allowedGroups" rows="4" placeholder="CN=Domain Users,CN=Users,DC=company,DC=com&#10;CN=IT Staff,OU=SecurityGroups,DC=company,DC=com&#10;CN=Administrators,CN=Builtin,DC=company,DC=com" oninput="updateConfigJson()"></textarea>
+                                    <div class="form-text">One group DN per line. Use full Distinguished Names (CN=GroupName,OU=...,DC=...)</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-info mb-3"><i class="fas fa-browser me-2"></i>Browser Settings</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chromeEnabled" checked onchange="updateConfigJson()">
+                                    <label class="form-check-label" for="chromeEnabled">
+                                        <i class="fab fa-chrome me-1"></i>Google Chrome
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="edgeEnabled" checked onchange="updateConfigJson()">
+                                    <label class="form-check-label" for="edgeEnabled">
+                                        <i class="fab fa-edge me-1"></i>Microsoft Edge
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="firefoxEnabled" onchange="updateConfigJson()">
+                                    <label class="form-check-label" for="firefoxEnabled">
+                                        <i class="fab fa-firefox me-1"></i>Mozilla Firefox
+                                    </label>
+                                </div>
+                            </div>
+
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-clock me-2"></i>Collection Settings</h6>
+                            
+                            <div class="mb-3">
+                                <label for="intervalMinutes" class="form-label">Collection Interval (minutes)</label>
+                                <input type="number" class="form-control" id="intervalMinutes" value="5" min="1" max="60" oninput="updateConfigJson()">
+                                <div class="form-text">How often to collect browser data (1-60 minutes)</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="maxHistoryDays" class="form-label">Max History Days</label>
+                                <input type="number" class="form-control" id="maxHistoryDays" value="30" min="1" max="365" oninput="updateConfigJson()">
+                                <div class="form-text">How many days of history to keep (1-365 days)</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="deduplicationEnabled" checked onchange="updateConfigJson()">
+                                    <label class="form-check-label" for="deduplicationEnabled">
+                                        Enable Deduplication
+                                    </label>
+                                </div>
+                                <div class="form-text">Remove duplicate URL visits within the same session</div>
+                            </div>
+
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-code me-2"></i>Generated Configuration</h6>
+                            
+                            <div class="mb-3">
+                                <label for="plainConfigArea" class="form-label">JSON Configuration</label>
+                                <textarea id="plainConfigArea" class="form-control" rows="12" spellcheck="false" style="font-family: 'Courier New', monospace; font-size: 0.85em;"></textarea>
+                                <div class="form-text">This JSON will be encrypted and saved as secureconfig.json</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-info" onclick="loadCurrentConfig(event)">
+                        <i class="fas fa-download me-2"></i>Load Current Config
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetToDefaults()">
+                        <i class="fas fa-undo me-2"></i>Reset to Defaults
+                    </button>
+                    <button class="btn btn-primary" onclick="submitSecureConfig()">
+                        <i class="fas fa-save me-2"></i>Generate & Download secureconfig.json
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -586,6 +757,7 @@
                 // Show admin panel button if user is admin
                 if (user.role === 'admin') {
                     document.getElementById('adminNavSection').style.display = 'block';
+                    document.getElementById('clientConfigSection').style.display = 'block';
                 }
             }
         }
@@ -1346,7 +1518,209 @@
             }
         }
 
+        // Client Config Functions
+        function openClientConfig() {
+            const modal = new bootstrap.Modal(document.getElementById('clientConfigModal'));
+            modal.show();
+            
+            // Try to load current config, fall back to defaults if it fails
+            loadCurrentConfig().catch(() => {
+                resetToDefaults();
+                updateConfigJson();
+            });
+        }
 
+        async function loadCurrentConfig(event = null) {
+            try {
+                const response = await fetch('/api/admin/secureconfig/current');
+                if (!response.ok) {
+                    throw new Error(`Failed to load current config: ${response.status}`);
+                }
+                
+                const config = await response.json();
+                populateFormFromConfig(config);
+                updateConfigJson();
+                
+                // Show success feedback only if called from button click
+                if (event && event.target) {
+                    const btn = event.target;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check me-2"></i>Loaded!';
+                    btn.classList.remove('btn-info');
+                    btn.classList.add('btn-success');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-info');
+                    }, 2000);
+                }
+                
+            } catch (error) {
+                console.error('Error loading current config:', error);
+                // Only show alert if called manually, not on auto-load
+                if (event) {
+                    alert('Failed to load current config: ' + error.message);
+                }
+            }
+        }
+
+        function populateFormFromConfig(config) {
+            // Populate organization settings
+            document.getElementById('orgName').value = config.organization || 'YourCompany';
+            
+            // Populate server settings
+            document.getElementById('serverUrl').value = config.server?.url || 'http://browserreporter:8000';
+            document.getElementById('apiKey').value = config.server?.api_key || 'your-secure-api-key-here';
+            
+            // Populate LDAP settings
+            document.getElementById('ldapEnabled').checked = config.ldap?.enabled !== false;
+            document.getElementById('ldapServer').value = config.ldap?.server || 'ldap://dc.company.com:389';
+            document.getElementById('bindDn').value = config.ldap?.bind_dn || 'CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com';
+            document.getElementById('bindPassword').value = config.ldap?.bind_password || 'service-account-password';
+            document.getElementById('baseDn').value = config.ldap?.base_dn || 'DC=company,DC=com';
+            
+            // Populate security groups (handle both old object format and new array format)
+            let groupsEnabled = false;
+            let groupsList = [];
+            
+            if (config.enable_group_filtering !== undefined) {
+                // New format: enable_group_filtering boolean + security_groups array
+                groupsEnabled = config.enable_group_filtering === true;
+                if (Array.isArray(config.security_groups)) {
+                    groupsList = config.security_groups;
+                }
+            } else if (config.security_groups?.enabled !== undefined) {
+                // Old format: security_groups.enabled + security_groups.allowed_groups
+                groupsEnabled = config.security_groups.enabled === true;
+                if (Array.isArray(config.security_groups.allowed_groups)) {
+                    groupsList = config.security_groups.allowed_groups;
+                }
+            }
+            
+            document.getElementById('securityGroupsEnabled').checked = groupsEnabled;
+            if (groupsList.length > 0) {
+                document.getElementById('allowedGroups').value = groupsList.join('\n');
+            } else {
+                document.getElementById('allowedGroups').value = 'CN=Domain Users,CN=Users,DC=company,DC=com\nCN=IT Staff,OU=SecurityGroups,DC=company,DC=com\nCN=Administrators,CN=Builtin,DC=company,DC=com';
+            }
+            
+            // Populate browser settings
+            document.getElementById('chromeEnabled').checked = config.browsers?.chrome !== false;
+            document.getElementById('edgeEnabled').checked = config.browsers?.edge !== false;
+            document.getElementById('firefoxEnabled').checked = config.browsers?.firefox === true;
+            
+            // Populate collection settings
+            document.getElementById('intervalMinutes').value = config.collection?.interval_minutes || 5;
+            document.getElementById('maxHistoryDays').value = config.collection?.max_history_days || 30;
+            document.getElementById('deduplicationEnabled').checked = config.collection?.deduplication !== false;
+        }
+
+        function resetToDefaults() {
+            // Reset all form fields to defaults
+            document.getElementById('orgName').value = 'YourCompany';
+            document.getElementById('serverUrl').value = 'http://browserreporter:8000';
+            document.getElementById('apiKey').value = 'your-secure-api-key-here';
+            document.getElementById('ldapEnabled').checked = true;
+            document.getElementById('ldapServer').value = 'ldap://dc.company.com:389';
+            document.getElementById('bindDn').value = 'CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com';
+            document.getElementById('bindPassword').value = 'service-account-password';
+            document.getElementById('baseDn').value = 'DC=company,DC=com';
+            document.getElementById('securityGroupsEnabled').checked = false;
+            document.getElementById('allowedGroups').value = 'CN=Domain Users,CN=Users,DC=company,DC=com\nCN=IT Staff,OU=SecurityGroups,DC=company,DC=com\nCN=Administrators,CN=Builtin,DC=company,DC=com';
+            document.getElementById('chromeEnabled').checked = true;
+            document.getElementById('edgeEnabled').checked = true;
+            document.getElementById('firefoxEnabled').checked = false;
+            document.getElementById('intervalMinutes').value = '5';
+            document.getElementById('maxHistoryDays').value = '30';
+            document.getElementById('deduplicationEnabled').checked = true;
+            
+            updateConfigJson();
+        }
+
+        function updateConfigJson() {
+            // Toggle LDAP settings visibility
+            const ldapEnabled = document.getElementById('ldapEnabled').checked;
+            document.getElementById('ldapSettings').style.display = ldapEnabled ? 'block' : 'none';
+            
+            // Toggle security groups settings visibility
+            const securityGroupsEnabled = document.getElementById('securityGroupsEnabled').checked;
+            document.getElementById('securityGroupSettings').style.display = securityGroupsEnabled ? 'block' : 'none';
+            
+            // Build config object from form values (Windows app format)
+            const config = {
+                organization: document.getElementById('orgName').value,
+                server: {
+                    url: document.getElementById('serverUrl').value,
+                    api_key: document.getElementById('apiKey').value
+                },
+                ldap: {
+                    enabled: ldapEnabled,
+                    server: document.getElementById('ldapServer').value,
+                    bind_dn: document.getElementById('bindDn').value,
+                    bind_password: document.getElementById('bindPassword').value,
+                    base_dn: document.getElementById('baseDn').value,
+                    user_filter: "(sAMAccountName={username})",
+                    attributes: ["sAMAccountName", "displayName", "mail", "department"]
+                },
+                // Windows app expects security_groups as an array, not an object
+                security_groups: securityGroupsEnabled ? 
+                    document.getElementById('allowedGroups').value.split('\n').map(g => g.trim()).filter(g => g) : 
+                    [],
+                enable_group_filtering: securityGroupsEnabled,
+                browsers: {
+                    chrome: document.getElementById('chromeEnabled').checked,
+                    edge: document.getElementById('edgeEnabled').checked,
+                    firefox: document.getElementById('firefoxEnabled').checked
+                },
+                collection: {
+                    interval_minutes: parseInt(document.getElementById('intervalMinutes').value),
+                    max_history_days: parseInt(document.getElementById('maxHistoryDays').value),
+                    deduplication: document.getElementById('deduplicationEnabled').checked
+                }
+            };
+            
+            // Update JSON textarea with formatted config
+            document.getElementById('plainConfigArea').value = JSON.stringify(config, null, 2);
+        }
+
+        async function submitSecureConfig() {
+            try {
+                const rawText = document.getElementById('plainConfigArea').value.trim();
+                if (!rawText) {
+                    alert('Please provide JSON configuration');
+                    return;
+                }
+
+                // Better JSON parsing error handling
+                let plain;
+                try {
+                    plain = JSON.parse(rawText);
+                } catch (jsonError) {
+                    console.error('JSON Parse Error:', jsonError);
+                    console.log('Raw text that failed to parse:', rawText);
+                    alert('Invalid JSON configuration. Please check the format.');
+                    return;
+                }
+
+                const resp = await fetch('/api/admin/secureconfig', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(plain)
+                });
+
+                if (!resp.ok) {
+                    const msg = await resp.text();
+                    throw new Error(msg || 'Failed to generate secure config');
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('clientConfigModal')).hide();
+                alert('secureconfig.json generated successfully!');
+            } catch (err) {
+                console.error('Secure config error', err);
+                alert('Error: ' + err.message);
+            }
+        }
 
         // Initialize dashboard when page loads
         window.addEventListener('load', initDashboard);

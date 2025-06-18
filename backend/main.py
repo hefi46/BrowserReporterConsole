@@ -24,6 +24,7 @@ from .crud import (
     delete_dashboard_user, verify_password, get_password_hash
 )
 from .models import DashboardUser, DashboardRoleEnum, User, Visit
+from .utils import encrypt_secure_config, decrypt_secure_config
 
 import uvicorn
 
@@ -243,9 +244,6 @@ async def admin_get_users(request: Request, db: AsyncSession = Depends(get_db)):
     return users
 
 
-
-
-
 @app.post("/api/admin/users", response_model=DashboardUserResponse)
 async def admin_create_user(user_data: DashboardUserCreate, request: Request, db: AsyncSession = Depends(get_db)):
     """Create a new dashboard user (admin only)."""
@@ -309,9 +307,6 @@ async def admin_delete_user(username: str, request: Request, db: AsyncSession = 
     
     await db.commit()
     return {"success": True, "message": "User deleted successfully"}
-
-
-
 
 
 @app.post("/api/admin/users/bulk-import")
@@ -460,6 +455,109 @@ async def on_startup():
         await conn.run_sync(Base.metadata.create_all)
     # ensure initial admin exists
     await create_initial_admin()
+
+
+# -------------------------- Secure Config -------------------------------
+
+# Location of the generated secureconfig.json (project root by default)
+SECURECONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "secureconfig.json")
+
+
+@app.post("/api/admin/secureconfig")
+async def admin_generate_secureconfig(
+    request: Request,
+    plain_config: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate an encrypted *secureconfig.json* file and persist it.
+    Admins only.
+    """
+    await require_admin(request, db)
+
+    encrypted = encrypt_secure_config(plain_config)
+
+    # Persist to disk so that the Windows collector can fetch it via GET /secureconfig.json
+    try:
+        with open(SECURECONFIG_PATH, "w", encoding="utf-8") as f:
+            import json
+
+            json.dump(encrypted, f, indent=2)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to write secureconfig.json: {exc}")
+
+    return {"success": True}
+
+
+@app.get("/api/admin/secureconfig/current")
+async def admin_get_current_config(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the current decrypted configuration for editing.
+    Admins only.
+    """
+    await require_admin(request, db)
+
+    if not os.path.exists(SECURECONFIG_PATH):
+        # Return default config if no config exists yet
+        return {
+            "organization": "YourCompany",
+            "server": {
+                "url": "http://browserreporter:8000",
+                "api_key": "your-secure-api-key-here"
+            },
+            "ldap": {
+                "enabled": True,
+                "server": "ldap://dc.company.com:389",
+                "bind_dn": "CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com",
+                "bind_password": "service-account-password",
+                "base_dn": "DC=company,DC=com",
+                "user_filter": "(sAMAccountName={username})",
+                "attributes": ["sAMAccountName", "displayName", "mail", "department"]
+            },
+            "security_groups": [
+                "CN=Domain Users,CN=Users,DC=company,DC=com",
+                "CN=IT Staff,OU=SecurityGroups,DC=company,DC=com", 
+                "CN=Administrators,CN=Builtin,DC=company,DC=com"
+            ],
+            "enable_group_filtering": False,
+            "browsers": {
+                "chrome": True,
+                "edge": True,
+                "firefox": False
+            },
+            "collection": {
+                "interval_minutes": 5,
+                "max_history_days": 30,
+                "deduplication": True
+            }
+        }
+
+    try:
+        # Read and decrypt the current config
+        import json
+        with open(SECURECONFIG_PATH, "r", encoding="utf-8") as f:
+            encrypted_data = json.load(f)
+        
+        # Decrypt the config to get the actual values
+        decrypted_config = decrypt_secure_config(encrypted_data)
+        return decrypted_config
+        
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read current config: {exc}")
+
+
+@app.get("/secureconfig.json")
+async def download_secureconfig():
+    """Serve the generated *secureconfig.json*.
+
+    No auth on purpose – the Windows collector expects to fetch it anonymously.
+    You may wrap this with auth/IP restrictions if desired.
+    """
+    if not os.path.exists(SECURECONFIG_PATH):
+        raise HTTPException(status_code=404, detail="secureconfig.json not found. Generate it first via the admin panel.")
+
+    return FileResponse(SECURECONFIG_PATH, media_type="application/json")
 
 
 if __name__ == "__main__":
