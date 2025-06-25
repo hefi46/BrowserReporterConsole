@@ -18,8 +18,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Default environment values (can be overridden in compose or with -e)
-ENV API_KEY=your-secure-api-key-here \
-    SESSION_SECRET=changeme-session-secret \
+ENV SESSION_SECRET=changeme-session-secret \
     DATABASE_URL=postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
 
 EXPOSE 8000

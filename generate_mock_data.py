@@ -13,7 +13,6 @@ from typing import List, Dict
 
 # Configuration
 API_URL = "http://localhost:8000/api/reports/data"
-API_KEY = "your-secure-api-key-here"
 
 # Homegroups and user distribution (5 users each)
 HOMEGROUPS = ["3A", "4A", "5A", "6C"]
@@ -186,13 +185,8 @@ def send_user_data(user_info: Dict, visits: List[Dict]) -> bool:
         "UserInfo": user_info
     }
     
-    headers = {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY
-    }
-    
     try:
-        response = requests.post(API_URL, json=payload, headers=headers, timeout=10)
+        response = requests.post(API_URL, json=payload, timeout=10)
         if response.status_code == 200:
             print(f"✅ Successfully sent data for {user_info['Username']} ({len(visits)} visits)")
             return True

@@ -560,81 +560,58 @@
                     <!-- Configuration Form -->
                     <div class="row">
                         <div class="col-md-6">
-                            <h6 class="text-info mb-3"><i class="fas fa-building me-2"></i>Organization Settings</h6>
-                            
-                            <div class="mb-3">
-                                <label for="orgName" class="form-label">Organization Name</label>
-                                <input type="text" class="form-control" id="orgName" value="YourCompany" oninput="updateConfigJson()">
-                                <div class="form-text">Display name for your organization</div>
-                            </div>
-
-                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-server me-2"></i>Server Settings</h6>
+                            <h6 class="text-info mb-3"><i class="fas fa-server me-2"></i>Server Settings</h6>
                             
                             <div class="mb-3">
                                 <label for="serverUrl" class="form-label">Server URL</label>
                                 <input type="url" class="form-control" id="serverUrl" value="http://browserreporter:8000" oninput="updateConfigJson()">
                                 <div class="form-text">Full URL where the BrowserReporter server is accessible</div>
                             </div>
+
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-clock me-2"></i>Collection Settings</h6>
                             
                             <div class="mb-3">
-                                <label for="apiKey" class="form-label">API Key</label>
-                                <input type="text" class="form-control" id="apiKey" value="your-api-key" oninput="updateConfigJson()">
-                                <div class="form-text">Secure API key for client authentication</div>
+                                <label for="intervalMinutes" class="form-label">Collection Interval (minutes)</label>
+                                <input type="number" class="form-control" id="intervalMinutes" value="5" min="1" max="60" oninput="updateConfigJson()">
+                                <div class="form-text">How often to collect browser data (1-60 minutes)</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="maxHistoryDays" class="form-label">Max History Days</label>
+                                <input type="number" class="form-control" id="maxHistoryDays" value="30" min="1" max="365" oninput="updateConfigJson()">
+                                <div class="form-text">How many days of history to keep (1-365 days)</div>
                             </div>
 
-                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-directory-tree me-2"></i>LDAP Settings</h6>
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-users me-2"></i>User Monitoring</h6>
                             
                             <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="ldapEnabled" checked onchange="updateConfigJson()">
-                                    <label class="form-check-label" for="ldapEnabled">
-                                        Enable LDAP Authentication
-                                    </label>
-                                </div>
+                                <label for="monitoredUsersGroup" class="form-label">Monitored Users Group</label>
+                                <input type="text" class="form-control" id="monitoredUsersGroup" value="" oninput="updateConfigJson()">
+                                <div class="form-text">Active Directory group name to monitor (leave empty to monitor all users)</div>
                             </div>
                             
-                            <div id="ldapSettings">
-                                <div class="mb-3">
-                                    <label for="ldapServer" class="form-label">LDAP Server</label>
-                                    <input type="text" class="form-control" id="ldapServer" value="ldap://dc.company.com:389" oninput="updateConfigJson()">
-                                    <div class="form-text">LDAP server URL with port</div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="bindDn" class="form-label">Bind DN</label>
-                                    <input type="text" class="form-control" id="bindDn" value="CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com" oninput="updateConfigJson()">
-                                    <div class="form-text">Service account for LDAP binding</div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="bindPassword" class="form-label">Bind Password</label>
-                                    <input type="password" class="form-control" id="bindPassword" value="service-account-password" oninput="updateConfigJson()">
-                                    <div class="form-text">Service account password</div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="baseDn" class="form-label">Base DN</label>
-                                    <input type="text" class="form-control" id="baseDn" value="DC=company,DC=com" oninput="updateConfigJson()">
-                                    <div class="form-text">LDAP search base</div>
-                                </div>
+                            <div class="mb-3">
+                                <label for="monitoredUsers" class="form-label">Individual Users to Monitor</label>
+                                <textarea class="form-control" id="monitoredUsers" rows="3" placeholder="user1&#10;user2&#10;user3" oninput="updateConfigJson()"></textarea>
+                                <div class="form-text">One username per line. Leave empty to use group-based monitoring</div>
                             </div>
 
-                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-users me-2"></i>Security Groups</h6>
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-clock me-2"></i>Time-Based Monitoring</h6>
                             
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="securityGroupsEnabled" onchange="updateConfigJson()">
-                                    <label class="form-check-label" for="securityGroupsEnabled">
-                                        Enable Security Group Filtering
-                                    </label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="monitorStartTime" class="form-label">Start Time</label>
+                                        <input type="time" class="form-control" id="monitorStartTime" value="00:00" oninput="updateConfigJson()">
+                                        <div class="form-text">When to start monitoring</div>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div id="securityGroupSettings" style="display: none;">
-                                <div class="mb-3">
-                                    <label for="allowedGroups" class="form-label">Allowed Groups (Distinguished Names)</label>
-                                    <textarea class="form-control" id="allowedGroups" rows="4" placeholder="CN=Domain Users,CN=Users,DC=company,DC=com&#10;CN=IT Staff,OU=SecurityGroups,DC=company,DC=com&#10;CN=Administrators,CN=Builtin,DC=company,DC=com" oninput="updateConfigJson()"></textarea>
-                                    <div class="form-text">One group DN per line. Use full Distinguished Names (CN=GroupName,OU=...,DC=...)</div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="monitorEndTime" class="form-label">End Time</label>
+                                        <input type="time" class="form-control" id="monitorEndTime" value="23:59" oninput="updateConfigJson()">
+                                        <div class="form-text">When to stop monitoring</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -655,36 +632,33 @@
                                         <i class="fab fa-edge me-1"></i>Microsoft Edge
                                     </label>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="firefoxEnabled" onchange="updateConfigJson()">
-                                    <label class="form-check-label" for="firefoxEnabled">
-                                        <i class="fab fa-firefox me-1"></i>Mozilla Firefox
-                                    </label>
+                            </div>
+
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-file-alt me-2"></i>Logging Settings</h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="logMaxMb" class="form-label">Max Log Size (MB)</label>
+                                        <input type="number" class="form-control" id="logMaxMb" value="5" min="1" max="100" oninput="updateConfigJson()">
+                                        <div class="form-text">Maximum log file size in megabytes</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="logRollCount" class="form-label">Log Roll Count</label>
+                                        <input type="number" class="form-control" id="logRollCount" value="3" min="1" max="10" oninput="updateConfigJson()">
+                                        <div class="form-text">Number of log files to keep</div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-clock me-2"></i>Collection Settings</h6>
+                            <h6 class="text-info mb-3 mt-4"><i class="fas fa-lock me-2"></i>Application Security</h6>
                             
                             <div class="mb-3">
-                                <label for="intervalMinutes" class="form-label">Collection Interval (minutes)</label>
-                                <input type="number" class="form-control" id="intervalMinutes" value="5" min="1" max="60" oninput="updateConfigJson()">
-                                <div class="form-text">How often to collect browser data (1-60 minutes)</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="maxHistoryDays" class="form-label">Max History Days</label>
-                                <input type="number" class="form-control" id="maxHistoryDays" value="30" min="1" max="365" oninput="updateConfigJson()">
-                                <div class="form-text">How many days of history to keep (1-365 days)</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="deduplicationEnabled" checked onchange="updateConfigJson()">
-                                    <label class="form-check-label" for="deduplicationEnabled">
-                                        Enable Deduplication
-                                    </label>
-                                </div>
-                                <div class="form-text">Remove duplicate URL visits within the same session</div>
+                                <label for="exitPassword" class="form-label">Exit Password</label>
+                                <input type="text" class="form-control" id="exitPassword" value="BRAdmin2025" oninput="updateConfigJson()">
+                                <div class="form-text">Password required to exit the application from system tray</div>
                             </div>
 
                             <h6 class="text-info mb-3 mt-4"><i class="fas fa-code me-2"></i>Generated Configuration</h6>
@@ -1566,122 +1540,90 @@
         }
 
         function populateFormFromConfig(config) {
-            // Populate organization settings (keep for backward compatibility)
-            document.getElementById('orgName').value = config.organization || 'YourCompany';
+            // Populate server settings
+            document.getElementById('serverUrl').value = config.server_url || 'http://browserreporter:8000';
             
-            // Populate server settings (handle both old nested and new flat format)
-            if (config.server_url) {
-                // New format
-                document.getElementById('serverUrl').value = config.server_url;
-                document.getElementById('apiKey').value = config.api_key || 'your-secure-api-key-here';
+            // Populate collection settings
+            document.getElementById('intervalMinutes').value = config.sync_interval_minutes || 5;
+            document.getElementById('maxHistoryDays').value = Math.floor((config.max_history_age_hours || 24) / 24);
+            
+            // Populate user monitoring settings
+            document.getElementById('monitoredUsersGroup').value = config.monitored_users_group || '';
+            if (Array.isArray(config.monitored_users)) {
+                document.getElementById('monitoredUsers').value = config.monitored_users.join('\n');
             } else {
-                // Old format
-                document.getElementById('serverUrl').value = config.server?.url || 'http://browserreporter:8000';
-                document.getElementById('apiKey').value = config.server?.api_key || 'your-secure-api-key-here';
+                document.getElementById('monitoredUsers').value = '';
             }
             
-            // Populate LDAP settings
-            document.getElementById('ldapEnabled').checked = config.ldap?.enabled !== false;
-            document.getElementById('ldapServer').value = config.ldap?.server || 'ldap://dc.company.com:389';
-            document.getElementById('bindDn').value = config.ldap?.bind_dn || 'CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com';
-            document.getElementById('bindPassword').value = config.ldap?.bind_password || 'service-account-password';
-            document.getElementById('baseDn').value = config.ldap?.base_dn || 'DC=company,DC=com';
-            
-            // Populate security groups (handle both old object format and new array format)
-            let groupsEnabled = false;
-            let groupsList = [];
-            
-            if (config.enable_group_filtering !== undefined) {
-                // New format: enable_group_filtering boolean + security_groups array
-                groupsEnabled = config.enable_group_filtering === true;
-                if (Array.isArray(config.security_groups)) {
-                    groupsList = config.security_groups;
-                }
-            } else if (config.security_groups?.enabled !== undefined) {
-                // Old format: security_groups.enabled + security_groups.allowed_groups
-                groupsEnabled = config.security_groups.enabled === true;
-                if (Array.isArray(config.security_groups.allowed_groups)) {
-                    groupsList = config.security_groups.allowed_groups;
-                }
-            }
-            
-            document.getElementById('securityGroupsEnabled').checked = groupsEnabled;
-            if (groupsList.length > 0) {
-                document.getElementById('allowedGroups').value = groupsList.join('\n');
+            // Populate time-based monitoring
+            if (config.monitored_hours) {
+                document.getElementById('monitorStartTime').value = config.monitored_hours.start || '00:00';
+                document.getElementById('monitorEndTime').value = config.monitored_hours.end || '23:59';
             } else {
-                document.getElementById('allowedGroups').value = 'CN=RegularUsers,OU=SecurityGroups,DC=yourdomain,DC=com\nCN=SalesTeam,OU=SecurityGroups,DC=yourdomain,DC=com\nCN=MarketingTeam,OU=SecurityGroups,DC=yourdomain,DC=com';
+                document.getElementById('monitorStartTime').value = '00:00';
+                document.getElementById('monitorEndTime').value = '23:59';
             }
             
-            // Populate browser settings (handle old format if present)
-            document.getElementById('chromeEnabled').checked = config.browsers?.chrome !== false;
-            document.getElementById('edgeEnabled').checked = config.browsers?.edge !== false;
-            document.getElementById('firefoxEnabled').checked = config.browsers?.firefox === true;
-            
-            // Populate collection settings (handle both old and new format)
-            if (config.sync_interval_minutes) {
-                // New format
-                document.getElementById('intervalMinutes').value = config.sync_interval_minutes;
-                document.getElementById('maxHistoryDays').value = Math.floor(config.max_history_age_hours / 24); // Convert hours to days
+            // Populate browser settings
+            if (Array.isArray(config.browsers)) {
+                document.getElementById('chromeEnabled').checked = config.browsers.includes('chrome');
+                document.getElementById('edgeEnabled').checked = config.browsers.includes('edge');
             } else {
-                // Old format
-                document.getElementById('intervalMinutes').value = config.collection?.interval_minutes || 5;
-                document.getElementById('maxHistoryDays').value = config.collection?.max_history_days || 30;
+                document.getElementById('chromeEnabled').checked = true;
+                document.getElementById('edgeEnabled').checked = true;
             }
-            document.getElementById('deduplicationEnabled').checked = config.collection?.deduplication !== false;
+            
+            // Populate logging settings
+            document.getElementById('logMaxMb').value = config.log_max_mb || 5;
+            document.getElementById('logRollCount').value = config.log_roll_count || 3;
+            
+            // Populate exit password
+            document.getElementById('exitPassword').value = config.exit_password || 'BRAdmin2025';
         }
 
         function resetToDefaults() {
             // Reset all form fields to defaults
-            document.getElementById('orgName').value = 'YourCompany';
             document.getElementById('serverUrl').value = 'http://browserreporter:8000';
-            document.getElementById('apiKey').value = 'your-secure-api-key-here';
-            document.getElementById('ldapEnabled').checked = true;
-            document.getElementById('ldapServer').value = 'ldap://dc.company.com:389';
-            document.getElementById('bindDn').value = 'CN=ServiceAccount,OU=ServiceAccounts,DC=company,DC=com';
-            document.getElementById('bindPassword').value = 'service-account-password';
-            document.getElementById('baseDn').value = 'DC=company,DC=com';
-            document.getElementById('securityGroupsEnabled').checked = false;
-            document.getElementById('allowedGroups').value = 'CN=RegularUsers,OU=SecurityGroups,DC=yourdomain,DC=com\nCN=SalesTeam,OU=SecurityGroups,DC=yourdomain,DC=com\nCN=MarketingTeam,OU=SecurityGroups,DC=yourdomain,DC=com';
-            document.getElementById('chromeEnabled').checked = true;
-            document.getElementById('edgeEnabled').checked = true;
-            document.getElementById('firefoxEnabled').checked = false;
             document.getElementById('intervalMinutes').value = '5';
             document.getElementById('maxHistoryDays').value = '30';
-            document.getElementById('deduplicationEnabled').checked = true;
+            document.getElementById('monitoredUsersGroup').value = '';
+            document.getElementById('monitoredUsers').value = '';
+            document.getElementById('monitorStartTime').value = '00:00';
+            document.getElementById('monitorEndTime').value = '23:59';
+            document.getElementById('chromeEnabled').checked = true;
+            document.getElementById('edgeEnabled').checked = true;
+            document.getElementById('logMaxMb').value = '5';
+            document.getElementById('logRollCount').value = '3';
+            document.getElementById('exitPassword').value = 'BRAdmin2025';
             
             updateConfigJson();
         }
 
         function updateConfigJson() {
-            // Toggle LDAP settings visibility
-            const ldapEnabled = document.getElementById('ldapEnabled').checked;
-            document.getElementById('ldapSettings').style.display = ldapEnabled ? 'block' : 'none';
+            // Build browsers array
+            const browsers = [];
+            if (document.getElementById('chromeEnabled').checked) browsers.push('chrome');
+            if (document.getElementById('edgeEnabled').checked) browsers.push('edge');
             
-            // Toggle security groups settings visibility
-            const securityGroupsEnabled = document.getElementById('securityGroupsEnabled').checked;
-            document.getElementById('securityGroupSettings').style.display = securityGroupsEnabled ? 'block' : 'none';
+            // Build monitored users array
+            const monitoredUsersText = document.getElementById('monitoredUsers').value;
+            const monitoredUsers = monitoredUsersText ? monitoredUsersText.split('\n').map(u => u.trim()).filter(u => u) : [];
             
             // Build config object from form values (Windows collector format)
             const config = {
                 server_url: document.getElementById('serverUrl').value,
-                api_key: document.getElementById('apiKey').value,
                 sync_interval_minutes: parseInt(document.getElementById('intervalMinutes').value),
                 max_history_age_hours: parseInt(document.getElementById('maxHistoryDays').value) * 24, // Convert days to hours
-                cleanup_interval_hours: 24,
-                enable_group_filtering: securityGroupsEnabled,
-                security_groups: securityGroupsEnabled ? 
-                    document.getElementById('allowedGroups').value.split('\n').map(g => g.trim()).filter(g => g) : 
-                    [],
-                config_server: document.getElementById('serverUrl').value.replace(/\/$/, '') + "/secureconfig.json",
-                config_refresh_hours: 24,
-                ldap: {
-                    server: document.getElementById('ldapServer').value,
-                    bind_dn: document.getElementById('bindDn').value,
-                    bind_password: document.getElementById('bindPassword').value,
-                    base_dn: document.getElementById('baseDn').value,
-                    user_search_base: document.getElementById('baseDn').value,
-                    attributes: ["sAMAccountName", "givenName", "sn", "department", "mail", "displayName"]
-                }
+                monitored_users_group: document.getElementById('monitoredUsersGroup').value,
+                monitored_users: monitoredUsers,
+                monitored_hours: {
+                    start: document.getElementById('monitorStartTime').value,
+                    end: document.getElementById('monitorEndTime').value
+                },
+                browsers: browsers,
+                log_max_mb: parseInt(document.getElementById('logMaxMb').value),
+                log_roll_count: parseInt(document.getElementById('logRollCount').value),
+                exit_password: document.getElementById('exitPassword').value
             };
             
             // Update JSON textarea with formatted config

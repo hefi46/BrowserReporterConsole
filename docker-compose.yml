@@ -19,7 +19,6 @@ services:
     depends_on:
       - db
     environment:
-      API_KEY: ${API_KEY:-your-secure-api-key-here}
       SESSION_SECRET: ${SESSION_SECRET:-changeme-session-secret}
       DATABASE_URL: postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
     ports:

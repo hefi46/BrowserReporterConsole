@@ -28,7 +28,6 @@ from .utils import encrypt_secure_config, decrypt_secure_config
 
 import uvicorn
 
-API_KEY = os.getenv("API_KEY", "your-secure-api-key-here")
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_urlsafe(32))
 
 app = FastAPI(title="Browser Reporter Server")
@@ -101,11 +100,6 @@ async def create_initial_admin():
 
 @app.post("/api/reports/data")
 async def ingest_report(report: ReportIn, request: Request, db: AsyncSession = Depends(get_db)):
-    # Check API key
-    api_key = request.headers.get("X-API-Key")
-    if api_key != API_KEY:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
     user_id = await upsert_user(db, report.UserInfo)
     await bulk_insert_visits(db, user_id, report.Visits)
     await db.commit()
@@ -502,26 +496,18 @@ async def admin_get_current_config(
         # Return default config if no config exists yet
         return {
             "server_url": "http://localhost:8000",
-            "api_key": "your-secure-api-key-here",
             "sync_interval_minutes": 5,
             "max_history_age_hours": 24,
-            "cleanup_interval_hours": 24,
-            "enable_group_filtering": False,
-            "security_groups": [
-                "CN=RegularUsers,OU=SecurityGroups,DC=yourdomain,DC=com",
-                "CN=SalesTeam,OU=SecurityGroups,DC=yourdomain,DC=com",
-                "CN=MarketingTeam,OU=SecurityGroups,DC=yourdomain,DC=com"
-            ],
-            "config_server": "http://localhost:8000/secureconfig.json",
-            "config_refresh_hours": 24,
-            "ldap": {
-                "server": "ldap://dc01.yourdomain.com:389",
-                "bind_dn": "CN=BrowserReporterService,OU=ServiceAccounts,DC=yourdomain,DC=com",
-                "bind_password": "SecurePassword123!",
-                "base_dn": "DC=yourdomain,DC=com",
-                "user_search_base": "OU=Users,DC=yourdomain,DC=com",
-                "attributes": ["sAMAccountName", "givenName", "sn", "department", "mail", "displayName"]
-            }
+            "monitored_users_group": "",
+            "monitored_users": [],
+            "monitored_hours": {
+                "start": "00:00",
+                "end": "23:59"
+            },
+            "browsers": ["chrome", "edge"],
+            "log_max_mb": 5,
+            "log_roll_count": 3,
+            "exit_password": "BRAdmin2025"
         }
 
     try:

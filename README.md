@@ -53,7 +53,6 @@ A comprehensive dashboard system for collecting and analyzing browsing history d
 
 5. **Configure your browser extension:**
    - API Endpoint: `http://localhost:8000/api/reports/data`
-   - API Key: `your-secure-api-key-here` (default)
 
 ## Project Structure
 
@@ -113,7 +112,6 @@ admin2,securepass456,admin
 ## Environment Variables
 
 - `DATABASE_URL`: PostgreSQL connection string
-- `API_KEY`: Secure API key for data collection endpoints
 - `SECRET_KEY`: Session encryption key
 
 ## Development
@@ -139,10 +137,9 @@ The application uses SQLAlchemy models for:
 ## Security Notes
 
 1. Change default admin password immediately
-2. Update API_KEY in production environment
-3. Use HTTPS in production
-4. Review user permissions regularly
-5. Monitor API usage and access logs
+2. Use HTTPS in production
+3. Review user permissions regularly
+4. Monitor API usage and access logs
 
 ## Contributing
 
