@@ -2,6 +2,18 @@
 
 A comprehensive dashboard system for collecting and analyzing browsing history data from browser extensions, built with FastAPI and PostgreSQL.
 
+## Recent Performance Improvements (v2.1)
+
+**✅ Fixed User Details Pagination Performance Issues**
+- Implemented server-side pagination for user details view
+- Added pagination controls with page size options (25, 50, 100, 200 records per page)
+- Optimized API endpoint to load data in chunks instead of all at once
+- Improved DOM rendering performance for large datasets
+- Added proper loading states and error handling
+- Export functionality now handles large datasets efficiently
+
+*These changes resolve the "slow and chunky" performance when navigating user details with large browsing history datasets.*
+
 ## Features
 
 ### User Management

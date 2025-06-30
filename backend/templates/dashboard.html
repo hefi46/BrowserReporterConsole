@@ -358,6 +358,52 @@
                             </table>
                         </div>
 
+                        <!-- Pagination Controls -->
+                        <div id="userDetailsPagination" style="display: none;" class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="d-flex align-items-center">
+                                <span class="text-muted me-3">
+                                    <small>
+                                        Showing <span id="showingStart">0</span>-<span id="showingEnd">0</span> of <span id="totalRecords">0</span> records
+                                    </small>
+                                </span>
+                                <select class="form-select form-select-sm" id="pageSizeSelect" onchange="changePageSize()" style="width: auto;">
+                                    <option value="25">25 per page</option>
+                                    <option value="50" selected>50 per page</option>
+                                    <option value="100">100 per page</option>
+                                    <option value="200">200 per page</option>
+                                </select>
+                            </div>
+                            <nav aria-label="User details pagination">
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item" id="prevPageItem">
+                                        <a class="page-link" href="#" onclick="goToPage(currentPage - 1)">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item" id="firstPageItem">
+                                        <a class="page-link" href="#" onclick="goToPage(1)">1</a>
+                                    </li>
+                                    <li class="page-item" id="prevEllipsis" style="display: none;">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                    <li class="page-item" id="currentPageItem">
+                                        <span class="page-link bg-primary text-white" id="currentPageNumber">1</span>
+                                    </li>
+                                    <li class="page-item" id="nextEllipsis" style="display: none;">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                    <li class="page-item" id="lastPageItem">
+                                        <a class="page-link" href="#" id="lastPageLink" onclick="goToPage(totalPages)">1</a>
+                                    </li>
+                                    <li class="page-item" id="nextPageItem">
+                                        <a class="page-link" href="#" onclick="goToPage(currentPage + 1)">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+
                         <div id="noUserDetailsMessage" style="display: none;" class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>
                             No browsing data found for this user.
@@ -949,11 +995,21 @@
         let currentUserDetails = [];
         let allUserDetails = [];
         let currentUserForDetails = '';
+        let currentPage = 1;
+        let pageSize = 50;
+        let totalPages = 1;
+        let totalRecords = 0;
+        let currentDaysFilter = null;
 
         // View user details
         async function viewUserDetails(username) {
             currentUserForDetails = username;
             document.getElementById('modalUsername').textContent = username;
+            
+            // Reset pagination state
+            currentPage = 1;
+            pageSize = 50;
+            currentDaysFilter = null;
             
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
@@ -963,52 +1019,68 @@
             document.getElementById('userDetailsLoading').style.display = 'block';
             document.getElementById('userDetailsContent').style.display = 'none';
             document.getElementById('userDetailsError').style.display = 'none';
+            document.getElementById('userDetailsPagination').style.display = 'none';
             document.getElementById('dayFilter').value = '';
             document.getElementById('urlSearch').value = '';
+            document.getElementById('pageSizeSelect').value = '50';
             
             try {
-                await loadUserDetails(username);
+                await loadUserDetails(username, null, currentPage, pageSize);
             } catch (error) {
                 showUserDetailsError('Failed to load user details: ' + error.message);
             }
         }
 
         // Load user details from API
-        async function loadUserDetails(username, days = null) {
-            const url = `/api/reports/user/${encodeURIComponent(username)}${days ? `?days=${days}` : ''}`;
+        async function loadUserDetails(username, days = null, page = 1, page_size = 50) {
+            const params = new URLSearchParams();
+            if (days) params.append('days', days);
+            params.append('page', page);
+            params.append('page_size', page_size);
+            
+            const url = `/api/reports/user/${encodeURIComponent(username)}?${params.toString()}`;
             const response = await fetch(url);
             
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}: ${response.statusText}`);
             }
             
-            allUserDetails = await response.json();
-            currentUserDetails = allUserDetails;
+            const result = await response.json();
+            currentUserDetails = result.data;
+            
+            // Update pagination state
+            currentPage = result.pagination.page;
+            pageSize = result.pagination.page_size;
+            totalPages = result.pagination.total_pages;
+            totalRecords = result.pagination.total_count;
+            currentDaysFilter = days;
             
             displayUserDetails();
+            updatePaginationControls();
         }
 
         // Display user details in modal
         function displayUserDetails() {
             document.getElementById('userDetailsLoading').style.display = 'none';
             
-            if (currentUserDetails.length === 0) {
+            if (totalRecords === 0) {
                 document.getElementById('userDetailsContent').style.display = 'none';
                 document.getElementById('noUserDetailsMessage').style.display = 'block';
+                document.getElementById('userDetailsPagination').style.display = 'none';
                 return;
             }
             
             document.getElementById('userDetailsContent').style.display = 'block';
             document.getElementById('noUserDetailsMessage').style.display = 'none';
+            document.getElementById('userDetailsPagination').style.display = totalPages > 1 ? 'flex' : 'none';
             
-            // Update summary stats
-            const totalVisits = currentUserDetails.length;
+            // Update summary stats (show total counts, not just current page)
             const uniqueUrls = new Set(currentUserDetails.map(d => d.url)).size;
             const lastActivity = currentUserDetails.length > 0 ? 
                 new Date(Math.max(...currentUserDetails.map(d => new Date(d.timestamp)))).toLocaleDateString() : 'Never';
             
-            document.getElementById('detailTotalVisits').textContent = totalVisits.toLocaleString();
-            document.getElementById('detailUniqueUrls').textContent = uniqueUrls.toLocaleString();
+            document.getElementById('detailTotalVisits').textContent = totalRecords.toLocaleString();
+            document.getElementById('detailUniqueUrls').textContent = `${uniqueUrls} (on this page)`;
             document.getElementById('detailLastActivity').textContent = lastActivity;
             
             // Display table
@@ -1045,31 +1117,111 @@
             const days = document.getElementById('dayFilter').value;
             const searchTerm = document.getElementById('urlSearch').value.toLowerCase();
             
+            // Reset to page 1 when filtering
+            currentPage = 1;
+            
             // If days filter changed, reload from server
-            if (days && currentUserDetails === allUserDetails) {
+            if (days !== currentDaysFilter) {
                 document.getElementById('userDetailsLoading').style.display = 'block';
                 document.getElementById('userDetailsContent').style.display = 'none';
                 try {
-                    await loadUserDetails(currentUserForDetails, parseInt(days));
+                    await loadUserDetails(currentUserForDetails, days ? parseInt(days) : null, currentPage, pageSize);
                 } catch (error) {
                     showUserDetailsError('Failed to filter data: ' + error.message);
                     return;
                 }
-            } else if (!days) {
-                currentUserDetails = allUserDetails;
+            } else {
+                // If only search term changed, reload with current filters
+                try {
+                    await loadUserDetails(currentUserForDetails, currentDaysFilter, currentPage, pageSize);
+                } catch (error) {
+                    showUserDetailsError('Failed to filter data: ' + error.message);
+                    return;
+                }
             }
             
-            // Apply search filter
-            if (searchTerm) {
-                currentUserDetails = (days ? currentUserDetails : allUserDetails).filter(item =>
-                    (item.title || '').toLowerCase().includes(searchTerm) ||
-                    (item.url || '').toLowerCase().includes(searchTerm)
-                );
-            } else if (!days) {
-                currentUserDetails = allUserDetails;
-            }
+            // Note: Server-side search filtering would be better for performance
+            // For now, we reload the page when filters change
+        }
+
+        // Pagination functions
+        async function goToPage(page) {
+            if (page < 1 || page > totalPages || page === currentPage) return;
             
-            displayUserDetails();
+            document.getElementById('userDetailsLoading').style.display = 'block';
+            document.getElementById('userDetailsContent').style.display = 'none';
+            
+            try {
+                await loadUserDetails(currentUserForDetails, currentDaysFilter, page, pageSize);
+            } catch (error) {
+                showUserDetailsError('Failed to load page: ' + error.message);
+            }
+        }
+
+        async function changePageSize() {
+            const newPageSize = parseInt(document.getElementById('pageSizeSelect').value);
+            if (newPageSize === pageSize) return;
+            
+            pageSize = newPageSize;
+            currentPage = 1; // Reset to first page when changing page size
+            
+            document.getElementById('userDetailsLoading').style.display = 'block';
+            document.getElementById('userDetailsContent').style.display = 'none';
+            
+            try {
+                await loadUserDetails(currentUserForDetails, currentDaysFilter, currentPage, pageSize);
+            } catch (error) {
+                showUserDetailsError('Failed to change page size: ' + error.message);
+            }
+        }
+
+        function updatePaginationControls() {
+            if (totalPages <= 1) return;
+            
+            // Update page size selector
+            document.getElementById('pageSizeSelect').value = pageSize;
+            
+            // Update pagination info
+            const start = (currentPage - 1) * pageSize + 1;
+            const end = Math.min(currentPage * pageSize, totalRecords);
+            document.getElementById('showingStart').textContent = start;
+            document.getElementById('showingEnd').textContent = end;
+            document.getElementById('totalRecords').textContent = totalRecords;
+            
+            // Update pagination buttons
+            const prevPageItem = document.getElementById('prevPageItem');
+            const nextPageItem = document.getElementById('nextPageItem');
+            const firstPageItem = document.getElementById('firstPageItem');
+            const lastPageItem = document.getElementById('lastPageItem');
+            const currentPageItem = document.getElementById('currentPageItem');
+            const prevEllipsis = document.getElementById('prevEllipsis');
+            const nextEllipsis = document.getElementById('nextEllipsis');
+            
+            // Enable/disable navigation buttons
+            prevPageItem.classList.toggle('disabled', currentPage <= 1);
+            nextPageItem.classList.toggle('disabled', currentPage >= totalPages);
+            
+            // Update current page display
+            document.getElementById('currentPageNumber').textContent = currentPage;
+            document.getElementById('lastPageLink').textContent = totalPages;
+            
+            // Show/hide page elements based on total pages
+            if (totalPages <= 1) {
+                firstPageItem.style.display = 'none';
+                lastPageItem.style.display = 'none';
+                currentPageItem.style.display = 'none';
+            } else if (totalPages <= 3) {
+                firstPageItem.style.display = currentPage === 1 ? 'none' : 'block';
+                lastPageItem.style.display = currentPage === totalPages ? 'none' : 'block';
+                prevEllipsis.style.display = 'none';
+                nextEllipsis.style.display = 'none';
+            } else {
+                // Show ellipsis for large page counts
+                firstPageItem.style.display = currentPage <= 2 ? 'none' : 'block';
+                lastPageItem.style.display = currentPage >= totalPages - 1 ? 'none' : 'block';
+                prevEllipsis.style.display = currentPage > 3 ? 'block' : 'none';
+                nextEllipsis.style.display = currentPage < totalPages - 2 ? 'block' : 'none';
+            }
         }
 
         // Show error in user details modal
@@ -1081,34 +1233,60 @@
         }
 
         // Export user details
-        function exportUserDetails() {
-            if (currentUserDetails.length === 0) {
+        async function exportUserDetails() {
+            if (totalRecords === 0) {
                 alert('No data to export');
                 return;
             }
             
-            // Create CSV content
-            const headers = ['Timestamp', 'Title', 'URL', 'Computer'];
-            const csvContent = [
-                headers.join(','),
-                ...currentUserDetails.map(item => [
-                    `"${new Date(item.timestamp).toISOString()}"`,
-                    `"${(item.title || 'No Title').replace(/"/g, '""')}"`,
-                    `"${item.url.replace(/"/g, '""')}"`,
-                    `"${(item.computerName || 'Unknown').replace(/"/g, '""')}"`
-                ].join(','))
-            ].join('\n');
+            // For large datasets, confirm export
+            if (totalRecords > 1000) {
+                const confirm = window.confirm(`This will export ${totalRecords.toLocaleString()} records. This may take a moment. Continue?`);
+                if (!confirm) return;
+            }
             
-            // Download file
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${currentUserForDetails}_browsing_history.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+            try {
+                // Get all data for export (without pagination)
+                const params = new URLSearchParams();
+                if (currentDaysFilter) params.append('days', currentDaysFilter);
+                params.append('page_size', '10000'); // Large page size to get all data
+                
+                const url = `/api/reports/user/${encodeURIComponent(currentUserForDetails)}?${params.toString()}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                const allData = result.data;
+                
+                // Create CSV content
+                const headers = ['Timestamp', 'Title', 'URL', 'Computer'];
+                const csvContent = [
+                    headers.join(','),
+                    ...allData.map(item => [
+                        `"${new Date(item.timestamp).toISOString()}"`,
+                        `"${(item.title || 'No Title').replace(/"/g, '""')}"`,
+                        `"${item.url.replace(/"/g, '""')}"`,
+                        `"${(item.computerName || 'Unknown').replace(/"/g, '""')}"`
+                    ].join(','))
+                ].join('\n');
+                
+                // Download file
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `${currentUserForDetails}_browsing_history.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+                
+            } catch (error) {
+                alert('Export failed: ' + error.message);
+            }
         }
 
         // Export data

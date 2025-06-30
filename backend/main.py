@@ -199,8 +199,15 @@ async def reports_all(db: AsyncSession = Depends(get_db), request: Request = Non
 
 
 @app.get("/api/reports/user/{username}")
-async def reports_user(username: str, request: Request, days: int | None = None, db: AsyncSession = Depends(get_db)):
+async def reports_user(username: str, request: Request, days: int | None = None, page: int = 1, page_size: int = 50, db: AsyncSession = Depends(get_db)):
     require_login(request)
+    
+    # Validate pagination parameters
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 1000:  # Limit max page size to prevent abuse
+        page_size = 50
+    
     # Get user id
     result = await db.execute(select(User.id).where(User.username == username))
     user_id_row = result.scalar_one_or_none()
@@ -208,24 +215,53 @@ async def reports_user(username: str, request: Request, days: int | None = None,
         raise HTTPException(status_code=404, detail="User not found")
     user_id = user_id_row
 
+    # Build base query
     query = select(Visit).where(Visit.user_id == user_id)
     if days:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         query = query.where(Visit.visit_time >= cutoff)
+    
+    # Get total count for pagination
+    count_query = select(func.count(Visit.id)).where(Visit.user_id == user_id)
+    if days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        count_query = count_query.where(Visit.visit_time >= cutoff)
+    
+    total_result = await db.execute(count_query)
+    total_count = total_result.scalar()
+    
+    # Apply pagination
     query = query.order_by(Visit.visit_time.desc())
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
 
     result = await db.execute(query)
     visits = result.scalars().all()
 
-    return [
-        {
-            "timestamp": v.visit_time.isoformat(),
-            "title": v.title,
-            "url": v.url,
-            "computerName": v.computer_name,
+    # Calculate pagination metadata
+    total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
+    has_next = page < total_pages
+    has_prev = page > 1
+
+    return {
+        "data": [
+            {
+                "timestamp": v.visit_time.isoformat(),
+                "title": v.title,
+                "url": v.url,
+                "computerName": v.computer_name,
+            }
+            for v in visits
+        ],
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev
         }
-        for v in visits
-    ]
+    }
 
 
 # Admin Management API Endpoints -------------------------------------
