@@ -527,6 +527,11 @@
                                     <option value="30">Last 30 Days</option>
                                 </select>
                             </div>
+                            <div class="col-md-6">
+                                <label for="websiteFilter" class="form-label">Filter by Website/URL</label>
+                                <input type="text" class="form-control" id="websiteFilter" placeholder="e.g., youtube, facebook, github..." oninput="filterDisplayedData()">
+                                <div class="form-text">Filter currently loaded data by website name or URL</div>
+                            </div>
                         </div>
 
                         <!-- Browsing History Table -->
@@ -1209,6 +1214,7 @@
             document.getElementById('userDetailsError').style.display = 'none';
             document.getElementById('userDetailsPagination').style.display = 'none';
             document.getElementById('dayFilter').value = '';
+            document.getElementById('websiteFilter').value = '';
             document.getElementById('pageSizeSelect').value = '50';
             
             try {
@@ -1234,6 +1240,7 @@
             
             const result = await response.json();
             currentUserDetails = result.data;
+            originalUserDetails = result.data; // Store original data for filtering
             
             // Update pagination state
             currentPage = result.pagination.page;
@@ -1257,22 +1264,93 @@
                 return;
             }
             
+            // Use the new display function to show all current data
+            updateUserDetailsDisplay(currentUserDetails);
+        }
+
+        // Store original data for filtering
+        let originalUserDetails = null;
+
+        // Filter user details by time period only
+        async function filterUserDetails() {
+            const days = document.getElementById('dayFilter').value;
+            
+            // Reset to page 1 when filtering
+            currentPage = 1;
+            
+            // If days filter changed, reload from server
+            if (days !== currentDaysFilter) {
+                // Clear website filter when time period changes
+                document.getElementById('websiteFilter').value = '';
+                
+                document.getElementById('userDetailsLoading').style.display = 'block';
+                document.getElementById('userDetailsContent').style.display = 'none';
+                try {
+                    await loadUserDetails(currentUserForDetails, days ? parseFloat(days) : null, currentPage, pageSize);
+                } catch (error) {
+                    showUserDetailsError('Failed to filter data: ' + error.message);
+                    return;
+                }
+            }
+        }
+
+        // Filter displayed data locally by website/URL
+        function filterDisplayedData() {
+            const searchTerm = document.getElementById('websiteFilter').value.toLowerCase().trim();
+            
+            if (!originalUserDetails) {
+                return; // No data loaded yet
+            }
+
+            let filteredData = originalUserDetails;
+            
+            // Apply search filter if there's a search term
+            if (searchTerm) {
+                filteredData = originalUserDetails.filter(item => 
+                    (item.url && item.url.toLowerCase().includes(searchTerm)) ||
+                    (item.title && item.title.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            // Update the display with filtered data
+            updateUserDetailsDisplay(filteredData);
+        }
+
+        // Update the user details display with specific data
+        function updateUserDetailsDisplay(dataToShow) {
+            if (dataToShow.length === 0) {
+                document.getElementById('userDetailsContent').style.display = 'none';
+                document.getElementById('noUserDetailsMessage').style.display = 'block';
+                document.getElementById('userDetailsPagination').style.display = 'none';
+                return;
+            }
+            
             document.getElementById('userDetailsContent').style.display = 'block';
             document.getElementById('noUserDetailsMessage').style.display = 'none';
-            document.getElementById('userDetailsPagination').style.display = totalPages > 1 ? 'flex' : 'none';
             
-            // Update summary stats (show total counts, not just current page)
-            const uniqueUrls = new Set(currentUserDetails.map(d => d.url)).size;
-            const lastActivity = currentUserDetails.length > 0 ? 
-                new Date(Math.max(...currentUserDetails.map(d => new Date(d.timestamp)))).toLocaleDateString() : 'Never';
+            // Update summary stats
+            const uniqueUrls = new Set(dataToShow.map(d => d.url)).size;
+            const lastActivity = dataToShow.length > 0 ? 
+                new Date(Math.max(...dataToShow.map(d => new Date(d.timestamp)))).toLocaleDateString() : 'Never';
             
-            document.getElementById('detailTotalVisits').textContent = totalRecords.toLocaleString();
-            document.getElementById('detailUniqueUrls').textContent = `${uniqueUrls} (on this page)`;
+            const filterTerm = document.getElementById('websiteFilter').value.trim();
+            
+            // Show different stats based on whether we're filtering or not
+            if (filterTerm) {
+                // When filtering, show filtered counts
+                document.getElementById('detailTotalVisits').textContent = `${dataToShow.length.toLocaleString()} filtered`;
+                document.getElementById('detailUniqueUrls').textContent = uniqueUrls.toLocaleString();
+            } else {
+                // When not filtering, show total counts with page info
+                document.getElementById('detailTotalVisits').textContent = totalRecords.toLocaleString();
+                document.getElementById('detailUniqueUrls').textContent = `${uniqueUrls} (on this page)`;
+            }
+            
             document.getElementById('detailLastActivity').textContent = lastActivity;
             
-            // Display table
+            // Display table with filtered data
             const tableBody = document.getElementById('userDetailsTable');
-            tableBody.innerHTML = currentUserDetails.map(item => `
+            tableBody.innerHTML = dataToShow.map(item => `
                 <tr>
                     <td>
                         <small class="text-muted">
@@ -1297,31 +1375,22 @@
                     </td>
                 </tr>
             `).join('');
-        }
-
-        // Filter user details by time period only
-        async function filterUserDetails() {
-            const days = document.getElementById('dayFilter').value;
             
-            // Reset to page 1 when filtering
-            currentPage = 1;
-            
-            // If days filter changed, reload from server
-            if (days !== currentDaysFilter) {
-                document.getElementById('userDetailsLoading').style.display = 'block';
-                document.getElementById('userDetailsContent').style.display = 'none';
-                try {
-                    await loadUserDetails(currentUserForDetails, days ? parseFloat(days) : null, currentPage, pageSize);
-                } catch (error) {
-                    showUserDetailsError('Failed to filter data: ' + error.message);
-                    return;
-                }
+            // Hide pagination when filtering (show all filtered results)
+            const currentFilter = document.getElementById('websiteFilter').value.trim();
+            if (currentFilter) {
+                document.getElementById('userDetailsPagination').style.display = 'none';
+            } else {
+                document.getElementById('userDetailsPagination').style.display = totalPages > 1 ? 'flex' : 'none';
             }
         }
 
         // Pagination functions
         async function goToPage(page) {
             if (page < 1 || page > totalPages || page === currentPage) return;
+            
+            // Clear website filter when changing pages (since we're loading new data)
+            document.getElementById('websiteFilter').value = '';
             
             document.getElementById('userDetailsLoading').style.display = 'block';
             document.getElementById('userDetailsContent').style.display = 'none';
@@ -1339,6 +1408,9 @@
             
             pageSize = newPageSize;
             currentPage = 1; // Reset to first page when changing page size
+            
+            // Clear website filter when changing page size (since we're loading new data)
+            document.getElementById('websiteFilter').value = '';
             
             document.getElementById('userDetailsLoading').style.display = 'block';
             document.getElementById('userDetailsContent').style.display = 'none';
