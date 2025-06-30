@@ -14,21 +14,49 @@ from typing import List, Dict
 # Configuration
 API_URL = "http://localhost:8000/api/reports/data"
 
-# Homegroups and user distribution (5 users each)
-HOMEGROUPS = ["3A", "4A", "5A", "6C"]
-USERS_PER_GROUP = 5
+# Homegroups and user distribution for load testing
+HOMEGROUPS = ["3A", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "6C", "Engineering", "Marketing", "Sales", "HR", "Finance", "IT", "Research", "Support", "Admin", "Legal", "Operations", "Quality"]
+USERS_PER_GROUP = 12  # 24 groups * 12 users = 288 users (close to 300)
 
-# Sample data for realistic browsing
+# Sample data for realistic browsing - expanded for load testing
 FIRST_NAMES = [
     "John", "Jane", "Michael", "Sarah", "David", "Emma", "James", "Lisa",
     "Robert", "Emily", "William", "Ashley", "Christopher", "Jessica", "Daniel",
-    "Amanda", "Matthew", "Stephanie", "Anthony", "Nicole"
+    "Amanda", "Matthew", "Stephanie", "Anthony", "Nicole", "Andrew", "Elizabeth",
+    "Joshua", "Helen", "Kenneth", "Maria", "Paul", "Nancy", "Mark", "Betty",
+    "Donald", "Dorothy", "Steven", "Sandra", "Brian", "Donna", "Edward", "Carol",
+    "Ronald", "Ruth", "Timothy", "Sharon", "Jason", "Michelle", "Jeffrey", "Laura",
+    "Ryan", "Kimberly", "Jacob", "Deborah", "Gary", "Amy", "Nicholas", "Angela",
+    "Eric", "Brenda", "Jonathan", "Emma", "Stephen", "Olivia", "Larry", "Cynthia",
+    "Justin", "Marie", "Scott", "Janet", "Brandon", "Catherine", "Benjamin", "Frances",
+    "Samuel", "Christine", "Gregory", "Samantha", "Frank", "Debra", "Raymond", "Rachel",
+    "Alexander", "Carolyn", "Patrick", "Virginia", "Jack", "Maria", "Dennis", "Heather",
+    "Jerry", "Diane", "Tyler", "Julie", "Aaron", "Joyce", "Jose", "Victoria",
+    "Henry", "Kelly", "Adam", "Christina", "Douglas", "Joan", "Nathan", "Evelyn",
+    "Peter", "Lauren", "Zachary", "Judith", "Kyle", "Megan", "Arthur", "Cheryl",
+    "Noah", "Andrea", "Carl", "Hannah", "Wayne", "Jacqueline", "Ralph", "Martha",
+    "Roy", "Gloria", "Eugene", "Teresa", "Louis", "Sara", "Philip", "Janice",
+    "Bobby", "Marie", "Johnny", "Julia", "Mason", "Kathryn", "Austin", "Frances"
 ]
 
 LAST_NAMES = [
     "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
     "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
-    "Thomas", "Taylor", "Moore", "Jackson", "Martin"
+    "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson",
+    "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker",
+    "Young", "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill",
+    "Flores", "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell",
+    "Mitchell", "Carter", "Roberts", "Turner", "Phillips", "Parker", "Evans", "Edwards",
+    "Collins", "Stewart", "Morris", "Rogers", "Reed", "Cook", "Morgan", "Bell",
+    "Murphy", "Bailey", "Cooper", "Richardson", "Cox", "Howard", "Ward", "Torres",
+    "Peterson", "Gray", "Ramirez", "James", "Watson", "Brooks", "Kelly", "Sanders",
+    "Price", "Bennett", "Wood", "Barnes", "Ross", "Henderson", "Coleman", "Jenkins",
+    "Perry", "Powell", "Long", "Patterson", "Hughes", "Flores", "Washington", "Butler",
+    "Simmons", "Foster", "Gonzales", "Bryant", "Alexander", "Russell", "Griffin", "Diaz",
+    "Hayes", "Myers", "Ford", "Hamilton", "Graham", "Sullivan", "Wallace", "Woods",
+    "Cole", "West", "Jordan", "Owens", "Reynolds", "Fisher", "Ellis", "Harrison",
+    "Gibson", "Mcdonald", "Cruz", "Marshall", "Ortiz", "Gomez", "Murray", "Freeman",
+    "Wells", "Webb", "Simpson", "Stevens", "Tucker", "Porter", "Hunter", "Hicks"
 ]
 
 # Realistic websites with categories
@@ -100,9 +128,10 @@ COMPUTER_NAMES = [
 
 def generate_user_data(user_index: int, homegroup: str) -> Dict:
     """Generate user data for a specific user"""
-    first_name = FIRST_NAMES[user_index]
-    last_name = LAST_NAMES[user_index]
-    username = f"{first_name.lower()}.{last_name.lower()}"
+    # Use modulo to cycle through names and add user index for uniqueness
+    first_name = FIRST_NAMES[user_index % len(FIRST_NAMES)]
+    last_name = LAST_NAMES[user_index % len(LAST_NAMES)]
+    username = f"{first_name.lower()}.{last_name.lower()}{user_index:03d}"  # Add index for uniqueness
     
     return {
         "Username": username,
@@ -136,9 +165,9 @@ def generate_visits(user_info: Dict, num_visits: int) -> List[Dict]:
     browsing_pattern = generate_browsing_pattern()
     computer_name = random.choice(COMPUTER_NAMES)
     
-    # Generate visits over the last 30 days
+    # Generate visits over the last 60 days for more spread
     end_time = datetime.now()
-    start_time = end_time - timedelta(days=30)
+    start_time = end_time - timedelta(days=60)
     
     for i in range(num_visits):
         # Pick category based on browsing pattern
@@ -147,7 +176,7 @@ def generate_visits(user_info: Dict, num_visits: int) -> List[Dict]:
         
         # Generate realistic timing (business hours weighted)
         random_time = start_time + timedelta(
-            days=random.randint(0, 29),
+            days=random.randint(0, 59),
             hours=random.choices([8, 9, 10, 11, 12, 13, 14, 15, 16, 17], 
                                 weights=[5, 10, 15, 15, 10, 10, 15, 15, 10, 5])[0],
             minutes=random.randint(0, 59),
@@ -186,33 +215,32 @@ def send_user_data(user_info: Dict, visits: List[Dict]) -> bool:
     }
     
     try:
-        response = requests.post(API_URL, json=payload, timeout=10)
+        response = requests.post(API_URL, json=payload, timeout=30)  # Increased timeout for large data
         if response.status_code == 200:
-            print(f"✅ Successfully sent data for {user_info['Username']} ({len(visits)} visits)")
             return True
         else:
-            print(f"❌ Failed to send data for {user_info['Username']}: {response.status_code}")
-            print(f"   Response: {response.text}")
             return False
     except Exception as e:
-        print(f"❌ Error sending data for {user_info['Username']}: {e}")
         return False
 
 def main():
-    """Generate and send mock data for all users"""
-    print("🚀 Browser Reporter Mock Data Generator")
-    print("=" * 50)
+    """Generate and send load test data for all users"""
+    print("🚀 Browser Reporter Load Test Data Generator")
+    print("=" * 60)
     print(f"📊 Generating data for {len(HOMEGROUPS) * USERS_PER_GROUP} users")
-    print(f"🏢 Homegroups: {', '.join(HOMEGROUPS)} ({USERS_PER_GROUP} users each)")
+    print(f"🏢 Homegroups: {len(HOMEGROUPS)} groups ({USERS_PER_GROUP} users each)")
     print(f"🌐 API Endpoint: {API_URL}")
+    print(f"📈 Target: 1000 visits per user = {len(HOMEGROUPS) * USERS_PER_GROUP * 1000:,} total records")
+    print(f"⏱️  Estimated time: {(len(HOMEGROUPS) * USERS_PER_GROUP) * 2 / 60:.1f} minutes")
     print()
     
     total_users = 0
     successful_uploads = 0
     total_visits = 0
+    start_time = time.time()
     
     for group_index, homegroup in enumerate(HOMEGROUPS):
-        print(f"📁 Processing homegroup: {homegroup}")
+        print(f"📁 Processing homegroup: {homegroup} ({group_index + 1}/{len(HOMEGROUPS)})")
         
         for user_in_group in range(USERS_PER_GROUP):
             user_index = group_index * USERS_PER_GROUP + user_in_group
@@ -220,33 +248,45 @@ def main():
             # Generate user data
             user_info = generate_user_data(user_index, homegroup)
             
-            # Generate random number of visits (20-30)
-            num_visits = random.randint(20, 30)
+            # Generate 1000 visits for load testing
+            num_visits = 1000
             visits = generate_visits(user_info, num_visits)
             
             # Send data
             if send_user_data(user_info, visits):
                 successful_uploads += 1
                 total_visits += len(visits)
+                print(f"   ✅ [{total_users + 1:3d}/{len(HOMEGROUPS) * USERS_PER_GROUP}] {user_info['Username']}")
+            else:
+                print(f"   ❌ [{total_users + 1:3d}/{len(HOMEGROUPS) * USERS_PER_GROUP}] FAILED: {user_info['Username']}")
             
             total_users += 1
             
             # Small delay to avoid overwhelming the server
-            time.sleep(0.5)
+            time.sleep(0.2)
+    
+    end_time = time.time()
+    duration = end_time - start_time
     
     print()
-    print("📈 Summary:")
+    print("=" * 60)
+    print("📈 Load Test Data Generation Summary:")
     print(f"   👥 Total users: {total_users}")
     print(f"   ✅ Successful uploads: {successful_uploads}")
     print(f"   ❌ Failed uploads: {total_users - successful_uploads}")
-    print(f"   📊 Total visits generated: {total_visits}")
-    print(f"   📊 Average visits per user: {total_visits / successful_uploads if successful_uploads > 0 else 0:.1f}")
+    print(f"   📊 Total visits generated: {total_visits:,}")
+    print(f"   📊 Average visits per user: {total_visits / successful_uploads if successful_uploads > 0 else 0:.0f}")
+    print(f"   ⏱️  Total time: {duration:.1f} seconds ({duration/60:.1f} minutes)")
+    print(f"   🚀 Upload rate: {successful_uploads / duration:.1f} users/second")
+    print(f"   📈 Data rate: {total_visits / duration:.0f} visits/second")
     
     if successful_uploads == total_users:
-        print("\n🎉 All mock data generated successfully!")
-        print("💡 You can now view the data in the dashboard at http://localhost:8000")
+        print(f"\n🎉 Load test data generation completed successfully!")
+        print(f"💪 Generated {total_visits:,} browsing records across {successful_uploads} users")
+        print(f"🔥 Your pagination system is ready for serious load testing!")
+        print("💡 View the data in the dashboard at http://localhost:8000")
     else:
-        print(f"\n⚠️  Some uploads failed. Check the API server status.")
+        print(f"\n⚠️  {total_users - successful_uploads} uploads failed. Check the API server status.")
 
 if __name__ == "__main__":
     main() 
