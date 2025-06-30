@@ -198,6 +198,111 @@ async def reports_all(db: AsyncSession = Depends(get_db), request: Request = Non
     return data
 
 
+@app.get("/api/reports/search")
+async def search_website(request: Request, url: str, page: int = 1, page_size: int = 50, days: int | None = None, db: AsyncSession = Depends(get_db)):
+    """Search for users who visited a specific URL or website"""
+    require_login(request)
+    
+    # Validate pagination parameters
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 1000:
+        page_size = 50
+    
+    # Build base query - search for URLs containing the search term
+    query = (
+        select(
+            Visit.url,
+            Visit.title,
+            Visit.visit_time,
+            Visit.computer_name,
+            User.username,
+            User.display_name,
+            User.email,
+            User.homegroup
+        )
+        .select_from(Visit)
+        .join(User, Visit.user_id == User.id)
+        .where(Visit.url.ilike(f"%{url}%"))
+    )
+    
+    # Apply date filter if specified
+    if days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.where(Visit.visit_time >= cutoff)
+    
+    # Get total count for pagination
+    count_query = (
+        select(func.count(Visit.id))
+        .select_from(Visit)
+        .join(User, Visit.user_id == User.id)
+        .where(Visit.url.ilike(f"%{url}%"))
+    )
+    if days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        count_query = count_query.where(Visit.visit_time >= cutoff)
+    
+    total_result = await db.execute(count_query)
+    total_count = total_result.scalar()
+    
+    # Apply pagination
+    query = query.order_by(Visit.visit_time.desc())
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    result = await db.execute(query)
+    visits = result.fetchall()
+    
+    # Calculate pagination metadata
+    total_pages = (total_count + page_size - 1) // page_size
+    has_next = page < total_pages
+    has_prev = page > 1
+    
+    # Get unique users count for summary
+    unique_users_query = (
+        select(func.count(func.distinct(User.id)))
+        .select_from(Visit)
+        .join(User, Visit.user_id == User.id)
+        .where(Visit.url.ilike(f"%{url}%"))
+    )
+    if days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        unique_users_query = unique_users_query.where(Visit.visit_time >= cutoff)
+    
+    unique_users_result = await db.execute(unique_users_query)
+    unique_users_count = unique_users_result.scalar()
+    
+    return {
+        "data": [
+            {
+                "url": v.url,
+                "title": v.title,
+                "timestamp": v.visit_time.isoformat(),
+                "computerName": v.computer_name,
+                "username": v.username,
+                "displayName": v.display_name,
+                "email": v.email,
+                "homegroup": v.homegroup
+            }
+            for v in visits
+        ],
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev
+        },
+        "summary": {
+            "search_term": url,
+            "total_visits": total_count,
+            "unique_users": unique_users_count,
+            "days_filter": days
+        }
+    }
+
+
 @app.get("/api/reports/user/{username}")
 async def reports_user(username: str, request: Request, days: int | None = None, page: int = 1, page_size: int = 50, db: AsyncSession = Depends(get_db)):
     require_login(request)

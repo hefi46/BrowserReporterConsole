@@ -221,6 +221,189 @@
             </div>
         </div>
 
+        <!-- Website Search -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="stats-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-search me-2"></i>
+                            Website Search
+                        </h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="clearWebsiteSearch()">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </button>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="websiteSearchInput" class="form-label">
+                                <i class="fas fa-globe me-1"></i>Search URLs/Websites
+                            </label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="websiteSearchInput" 
+                                       placeholder="e.g., youtube.com, facebook.com, github.com..." 
+                                       onkeypress="handleWebsiteSearchEnter(event)">
+                                <button class="btn btn-primary" type="button" onclick="performWebsiteSearch()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Search for users who visited specific websites or URLs</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="websiteSearchDays" class="form-label">
+                                <i class="fas fa-calendar me-1"></i>Time Period
+                            </label>
+                            <select class="form-select" id="websiteSearchDays">
+                                <option value="">All Time</option>
+                                <option value="1">Last 24 Hours</option>
+                                <option value="7">Last 7 Days</option>
+                                <option value="30">Last 30 Days</option>
+                                <option value="90">Last 3 Months</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="websiteSearchPageSize" class="form-label">
+                                <i class="fas fa-list me-1"></i>Results per Page
+                            </label>
+                            <select class="form-select" id="websiteSearchPageSize">
+                                <option value="25">25 results</option>
+                                <option value="50" selected>50 results</option>
+                                <option value="100">100 results</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Website Search Results -->
+        <div id="websiteSearchResults" class="data-table-card" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-search-plus me-2"></i>
+                    Search Results
+                    <span id="searchResultsTitle" class="text-muted"></span>
+                </h5>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-outline-primary btn-sm me-2" onclick="exportWebsiteSearchResults()">
+                        <i class="fas fa-download me-2"></i>Export Results
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="clearWebsiteSearch()">
+                        <i class="fas fa-times me-2"></i>Close
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Summary -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center p-3">
+                            <i class="fas fa-chart-bar fa-2x text-primary mb-2"></i>
+                            <h5 id="searchTotalVisits" class="mb-1">-</h5>
+                            <small class="text-muted">Total Visits</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center p-3">
+                            <i class="fas fa-users fa-2x text-success mb-2"></i>
+                            <h5 id="searchUniqueUsers" class="mb-1">-</h5>
+                            <small class="text-muted">Unique Users</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center p-3">
+                            <i class="fas fa-globe fa-2x text-info mb-2"></i>
+                            <h5 id="searchTerm" class="mb-1">-</h5>
+                            <small class="text-muted">Search Term</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="websiteSearchLoading" class="text-center p-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Searching...</span>
+                </div>
+                <p class="mt-2">Searching website visits...</p>
+            </div>
+
+            <div id="websiteSearchContent" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>URL</th>
+                                <th>Title</th>
+                                <th>Timestamp</th>
+                                <th>Computer</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="websiteSearchTable">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Search Results Pagination -->
+                <div id="websiteSearchPagination" class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted me-3">
+                            <small>
+                                Showing <span id="searchShowingStart">0</span>-<span id="searchShowingEnd">0</span> of <span id="searchTotalRecords">0</span> results
+                            </small>
+                        </span>
+                    </div>
+                    <nav aria-label="Search results pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item" id="searchPrevPageItem">
+                                <a class="page-link" href="#" onclick="goToSearchPage(searchCurrentPage - 1)">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item" id="searchFirstPageItem">
+                                <a class="page-link" href="#" onclick="goToSearchPage(1)">1</a>
+                            </li>
+                            <li class="page-item" id="searchPrevEllipsis" style="display: none;">
+                                <span class="page-link">...</span>
+                            </li>
+                            <li class="page-item" id="searchCurrentPageItem">
+                                <span class="page-link bg-primary text-white" id="searchCurrentPageNumber">1</span>
+                            </li>
+                            <li class="page-item" id="searchNextEllipsis" style="display: none;">
+                                <span class="page-link">...</span>
+                            </li>
+                            <li class="page-item" id="searchLastPageItem">
+                                <a class="page-link" href="#" id="searchLastPageLink" onclick="goToSearchPage(searchTotalPages)">1</a>
+                            </li>
+                            <li class="page-item" id="searchNextPageItem">
+                                <a class="page-link" href="#" onclick="goToSearchPage(searchCurrentPage + 1)">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <div id="websiteSearchNoResults" style="display: none;" class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No results found for your search. Try a different URL or time period.
+            </div>
+
+            <div id="websiteSearchError" style="display: none;" class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span id="websiteSearchErrorMessage">Search failed. Please try again.</span>
+            </div>
+        </div>
+
         <!-- Data Table -->
         <div class="data-table-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1843,6 +2026,277 @@
             } catch (err) {
                 console.error('Secure config error', err);
                 alert('Error: ' + err.message);
+            }
+        }
+
+        // Website Search Variables
+        let searchCurrentPage = 1;
+        let searchTotalPages = 1;
+        let searchData = null;
+
+        // Handle enter key in search input
+        function handleWebsiteSearchEnter(event) {
+            if (event.key === 'Enter') {
+                performWebsiteSearch();
+            }
+        }
+
+        // Perform website search
+        async function performWebsiteSearch() {
+            const searchTerm = document.getElementById('websiteSearchInput').value.trim();
+            
+            if (!searchTerm) {
+                showErrorMessage('Please enter a website URL or search term');
+                return;
+            }
+
+            searchCurrentPage = 1;
+            await executeWebsiteSearch();
+        }
+
+        // Execute the actual search API call
+        async function executeWebsiteSearch() {
+            const searchTerm = document.getElementById('websiteSearchInput').value.trim();
+            const days = document.getElementById('websiteSearchDays').value;
+            const pageSize = parseInt(document.getElementById('websiteSearchPageSize').value);
+
+            // Show loading state
+            document.getElementById('websiteSearchResults').style.display = 'block';
+            document.getElementById('websiteSearchLoading').style.display = 'block';
+            document.getElementById('websiteSearchContent').style.display = 'none';
+            document.getElementById('websiteSearchNoResults').style.display = 'none';
+            document.getElementById('websiteSearchError').style.display = 'none';
+
+            try {
+                let url = `/api/reports/search?url=${encodeURIComponent(searchTerm)}&page=${searchCurrentPage}&page_size=${pageSize}`;
+                if (days) {
+                    url += `&days=${days}`;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+
+                searchData = await response.json();
+                displayWebsiteSearchResults();
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('websiteSearchLoading').style.display = 'none';
+                document.getElementById('websiteSearchError').style.display = 'block';
+                document.getElementById('websiteSearchErrorMessage').textContent = 'Search failed. Please try again.';
+            }
+        }
+
+        // Display search results
+        function displayWebsiteSearchResults() {
+            const data = searchData;
+            
+            // Hide loading, show content
+            document.getElementById('websiteSearchLoading').style.display = 'none';
+            
+            if (data.data.length === 0) {
+                document.getElementById('websiteSearchNoResults').style.display = 'block';
+                document.getElementById('websiteSearchContent').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('websiteSearchContent').style.display = 'block';
+            document.getElementById('websiteSearchNoResults').style.display = 'none';
+
+            // Update summary stats
+            document.getElementById('searchTotalVisits').textContent = data.summary.total_visits.toLocaleString();
+            document.getElementById('searchUniqueUsers').textContent = data.summary.unique_users.toLocaleString();
+            document.getElementById('searchTerm').textContent = data.summary.search_term;
+
+            // Update title
+            const timeFilter = data.summary.days_filter ? ` (${data.summary.days_filter} days)` : '';
+            document.getElementById('searchResultsTitle').textContent = `for "${data.summary.search_term}"${timeFilter}`;
+
+            // Build table
+            const tableBody = document.getElementById('websiteSearchTable');
+            tableBody.innerHTML = data.data.map(visit => {
+                const timestamp = new Date(visit.timestamp);
+                return `
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div>
+                                    <div class="fw-medium">${visit.displayName}</div>
+                                    <small class="text-muted">${visit.username} | ${visit.homegroup}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="${visit.url}" target="_blank" class="text-primary" style="word-break: break-all;">
+                                ${visit.url.length > 50 ? visit.url.substring(0, 50) + '...' : visit.url}
+                                <i class="fas fa-external-link-alt ms-1 small"></i>
+                            </a>
+                        </td>
+                        <td>
+                            <span class="text-truncate" style="max-width: 200px; display: inline-block;" title="${visit.title || 'No title'}">
+                                ${visit.title || 'No title'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="text-nowrap">
+                                <div>${timestamp.toLocaleDateString()}</div>
+                                <small class="text-muted">${timestamp.toLocaleTimeString()}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">${visit.computerName}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-outline-primary btn-sm" onclick="viewUserDetails('${visit.username}')" title="View user details">
+                                <i class="fas fa-user"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Update pagination
+            updateSearchPagination(data.pagination);
+        }
+
+        // Update search pagination
+        function updateSearchPagination(pagination) {
+            searchCurrentPage = pagination.page;
+            searchTotalPages = pagination.total_pages;
+            
+            // Update showing text
+            const start = ((pagination.page - 1) * pagination.page_size) + 1;
+            const end = Math.min(pagination.page * pagination.page_size, pagination.total_count);
+            document.getElementById('searchShowingStart').textContent = start;
+            document.getElementById('searchShowingEnd').textContent = end;
+            document.getElementById('searchTotalRecords').textContent = pagination.total_count.toLocaleString();
+
+            // Update pagination buttons
+            const prevPageItem = document.getElementById('searchPrevPageItem');
+            const nextPageItem = document.getElementById('searchNextPageItem');
+            const firstPageItem = document.getElementById('searchFirstPageItem');
+            const lastPageItem = document.getElementById('searchLastPageItem');
+            const currentPageItem = document.getElementById('searchCurrentPageItem');
+            const prevEllipsis = document.getElementById('searchPrevEllipsis');
+            const nextEllipsis = document.getElementById('searchNextEllipsis');
+
+            // Enable/disable prev/next buttons
+            prevPageItem.classList.toggle('disabled', !pagination.has_prev);
+            nextPageItem.classList.toggle('disabled', !pagination.has_next);
+
+            // Update current page number
+            document.getElementById('searchCurrentPageNumber').textContent = pagination.page;
+            document.getElementById('searchLastPageLink').textContent = searchTotalPages;
+
+            // Show/hide pagination elements based on total pages
+            if (searchTotalPages <= 1) {
+                document.getElementById('websiteSearchPagination').style.display = 'none';
+                return;
+            } else {
+                document.getElementById('websiteSearchPagination').style.display = 'flex';
+            }
+
+            // Show/hide first and last page buttons
+            firstPageItem.style.display = searchTotalPages > 1 ? 'block' : 'none';
+            lastPageItem.style.display = searchTotalPages > 1 && searchTotalPages !== pagination.page ? 'block' : 'none';
+
+            // Handle ellipsis for large page counts
+            if (searchTotalPages > 5) {
+                if (pagination.page > 3) {
+                    prevEllipsis.style.display = 'block';
+                } else {
+                    prevEllipsis.style.display = 'none';
+                }
+                
+                if (pagination.page < searchTotalPages - 2) {
+                    nextEllipsis.style.display = 'block';
+                } else {
+                    nextEllipsis.style.display = 'none';
+                }
+            } else {
+                prevEllipsis.style.display = 'none';
+                nextEllipsis.style.display = 'none';
+            }
+        }
+
+        // Navigate to specific search page
+        async function goToSearchPage(page) {
+            if (page < 1 || page > searchTotalPages || page === searchCurrentPage) {
+                return;
+            }
+            
+            searchCurrentPage = page;
+            await executeWebsiteSearch();
+        }
+
+        // Clear website search
+        function clearWebsiteSearch() {
+            document.getElementById('websiteSearchInput').value = '';
+            document.getElementById('websiteSearchDays').value = '';
+            document.getElementById('websiteSearchPageSize').value = '50';
+            document.getElementById('websiteSearchResults').style.display = 'none';
+            searchData = null;
+            searchCurrentPage = 1;
+            searchTotalPages = 1;
+        }
+
+        // Export website search results
+        async function exportWebsiteSearchResults() {
+            if (!searchData) {
+                showErrorMessage('No search results to export');
+                return;
+            }
+
+            const exportButton = document.querySelector('button[onclick="exportWebsiteSearchResults()"]');
+            const originalText = exportButton.innerHTML;
+            
+            try {
+                exportButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+                exportButton.disabled = true;
+
+                const searchTerm = document.getElementById('websiteSearchInput').value.trim();
+                const days = document.getElementById('websiteSearchDays').value;
+                
+                // Get all results (not just current page)
+                let url = `/api/reports/search?url=${encodeURIComponent(searchTerm)}&page=1&page_size=10000`;
+                if (days) {
+                    url += `&days=${days}`;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Export failed');
+                }
+
+                const allData = await response.json();
+                
+                // Create CSV content
+                const csvHeader = 'User,Username,Email,Homegroup,URL,Title,Timestamp,Computer\n';
+                const csvContent = allData.data.map(visit => {
+                    const timestamp = new Date(visit.timestamp).toISOString();
+                    return `"${visit.displayName}","${visit.username}","${visit.email}","${visit.homegroup}","${visit.url}","${visit.title || ''}","${timestamp}","${visit.computerName}"`;
+                }).join('\n');
+
+                const csv = csvHeader + csvContent;
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url2 = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url2;
+                a.download = `website_search_${searchTerm.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url2);
+                document.body.removeChild(a);
+                
+                showSuccessMessage('Search results exported successfully!');
+            } catch (error) {
+                console.error('Export error:', error);
+                showErrorMessage('Failed to export search results. Please try again.');
+            } finally {
+                exportButton.innerHTML = originalText;
+                exportButton.disabled = false;
             }
         }
 
