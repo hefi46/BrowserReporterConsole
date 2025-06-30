@@ -183,6 +183,9 @@
                             </label>
                             <select class="form-select" id="activityFilter" onchange="applyFilters()">
                                 <option value="">All Time</option>
+                                <option value="0.021">Last 30 Minutes</option>
+                                <option value="0.042">Last 1 Hour</option>
+                                <option value="0.333">Last 8 Hours</option>
                                 <option value="1">Last 24 Hours</option>
                                 <option value="7">Last 7 Days</option>
                                 <option value="30">Last 30 Days</option>
@@ -516,14 +519,13 @@
                                 <label for="dayFilter" class="form-label">Filter by Days</label>
                                 <select class="form-select" id="dayFilter" onchange="filterUserDetails()">
                                     <option value="">All Time</option>
+                                    <option value="0.021">Last 30 Minutes</option>
+                                    <option value="0.042">Last 1 Hour</option>
+                                    <option value="0.333">Last 8 Hours</option>
                                     <option value="1">Last 24 Hours</option>
                                     <option value="7">Last 7 Days</option>
                                     <option value="30">Last 30 Days</option>
                                 </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="urlSearch" class="form-label">Search URLs/Titles</label>
-                                <input type="text" class="form-control" id="urlSearch" placeholder="Search..." oninput="filterUserDetails()">
                             </div>
                         </div>
 
@@ -1207,7 +1209,6 @@
             document.getElementById('userDetailsError').style.display = 'none';
             document.getElementById('userDetailsPagination').style.display = 'none';
             document.getElementById('dayFilter').value = '';
-            document.getElementById('urlSearch').value = '';
             document.getElementById('pageSizeSelect').value = '50';
             
             try {
@@ -1298,10 +1299,9 @@
             `).join('');
         }
 
-        // Filter user details
+        // Filter user details by time period only
         async function filterUserDetails() {
             const days = document.getElementById('dayFilter').value;
-            const searchTerm = document.getElementById('urlSearch').value.toLowerCase();
             
             // Reset to page 1 when filtering
             currentPage = 1;
@@ -1311,23 +1311,12 @@
                 document.getElementById('userDetailsLoading').style.display = 'block';
                 document.getElementById('userDetailsContent').style.display = 'none';
                 try {
-                    await loadUserDetails(currentUserForDetails, days ? parseInt(days) : null, currentPage, pageSize);
-                } catch (error) {
-                    showUserDetailsError('Failed to filter data: ' + error.message);
-                    return;
-                }
-            } else {
-                // If only search term changed, reload with current filters
-                try {
-                    await loadUserDetails(currentUserForDetails, currentDaysFilter, currentPage, pageSize);
+                    await loadUserDetails(currentUserForDetails, days ? parseFloat(days) : null, currentPage, pageSize);
                 } catch (error) {
                     showUserDetailsError('Failed to filter data: ' + error.message);
                     return;
                 }
             }
-            
-            // Note: Server-side search filtering would be better for performance
-            // For now, we reload the page when filters change
         }
 
         // Pagination functions

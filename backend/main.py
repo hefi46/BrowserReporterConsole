@@ -199,7 +199,7 @@ async def reports_all(db: AsyncSession = Depends(get_db), request: Request = Non
 
 
 @app.get("/api/reports/search")
-async def search_website(request: Request, url: str, page: int = 1, page_size: int = 50, days: int | None = None, db: AsyncSession = Depends(get_db)):
+async def search_website(request: Request, url: str, page: int = 1, page_size: int = 50, days: float | None = None, db: AsyncSession = Depends(get_db)):
     """Search for users who visited a specific URL or website"""
     require_login(request)
     
@@ -307,7 +307,7 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
 
 
 @app.get("/api/reports/user/{username}")
-async def reports_user(username: str, request: Request, days: int | None = None, page: int = 1, page_size: int = 50, db: AsyncSession = Depends(get_db)):
+async def reports_user(username: str, request: Request, days: float | None = None, page: int = 1, page_size: int = 50, db: AsyncSession = Depends(get_db)):
     require_login(request)
     
     # Validate pagination parameters
@@ -326,13 +326,15 @@ async def reports_user(username: str, request: Request, days: int | None = None,
     # Build base query
     query = select(Visit).where(Visit.user_id == user_id)
     if days:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        days_float = float(days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
         query = query.where(Visit.visit_time >= cutoff)
     
     # Get total count for pagination
     count_query = select(func.count(Visit.id)).where(Visit.user_id == user_id)
     if days:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        days_float = float(days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
         count_query = count_query.where(Visit.visit_time >= cutoff)
     
     total_result = await db.execute(count_query)
