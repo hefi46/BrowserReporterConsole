@@ -256,6 +256,9 @@
                             </label>
                             <select class="form-select" id="websiteSearchDays">
                                 <option value="">All Time</option>
+                                <option value="0.021">Last 30 Minutes</option>
+                                <option value="0.042">Last 1 Hour</option>
+                                <option value="0.333">Last 8 Hours</option>
                                 <option value="1">Last 24 Hours</option>
                                 <option value="7">Last 7 Days</option>
                                 <option value="30">Last 30 Days</option>
@@ -2034,6 +2037,25 @@
         let searchTotalPages = 1;
         let searchData = null;
 
+        // Helper function to get time period display name
+        function getTimePeriodDisplay(days) {
+            if (!days) return '';
+            const daysFloat = parseFloat(days);
+            if (daysFloat <= 0.025) {
+                return '30min';
+            } else if (daysFloat <= 0.045) {
+                return '1hour';
+            } else if (daysFloat <= 0.35) {
+                return '8hours';
+            } else if (daysFloat <= 1) {
+                return '24hours';
+            } else if (daysFloat <= 7) {
+                return `${Math.round(daysFloat)}days`;
+            } else {
+                return `${Math.round(daysFloat)}days`;
+            }
+        }
+
         // Handle enter key in search input
         function handleWebsiteSearchEnter(event) {
             if (event.key === 'Enter') {
@@ -2109,8 +2131,24 @@
             document.getElementById('searchUniqueUsers').textContent = data.summary.unique_users.toLocaleString();
             document.getElementById('searchTerm').textContent = data.summary.search_term;
 
-            // Update title
-            const timeFilter = data.summary.days_filter ? ` (${data.summary.days_filter} days)` : '';
+            // Update title with proper time period display
+            let timeFilter = '';
+            if (data.summary.days_filter) {
+                const days = parseFloat(data.summary.days_filter);
+                if (days <= 0.025) {
+                    timeFilter = ' (last 30 minutes)';
+                } else if (days <= 0.045) {
+                    timeFilter = ' (last 1 hour)';
+                } else if (days <= 0.35) {
+                    timeFilter = ' (last 8 hours)';
+                } else if (days <= 1) {
+                    timeFilter = ' (last 24 hours)';
+                } else if (days <= 7) {
+                    timeFilter = ` (last ${Math.round(days)} days)`;
+                } else {
+                    timeFilter = ` (last ${Math.round(days)} days)`;
+                }
+            }
             document.getElementById('searchResultsTitle').textContent = `for "${data.summary.search_term}"${timeFilter}`;
 
             // Build table
@@ -2284,7 +2322,12 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url2;
-                a.download = `website_search_${searchTerm.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+                
+                // Create descriptive filename with time period
+                const timePeriod = getTimePeriodDisplay(days);
+                const dateStr = new Date().toISOString().split('T')[0];
+                const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z0-9]/g, '_');
+                a.download = `website_search_${cleanSearchTerm}${timePeriod ? '_' + timePeriod : ''}_${dateStr}.csv`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url2);

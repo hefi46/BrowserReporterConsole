@@ -228,7 +228,8 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
     
     # Apply date filter if specified
     if days:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        days_float = float(days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
         query = query.where(Visit.visit_time >= cutoff)
     
     # Get total count for pagination
@@ -239,7 +240,8 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
         .where(Visit.url.ilike(f"%{url}%"))
     )
     if days:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        days_float = float(days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
         count_query = count_query.where(Visit.visit_time >= cutoff)
     
     total_result = await db.execute(count_query)
@@ -266,7 +268,8 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
         .where(Visit.url.ilike(f"%{url}%"))
     )
     if days:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        days_float = float(days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
         unique_users_query = unique_users_query.where(Visit.visit_time >= cutoff)
     
     unique_users_result = await db.execute(unique_users_query)
