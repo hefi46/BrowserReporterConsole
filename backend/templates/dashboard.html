@@ -487,6 +487,53 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Main Dashboard Pagination -->
+                <div id="mainPagination" class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted me-3">
+                            <small>
+                                Showing <span id="mainShowingStart">0</span>-<span id="mainShowingEnd">0</span> of <span id="mainTotalRecords">0</span> users
+                            </small>
+                        </span>
+                        <div class="me-3">
+                            <select class="form-select form-select-sm" id="mainPageSizeSelect" onchange="changeMainPageSize()" style="width: auto;">
+                                <option value="25">25 per page</option>
+                                <option value="50" selected>50 per page</option>
+                                <option value="100">100 per page</option>
+                            </select>
+                        </div>
+                    </div>
+                    <nav aria-label="Main dashboard pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item" id="mainPrevPageItem">
+                                <a class="page-link" href="#" onclick="goToMainPage(mainCurrentPage - 1)">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item" id="mainFirstPageItem">
+                                <a class="page-link" href="#" onclick="goToMainPage(1)">1</a>
+                            </li>
+                            <li class="page-item" id="mainPrevEllipsis" style="display: none;">
+                                <span class="page-link">...</span>
+                            </li>
+                            <li class="page-item active" id="mainCurrentPageItem">
+                                <span class="page-link" id="mainCurrentPageNumber">1</span>
+                            </li>
+                            <li class="page-item" id="mainNextEllipsis" style="display: none;">
+                                <span class="page-link">...</span>
+                            </li>
+                            <li class="page-item" id="mainLastPageItem">
+                                <a class="page-link" href="#" id="mainLastPageLink" onclick="goToMainPage(mainTotalPages)">2</a>
+                            </li>
+                            <li class="page-item" id="mainNextPageItem">
+                                <a class="page-link" href="#" onclick="goToMainPage(mainCurrentPage + 1)">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
             </div>
 
             <div id="noDataMessage" style="display: none;" class="alert alert-info alert-custom">
@@ -967,6 +1014,12 @@
         let allUserData = [];
         let filteredUserData = [];
         let availableHomegroups = [];
+        
+        // Main dashboard pagination variables
+        let mainCurrentPage = 1;
+        let mainPageSize = 50;
+        let mainTotalPages = 1;
+        let mainTotalRecords = 0;
 
         // Initialize dashboard
         async function initDashboard() {
@@ -1010,20 +1063,31 @@
         }
 
         // Load dashboard data
-        async function loadDashboardData() {
+        async function loadDashboardData(page = 1, pageSize = mainPageSize) {
             try {
-                const response = await fetch('/api/reports/all');
+                const response = await fetch(`/api/reports/all?page=${page}&page_size=${pageSize}`);
                 if (response.ok) {
-                    allUserData = await response.json();
+                    const result = await response.json();
                     
-                    // Process homegroups and initialize filters
-                    extractHomegroups();
-                    populateHomegroupFilter();
+                    // Update pagination state
+                    mainCurrentPage = result.pagination.page;
+                    mainPageSize = result.pagination.page_size;
+                    mainTotalPages = result.pagination.total_pages;
+                    mainTotalRecords = result.pagination.total_count;
                     
-                    // Initialize with all data
-                    filteredUserData = [...allUserData];
-                    displayUserTable(filteredUserData);
+                    // Store the current page data
+                    allUserData = result.data;
+                    
+                    // Process homegroups and initialize filters (only on first load)
+                    if (page === 1) {
+                        extractHomegroups();
+                        populateHomegroupFilter();
+                    }
+                    
+                    // Display current page data (no filtering on initial load)
+                    displayUserTable(allUserData);
                     updateFilterStatus();
+                    updateMainPagination();
                 } else {
                     throw new Error(`Failed to load data: ${response.status}`);
                 }
@@ -1159,6 +1223,13 @@
 
             displayUserTable(filteredUserData);
             updateFilterStatus();
+            
+            // Hide pagination when filtering (since results are filtered within current page)
+            if (filteredUserData.length < allUserData.length) {
+                document.getElementById('mainPagination').style.display = 'none';
+            } else {
+                updateMainPagination();
+            }
         }
 
         // Clear all filters
@@ -1170,6 +1241,7 @@
             filteredUserData = [...allUserData];
             displayUserTable(filteredUserData);
             updateFilterStatus();
+            updateMainPagination();
         }
 
         // Update filter status display
@@ -1215,7 +1287,94 @@
             // Clear filters when refreshing
             clearFilters();
             
-            await loadDashboardData();
+            // Reset to first page
+            mainCurrentPage = 1;
+            await loadDashboardData(1, mainPageSize);
+        }
+
+        // Main pagination functions
+        async function goToMainPage(page) {
+            if (page < 1 || page > mainTotalPages) return;
+            
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('dataTableContainer').style.display = 'none';
+            
+            await loadDashboardData(page, mainPageSize);
+        }
+
+        async function changeMainPageSize() {
+            const newPageSize = parseInt(document.getElementById('mainPageSizeSelect').value);
+            mainPageSize = newPageSize;
+            mainCurrentPage = 1; // Reset to first page when changing page size
+            
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('dataTableContainer').style.display = 'none';
+            
+            await loadDashboardData(1, newPageSize);
+        }
+
+        // Update main pagination controls
+        function updateMainPagination() {
+            if (mainTotalPages <= 1) {
+                document.getElementById('mainPagination').style.display = 'none';
+                return;
+            } else {
+                document.getElementById('mainPagination').style.display = 'flex';
+            }
+            
+            // Update page size selector
+            document.getElementById('mainPageSizeSelect').value = mainPageSize;
+            
+            // Update pagination info
+            const start = (mainCurrentPage - 1) * mainPageSize + 1;
+            const end = Math.min(mainCurrentPage * mainPageSize, mainTotalRecords);
+            document.getElementById('mainShowingStart').textContent = start;
+            document.getElementById('mainShowingEnd').textContent = end;
+            document.getElementById('mainTotalRecords').textContent = mainTotalRecords;
+            
+            // Update pagination buttons
+            const prevPageItem = document.getElementById('mainPrevPageItem');
+            const nextPageItem = document.getElementById('mainNextPageItem');
+            const firstPageItem = document.getElementById('mainFirstPageItem');
+            const lastPageItem = document.getElementById('mainLastPageItem');
+            const currentPageItem = document.getElementById('mainCurrentPageItem');
+            const prevEllipsis = document.getElementById('mainPrevEllipsis');
+            const nextEllipsis = document.getElementById('mainNextEllipsis');
+            
+            // Enable/disable navigation buttons
+            prevPageItem.classList.toggle('disabled', mainCurrentPage <= 1);
+            nextPageItem.classList.toggle('disabled', mainCurrentPage >= mainTotalPages);
+            
+            // Update current page display
+            document.getElementById('mainCurrentPageNumber').textContent = mainCurrentPage;
+            document.getElementById('mainLastPageLink').textContent = mainTotalPages;
+            
+            // Show/hide page elements based on total pages
+            if (mainTotalPages <= 1) {
+                firstPageItem.style.display = 'none';
+                lastPageItem.style.display = 'none';
+            } else {
+                firstPageItem.style.display = 'block';
+                lastPageItem.style.display = mainTotalPages > 1 && mainTotalPages !== mainCurrentPage ? 'block' : 'none';
+            }
+            
+            // Handle ellipsis for large page counts
+            if (mainTotalPages > 5) {
+                if (mainCurrentPage > 3) {
+                    prevEllipsis.style.display = 'block';
+                } else {
+                    prevEllipsis.style.display = 'none';
+                }
+                
+                if (mainCurrentPage < mainTotalPages - 2) {
+                    nextEllipsis.style.display = 'block';
+                } else {
+                    nextEllipsis.style.display = 'none';
+                }
+            } else {
+                prevEllipsis.style.display = 'none';
+                nextEllipsis.style.display = 'none';
+            }
         }
 
         // Global variables for user details

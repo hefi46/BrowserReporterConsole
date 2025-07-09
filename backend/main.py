@@ -159,12 +159,22 @@ async def api_logout(request: Request):
 
 
 @app.get("/api/reports/all")
-async def reports_all(db: AsyncSession = Depends(get_db), request: Request = None):
+async def reports_all(request: Request, page: int = 1, page_size: int = 50, db: AsyncSession = Depends(get_db)):
     # Ensure logged in
-    if request is not None:
-        require_login(request)
+    require_login(request)
+    
+    # Validate pagination parameters
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 1000:
+        page_size = 50
 
-    # Use SQLAlchemy query instead of raw SQL
+    # Get total count for pagination
+    count_query = select(func.count(User.id)).select_from(User)
+    count_result = await db.execute(count_query)
+    total_count = count_result.scalar()
+
+    # Use SQLAlchemy query with pagination
     query = (
         select(
             User.username,
@@ -179,6 +189,9 @@ async def reports_all(db: AsyncSession = Depends(get_db), request: Request = Non
         .select_from(User)
         .outerjoin(Visit, Visit.user_id == User.id)
         .group_by(User.id)
+        .order_by(User.username)
+        .limit(page_size)
+        .offset((page - 1) * page_size)
     )
     
     result = await db.execute(query)
@@ -195,7 +208,21 @@ async def reports_all(db: AsyncSession = Depends(get_db), request: Request = Non
             "lastActivity": r.last_activity.isoformat() if r.last_activity else None,
             "computers": r.computers,
         })
-    return data
+    
+    # Calculate pagination info
+    total_pages = (total_count + page_size - 1) // page_size
+    
+    return {
+        "data": data,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }
 
 
 @app.get("/api/reports/search")
