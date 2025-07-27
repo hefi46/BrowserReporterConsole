@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, BigInteger, ForeignKey
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import relationship
 from enum import Enum as PyEnum
 
@@ -34,6 +35,7 @@ class Visit(Base):
     title = Column(Text)
     visit_time = Column(DateTime(timezone=True), nullable=False)  # actual visit time
     inserted_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    search_vector = Column(TSVECTOR)
 
     user = relationship("User", back_populates="visits")
 

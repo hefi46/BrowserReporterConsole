@@ -236,7 +236,7 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
     if page_size < 1 or page_size > 1000:
         page_size = 50
     
-    # Build base query - search for URLs containing the search term
+    # Build base query - search using full-text search (much faster than ILIKE)
     query = (
         select(
             Visit.url,
@@ -246,11 +246,13 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
             User.username,
             User.display_name,
             User.email,
-            User.homegroup
+            User.homegroup,
+            func.ts_rank(Visit.search_vector, func.plainto_tsquery('english', url)).label('rank')
         )
         .select_from(Visit)
         .join(User, Visit.user_id == User.id)
-        .where(Visit.url.ilike(f"%{url}%"))
+        .where(Visit.search_vector.op('@@')(func.plainto_tsquery('english', url)))
+        .order_by(text('rank DESC'))
     )
     
     # Apply date filter if specified
@@ -259,12 +261,12 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
         cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
         query = query.where(Visit.visit_time >= cutoff)
     
-    # Get total count for pagination
+    # Get total count for pagination using full-text search
     count_query = (
         select(func.count(Visit.id))
         .select_from(Visit)
         .join(User, Visit.user_id == User.id)
-        .where(Visit.url.ilike(f"%{url}%"))
+        .where(Visit.search_vector.op('@@')(func.plainto_tsquery('english', url)))
     )
     if days:
         days_float = float(days)
