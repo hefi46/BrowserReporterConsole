@@ -236,7 +236,10 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
     if page_size < 1 or page_size > 1000:
         page_size = 50
     
-    # Build base query - search using full-text search (much faster than ILIKE)
+    # Build base query - hybrid search for best performance and flexibility
+    # Use both full-text search AND ILIKE for comprehensive results
+    search_term = url.strip()
+    
     query = (
         select(
             Visit.url,
@@ -247,12 +250,19 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
             User.display_name,
             User.email,
             User.homegroup,
-            func.ts_rank(Visit.search_vector, func.plainto_tsquery('english', url)).label('rank')
+            func.coalesce(
+                func.ts_rank(Visit.search_vector, func.websearch_to_tsquery('english', search_term)), 0
+            ).label('rank')
         )
         .select_from(Visit)
         .join(User, Visit.user_id == User.id)
-        .where(Visit.search_vector.op('@@')(func.plainto_tsquery('english', url)))
-        .order_by(text('rank DESC'))
+        .where(
+            # Use OR condition: full-text search OR ILIKE for maximum flexibility
+            (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term))) |
+            (Visit.url.ilike(f"%{search_term}%")) |
+            (Visit.title.ilike(f"%{search_term}%"))
+        )
+        .order_by(text('rank DESC'), Visit.visit_time.desc())
     )
     
     # Apply date filter if specified
@@ -261,12 +271,17 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
         cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
         query = query.where(Visit.visit_time >= cutoff)
     
-    # Get total count for pagination using full-text search
+    # Get total count for pagination using hybrid search
     count_query = (
         select(func.count(Visit.id))
         .select_from(Visit)
         .join(User, Visit.user_id == User.id)
-        .where(Visit.search_vector.op('@@')(func.plainto_tsquery('english', url)))
+        .where(
+            # Same OR condition as main query
+            (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term))) |
+            (Visit.url.ilike(f"%{search_term}%")) |
+            (Visit.title.ilike(f"%{search_term}%"))
+        )
     )
     if days:
         days_float = float(days)
