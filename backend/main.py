@@ -273,6 +273,19 @@ async def reports_all(
     }
 
 
+@app.get("/api/meta/homegroups")
+async def get_homegroups(request: Request, db: AsyncSession = Depends(get_db)):
+    """Return distinct homegroups for populating the dropdown."""
+    require_login(request)
+    result = await db.execute(
+        select(func.distinct(User.homegroup)).where(User.homegroup.is_not(None)).order_by(User.homegroup)
+    )
+    rows = result.scalars().all()
+    # Filter out empty strings if present
+    homegroups = [hg for hg in rows if (hg or '').strip()]
+    return {"homegroups": homegroups}
+
+
 @app.get("/api/reports/search")
 async def search_website(request: Request, url: str, page: int = 1, page_size: int = 50, days: float | None = None, db: AsyncSession = Depends(get_db)):
     """Search for users who visited a specific URL or website"""

@@ -1047,7 +1047,8 @@
                 currentUser = await response.json();
                 displayUserInfo(currentUser);
                 
-                // Load dashboard data
+                // Load meta and dashboard data
+                await fetchAndPopulateHomegroups();
                 await loadDashboardData();
                 
             } catch (error) {
@@ -1112,35 +1113,26 @@
             }
         }
 
-        // Extract unique homegroups from user data
-        function extractHomegroups() {
-            const homegroupSet = new Set();
-            allUserData.forEach(user => {
-                if (user.department) {
-                    homegroupSet.add(user.department);
-                }
-            });
-            availableHomegroups = Array.from(homegroupSet).sort();
-        }
-
-        // Populate homegroup filter dropdown
-        function populateHomegroupFilter() {
-            const select = document.getElementById('homegroupFilter');
-            const currentValue = select.value;
-            
-            // Clear existing options except "All Homegroups"
-            select.innerHTML = '<option value="">All Homegroups</option>';
-            
-            // Add homegroup options
-            availableHomegroups.forEach(homegroup => {
-                const option = document.createElement('option');
-                option.value = homegroup;
-                option.textContent = homegroup;
-                if (homegroup === currentValue) {
-                    option.selected = true;
-                }
-                select.appendChild(option);
-            });
+        // Fetch and populate homegroups
+        async function fetchAndPopulateHomegroups() {
+            try {
+                const resp = await fetch('/api/meta/homegroups');
+                if (!resp.ok) throw new Error('Failed to load homegroups');
+                const data = await resp.json();
+                availableHomegroups = data.homegroups || [];
+                const select = document.getElementById('homegroupFilter');
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">All Homegroups</option>';
+                availableHomegroups.forEach(homegroup => {
+                    const option = document.createElement('option');
+                    option.value = homegroup;
+                    option.textContent = homegroup;
+                    if (homegroup === currentValue) option.selected = true;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Homegroups load error', e);
+            }
         }
 
         // Display user table
