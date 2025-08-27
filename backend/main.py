@@ -684,6 +684,11 @@ async def dashboard_bootstrap(request: Request):
     require_login(request)
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
+@app.get("/dashboard2", response_class=HTMLResponse)
+async def dashboard2(request: Request):
+    require_login(request)
+    return templates.TemplateResponse("dashboard2.html", {"request": request})
+
 # Redirect root to dashboard
 @app.get("/")
 async def root_redirect(request: Request):
