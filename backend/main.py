@@ -159,7 +159,15 @@ async def api_logout(request: Request):
 
 
 @app.get("/api/reports/all")
-async def reports_all(request: Request, page: int = 1, page_size: int = 50, db: AsyncSession = Depends(get_db)):
+async def reports_all(
+    request: Request,
+    page: int = 1,
+    page_size: int = 50,
+    homegroup: Optional[str] = None,
+    days: Optional[float] = None,
+    search: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
     # Ensure logged in
     require_login(request)
     
@@ -169,30 +177,70 @@ async def reports_all(request: Request, page: int = 1, page_size: int = 50, db: 
     if page_size < 1 or page_size > 1000:
         page_size = 50
 
-    # Get total count for pagination
-    count_query = select(func.count(User.id)).select_from(User)
-    count_result = await db.execute(count_query)
-    total_count = count_result.scalar()
+    # Base selectable columns
+    selectable = select(
+        User.username,
+        func.coalesce(User.display_name, User.username).label("display_name"),
+        User.email,
+        User.homegroup.label("department"),
+        func.count(Visit.id).label("total_visits"),
+        func.count(func.distinct(Visit.url)).label("unique_urls"),
+        func.max(Visit.visit_time).label("last_activity"),
+        func.string_agg(func.distinct(Visit.computer_name), text("', '")).label("computers")
+    ).select_from(User).outerjoin(Visit, Visit.user_id == User.id)
 
-    # Use SQLAlchemy query with pagination
-    query = (
-        select(
-            User.username,
-            func.coalesce(User.display_name, User.username).label("display_name"),
-            User.email,
-            User.homegroup.label("department"),
-            func.count(Visit.id).label("total_visits"),
-            func.count(func.distinct(Visit.url)).label("unique_urls"),
-            func.max(Visit.visit_time).label("last_activity"),
-            func.string_agg(func.distinct(Visit.computer_name), text("', '")).label("computers")
+    # Apply optional filters (before grouping)
+    if homegroup:
+        selectable = selectable.where(User.homegroup == homegroup)
+
+    if days is not None:
+            # Only consider visits within cutoff for activity-related aggregations
+        try:
+            days_float = float(days)
+        except Exception:
+            days_float = None
+        if days_float is not None:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
+            selectable = selectable.where(Visit.visit_time >= cutoff)
+
+    if search:
+        search_lower = f"%{search.lower()}%"
+        selectable = selectable.where(
+            func.lower(User.username).like(search_lower) |
+            func.lower(func.coalesce(User.display_name, '')).like(search_lower) |
+            func.lower(func.coalesce(User.email, '')).like(search_lower) |
+            func.lower(func.coalesce(User.homegroup, '')).like(search_lower)
         )
-        .select_from(User)
-        .outerjoin(Visit, Visit.user_id == User.id)
-        .group_by(User.id)
-        .order_by(User.username)
-        .limit(page_size)
-        .offset((page - 1) * page_size)
-    )
+
+    # Grouping and ordering
+    selectable = selectable.group_by(User.id).order_by(User.username)
+
+    # Total count with same filters (count distinct users)
+    count_query = select(func.count(func.distinct(User.id))).select_from(User).outerjoin(Visit, Visit.user_id == User.id)
+    if homegroup:
+        count_query = count_query.where(User.homegroup == homegroup)
+    if days is not None:
+        try:
+            days_float = float(days)
+        except Exception:
+            days_float = None
+        if days_float is not None:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
+            count_query = count_query.where(Visit.visit_time >= cutoff)
+    if search:
+        search_lower = f"%{search.lower()}%"
+        count_query = count_query.where(
+            func.lower(User.username).like(search_lower) |
+            func.lower(func.coalesce(User.display_name, '')).like(search_lower) |
+            func.lower(func.coalesce(User.email, '')).like(search_lower) |
+            func.lower(func.coalesce(User.homegroup, '')).like(search_lower)
+        )
+
+    count_result = await db.execute(count_query)
+    total_count = count_result.scalar() or 0
+
+    # Apply pagination to main selectable
+    query = selectable.limit(page_size).offset((page - 1) * page_size)
     
     result = await db.execute(query)
     rows = result.fetchall()

@@ -1077,7 +1077,14 @@
         // Load dashboard data
         async function loadDashboardData(page = 1, pageSize = mainPageSize) {
             try {
-                const response = await fetch(`/api/reports/all?page=${page}&page_size=${pageSize}`);
+                const homegroup = document.getElementById('homegroupFilter').value;
+                const activity = document.getElementById('activityFilter').value;
+                const searchTerm = document.getElementById('searchInput').value.trim();
+                const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+                if (homegroup) params.set('homegroup', homegroup);
+                if (activity) params.set('days', activity);
+                if (searchTerm) params.set('search', searchTerm);
+                const response = await fetch(`/api/reports/all?${params.toString()}`);
                 if (response.ok) {
                     const result = await response.json();
                     
@@ -1090,13 +1097,7 @@
                     // Store the current page data
                     allUserData = result.data;
                     
-                    // Process homegroups and initialize filters (only on first load)
-                    if (page === 1) {
-                        extractHomegroups();
-                        populateHomegroupFilter();
-                    }
-                    
-                    // Display current page data (no filtering on initial load)
+                    // Display current page data
                     displayUserTable(allUserData);
                     updateFilterStatus();
                     updateMainPagination();
@@ -1196,9 +1197,7 @@
 
         // Apply filters
         function applyFilters() {
-            const homegroupFilter = document.getElementById('homegroupFilter').value;
             const activityFilter = document.getElementById('activityFilter').value;
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const keyword = (document.getElementById('keywordInput')?.value || '').trim();
 
             if (keyword) {
@@ -1216,48 +1215,11 @@
                 return;
             }
 
-            filteredUserData = allUserData.filter(user => {
-                // Homegroup filter
-                if (homegroupFilter && user.department !== homegroupFilter) {
-                    return false;
-                }
-
-                // Activity filter
-                if (activityFilter) {
-                    const daysAgo = parseInt(activityFilter);
-                    const cutoffDate = new Date();
-                    cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
-                    
-                    if (!user.lastActivity || new Date(user.lastActivity) < cutoffDate) {
-                        return false;
-                    }
-                }
-
-                // Search filter
-                if (searchTerm) {
-                    const matchesSearch = 
-                        (user.username || '').toLowerCase().includes(searchTerm) ||
-                        (user.displayName || '').toLowerCase().includes(searchTerm) ||
-                        (user.email || '').toLowerCase().includes(searchTerm) ||
-                        (user.department || '').toLowerCase().includes(searchTerm);
-                    
-                    if (!matchesSearch) {
-                        return false;
-                    }
-                }
-
-                return true;
-            });
-
-            displayUserTable(filteredUserData);
-            updateFilterStatus();
-            
-            // Hide pagination when filtering (since results are filtered within current page)
-            if (filteredUserData.length < allUserData.length) {
-                document.getElementById('mainPagination').style.display = 'none';
-            } else {
-                updateMainPagination();
-            }
+            // Server-side filtering: reload
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('dataTableContainer').style.display = 'none';
+            mainCurrentPage = 1;
+            loadDashboardData(1, mainPageSize);
         }
 
         // Clear all filters
