@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Details - Browser Reporter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard.html"><i class="fas fa-user me-2"></i>User Details</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard.html">Dashboard</a>
+                <a class="nav-link" href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0"><i class="fas fa-user-circle me-2"></i><span id="userTitle">User</span></h4>
+            <div>
+                <select id="daysFilter" class="form-select form-select-sm d-inline-block w-auto">
+                    <option value="">All Time</option>
+                    <option value="1">Last 24 Hours</option>
+                    <option value="7">Last 7 Days</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 3 Months</option>
+                </select>
+                <select id="pageSize" class="form-select form-select-sm d-inline-block w-auto ms-2">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Title</th>
+                                <th>URL</th>
+                                <th>Computer</th>
+                            </tr>
+                        </thead>
+                        <tbody id="visitsTable"></tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div><small>Showing <span id="showingStart">0</span>-<span id="showingEnd">0</span> of <span id="totalCount">0</span></small></div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" id="prevBtn">Prev</button>
+                        <button class="btn btn-outline-secondary" id="nextBtn">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const username = window.location.pathname.split('/').pop();
+        let page = 1;
+        let pageSize = 50;
+        let total = 0;
+
+        document.getElementById('userTitle').textContent = username;
+        document.getElementById('pageSize').addEventListener('change', () => { pageSize = parseInt(document.getElementById('pageSize').value); page = 1; load(); });
+        document.getElementById('daysFilter').addEventListener('change', () => { page = 1; load(); });
+        document.getElementById('prevBtn').addEventListener('click', () => { if (page > 1) { page--; load(); } });
+        document.getElementById('nextBtn').addEventListener('click', () => { const maxPage = Math.ceil(total / pageSize); if (page < maxPage) { page++; load(); } });
+
+        async function load() {
+            const days = document.getElementById('daysFilter').value;
+            const qs = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+            if (days) qs.set('days', days);
+            const resp = await fetch(`/api/reports/user/${encodeURIComponent(username)}?${qs.toString()}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            total = data.pagination.total_count;
+            document.getElementById('showingStart').textContent = ((data.pagination.page - 1) * data.pagination.page_size) + 1;
+            document.getElementById('showingEnd').textContent = Math.min(data.pagination.page * data.pagination.page_size, total);
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('prevBtn').disabled = !data.pagination.has_prev;
+            document.getElementById('nextBtn').disabled = !data.pagination.has_next;
+            const tbody = document.getElementById('visitsTable');
+            tbody.innerHTML = data.data.map(v => {
+                const ts = new Date(v.timestamp);
+                const tstr = `${ts.toLocaleDateString()} ${ts.toLocaleTimeString()}`;
+                return `<tr>
+                    <td>${tstr}</td>
+                    <td>${v.title || ''}</td>
+                    <td><a href="${v.url}" target="_blank">${v.url}</a></td>
+                    <td><span class="badge bg-secondary">${v.computerName}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        load();
+    </script>
+</body>
+</html>

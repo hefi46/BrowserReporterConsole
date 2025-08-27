@@ -1183,9 +1183,9 @@
                         <small class="text-muted">${user.computers || 'Unknown'}</small>
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="viewUserDetails('${user.username}')">
+                        <a class="btn btn-sm btn-outline-primary" href="/user/${user.username}">
                             <i class="fas fa-eye"></i>
-                        </button>
+                        </a>
                     </td>
                 </tr>
             `).join('');

@@ -643,6 +643,12 @@ async def client_config_page(request: Request, db: AsyncSession = Depends(get_db
     return templates.TemplateResponse("client_config.html", {"request": request})
 
 
+@app.get("/user/{username}", response_class=HTMLResponse)
+async def user_page(username: str, request: Request):
+    require_login(request)
+    return templates.TemplateResponse("user.html", {"request": request, "username": username})
+
+
 # -------------------------- Startup Events -----------------------------
 
 @app.on_event("startup")
