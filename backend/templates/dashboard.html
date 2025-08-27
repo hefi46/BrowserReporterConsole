@@ -237,6 +237,18 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <label for="keywordInput" class="form-label">
+                                <i class="fas fa-keyboard me-1"></i>Keyword (Title or URL)
+                            </label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="keywordInput" placeholder="Enter keyword or URL..." onkeypress="handleKeywordEnter(event)" oninput="applyFilters()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="applyFilters()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Search visit Title or URL</div>
+                        </div>
                     </div>
                     
                     <div class="row mt-3">
@@ -259,7 +271,7 @@
         </div>
 
         <!-- Website Search -->
-        <div class="row mb-4">
+        <div class="row mb-4" id="websiteSearchControlsRow" style="display: none;">
             <div class="col-12">
                 <div class="stats-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1187,6 +1199,22 @@
             const homegroupFilter = document.getElementById('homegroupFilter').value;
             const activityFilter = document.getElementById('activityFilter').value;
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const keyword = (document.getElementById('keywordInput')?.value || '').trim();
+
+            if (keyword) {
+                const websiteInput = document.getElementById('websiteSearchInput');
+                if (websiteInput) websiteInput.value = keyword;
+                const daysSelect = document.getElementById('websiteSearchDays');
+                if (daysSelect && activityFilter) {
+                    daysSelect.value = activityFilter;
+                }
+                if (typeof executeWebsiteSearch === 'function') {
+                    searchCurrentPage = 1;
+                    executeWebsiteSearch();
+                }
+                updateFilterStatus();
+                return;
+            }
 
             filteredUserData = allUserData.filter(user => {
                 // Homegroup filter
@@ -1237,6 +1265,10 @@
             document.getElementById('homegroupFilter').value = '';
             document.getElementById('activityFilter').value = '';
             document.getElementById('searchInput').value = '';
+            const keywordEl = document.getElementById('keywordInput');
+            if (keywordEl) keywordEl.value = '';
+            const resultsCard = document.getElementById('websiteSearchResults');
+            if (resultsCard) resultsCard.style.display = 'none';
             
             filteredUserData = [...allUserData];
             displayUserTable(filteredUserData);
@@ -1249,6 +1281,7 @@
             const homegroupFilter = document.getElementById('homegroupFilter').value;
             const activityFilter = document.getElementById('activityFilter').value;
             const searchTerm = document.getElementById('searchInput').value;
+            const keyword = (document.getElementById('keywordInput')?.value || '').trim();
             
             let statusText = 'Showing all users';
             const filters = [];
@@ -1271,12 +1304,22 @@
                 filters.push(`matching "${searchTerm}"`);
             }
             
+            if (keyword) {
+                filters.push(`keyword: ${keyword}`);
+            }
+
             if (filters.length > 0) {
                 statusText = `Filtered by: ${filters.join(', ')}`;
             }
             
             document.getElementById('filterStatus').textContent = statusText;
             document.getElementById('totalUserCount').textContent = filteredUserData.length;
+        }
+
+        function handleKeywordEnter(event) {
+            if (event.key === 'Enter') {
+                applyFilters();
+            }
         }
 
         // Refresh data
