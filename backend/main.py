@@ -629,6 +629,19 @@ async def root_redirect(request: Request):
     require_login(request)
     return RedirectResponse(url="/dashboard.html")
 
+# New standalone pages for Admin and Client Config ---------------------------------
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request, db: AsyncSession = Depends(get_db)):
+    await require_admin(request, db)
+    return templates.TemplateResponse("admin.html", {"request": request})
+
+
+@app.get("/client-config", response_class=HTMLResponse)
+async def client_config_page(request: Request, db: AsyncSession = Depends(get_db)):
+    await require_admin(request, db)
+    return templates.TemplateResponse("client_config.html", {"request": request})
+
 
 # -------------------------- Startup Events -----------------------------
 
