@@ -696,13 +696,14 @@ charlie.dev,DevPass654,user"""
 @app.get("/dashboard.html", response_class=HTMLResponse)
 async def dashboard_bootstrap(request: Request):
     require_login(request)
-    # Redirect legacy dashboard to the new one
-    return RedirectResponse(url="/dashboard2")
+    # Serve the new dashboard under the legacy path
+    return templates.TemplateResponse("dashboard2.html", {"request": request})
 
 @app.get("/dashboard2", response_class=HTMLResponse)
 async def dashboard2(request: Request):
     require_login(request)
-    return templates.TemplateResponse("dashboard2.html", {"request": request})
+    # Redirect to canonical dashboard path
+    return RedirectResponse(url="/dashboard.html")
 
 
 @app.get("/keyword-search", response_class=HTMLResponse)
@@ -714,7 +715,7 @@ async def keyword_search_page(request: Request, db: AsyncSession = Depends(get_d
 @app.get("/")
 async def root_redirect(request: Request):
     require_login(request)
-    return RedirectResponse(url="/dashboard2")
+    return RedirectResponse(url="/dashboard.html")
 
 # New standalone pages for Admin and Client Config ---------------------------------
 
