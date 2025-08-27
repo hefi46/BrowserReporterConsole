@@ -287,7 +287,15 @@ async def get_homegroups(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @app.get("/api/reports/search")
-async def search_website(request: Request, url: str, page: int = 1, page_size: int = 50, days: float | None = None, db: AsyncSession = Depends(get_db)):
+async def search_website(
+    request: Request,
+    url: str,
+    page: int = 1,
+    page_size: int = 50,
+    days: float | None = None,
+    homegroup: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
     """Search for users who visited a specific URL or website"""
     require_login(request)
     
@@ -325,6 +333,8 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
         )
         .order_by(text('rank DESC'), Visit.visit_time.desc())
     )
+    if homegroup:
+        query = query.where(User.homegroup == homegroup)
     
     # Apply date filter if specified
     if days:
@@ -344,6 +354,8 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
             (Visit.title.ilike(f"%{search_term}%"))
         )
     )
+    if homegroup:
+        count_query = count_query.where(User.homegroup == homegroup)
     if days:
         days_float = float(days)
         cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
@@ -372,6 +384,8 @@ async def search_website(request: Request, url: str, page: int = 1, page_size: i
         .join(User, Visit.user_id == User.id)
         .where(Visit.url.ilike(f"%{url}%"))
     )
+    if homegroup:
+        unique_users_query = unique_users_query.where(User.homegroup == homegroup)
     if days:
         days_float = float(days)
         cutoff = datetime.now(timezone.utc) - timedelta(days=days_float)
@@ -682,18 +696,25 @@ charlie.dev,DevPass654,user"""
 @app.get("/dashboard.html", response_class=HTMLResponse)
 async def dashboard_bootstrap(request: Request):
     require_login(request)
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    # Redirect legacy dashboard to the new one
+    return RedirectResponse(url="/dashboard2")
 
 @app.get("/dashboard2", response_class=HTMLResponse)
 async def dashboard2(request: Request):
     require_login(request)
     return templates.TemplateResponse("dashboard2.html", {"request": request})
 
+
+@app.get("/keyword-search", response_class=HTMLResponse)
+async def keyword_search_page(request: Request, db: AsyncSession = Depends(get_db)):
+    require_login(request)
+    return templates.TemplateResponse("keyword_search.html", {"request": request})
+
 # Redirect root to dashboard
 @app.get("/")
 async def root_redirect(request: Request):
     require_login(request)
-    return RedirectResponse(url="/dashboard.html")
+    return RedirectResponse(url="/dashboard2")
 
 # New standalone pages for Admin and Client Config ---------------------------------
 
