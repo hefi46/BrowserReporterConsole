@@ -1,0 +1,140 @@
+# BrowserReporterConsole - Automated Database Management Cron Jobs
+#
+# This file contains recommended cron schedules for database maintenance tasks.
+# Adjust timings based on your server's timezone and low-traffic periods.
+#
+# Installation:
+#   1. Copy this file: cp crontab.example ~/browser_reporter_cron
+#   2. Edit paths to match your installation directory
+#   3. Install: crontab ~/browser_reporter_cron
+#   4. Verify: crontab -l
+#
+# Note: All scripts should be executable (chmod +x script_name.sh)
+
+# Environment variables (adjust paths to your installation)
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+SCRIPTS_DIR=/home/hefi/BrowserReporterConsole/backend/scripts
+LOG_DIR=/var/log/browser_reporter
+
+# Create log directory if it doesn't exist
+# mkdir -p /var/log/browser_reporter
+
+# ============================================================================
+# DAILY TASKS
+# ============================================================================
+
+# Daily database backup at 2:00 AM
+# Keeps 7 days of backups
+0 2 * * * $SCRIPTS_DIR/backup_database.sh /backups/postgres 7 >> $LOG_DIR/backup.log 2>&1
+
+# Daily ANALYZE at 3:00 AM (updates query planner statistics)
+# This is quick and can run daily
+0 3 * * * $SCRIPTS_DIR/maintenance.sh --analyze-only >> $LOG_DIR/maintenance.log 2>&1
+
+# ============================================================================
+# WEEKLY TASKS
+# ============================================================================
+
+# Weekly VACUUM + ANALYZE on Sunday at 2:00 AM
+# Reclaims space from deleted records
+0 2 * * 0 $SCRIPTS_DIR/maintenance.sh >> $LOG_DIR/maintenance.log 2>&1
+
+# ============================================================================
+# MONTHLY TASKS
+# ============================================================================
+
+# Monthly data retention (archive old data) on 1st of month at 1:00 AM
+# Implements 90-day retention policy
+0 1 1 * * cd $SCRIPTS_DIR && python3 data_retention.py >> $LOG_DIR/retention.log 2>&1
+
+# Monthly deep maintenance (VACUUM FULL) on 1st of month at 4:00 AM
+# Only if database is large and you have maintenance window
+# IMPORTANT: This locks tables! Only run during low-traffic periods
+# 0 4 1 * * $SCRIPTS_DIR/maintenance.sh --vacuum-full >> $LOG_DIR/maintenance_full.log 2>&1
+
+# ============================================================================
+# QUARTERLY TASKS (Optional)
+# ============================================================================
+
+# Quarterly REINDEX on first Sunday of Jan/Apr/Jul/Oct at 3:00 AM
+# Only needed if experiencing index bloat
+# Format: minute hour day month day-of-week
+# 0 3 1-7 1,4,7,10 0 $SCRIPTS_DIR/maintenance.sh --reindex >> $LOG_DIR/reindex.log 2>&1
+
+# ============================================================================
+# MONITORING & ALERTS (Optional)
+# ============================================================================
+
+# Daily database size check at 6:00 AM
+# Sends alert if database exceeds threshold
+# 0 6 * * * $SCRIPTS_DIR/check_db_size.sh >> $LOG_DIR/monitoring.log 2>&1
+
+# Hourly log rotation check (if using custom logging)
+# 0 * * * * find $LOG_DIR -name "*.log" -size +100M -exec gzip {} \;
+
+# ============================================================================
+# LOG ROTATION
+# ============================================================================
+
+# Clean up old logs every week (keep 30 days)
+0 1 * * 0 find $LOG_DIR -name "*.log" -mtime +30 -delete
+
+# ============================================================================
+# SCHEDULE SUMMARY
+# ============================================================================
+#
+# Daily (every day):
+#   02:00 - Database backup
+#   03:00 - ANALYZE (update statistics)
+#
+# Weekly (Sunday):
+#   02:00 - VACUUM + ANALYZE (reclaim space)
+#   01:00 - Clean old logs
+#
+# Monthly (1st of month):
+#   01:00 - Data retention (archive/delete old data)
+#   04:00 - VACUUM FULL (optional, locks tables)
+#
+# Quarterly (first Sunday of quarter):
+#   03:00 - REINDEX (optional, for index bloat)
+#
+# ============================================================================
+# CUSTOMIZATION TIPS
+# ============================================================================
+#
+# 1. Adjust backup retention:
+#    Change "7" to keep more/fewer days of backups
+#
+# 2. Change backup time:
+#    Modify the hour (0-23) in the cron schedule
+#    Example: "0 1 * * *" runs at 1:00 AM
+#
+# 3. Add email notifications:
+#    Set MAILTO at top of crontab:
+#    MAILTO=admin@example.com
+#
+# 4. Disable specific jobs:
+#    Comment out line with #
+#
+# 5. Test a job manually:
+#    /path/to/script.sh
+#
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+#
+# Cron jobs not running?
+# 1. Check cron service: sudo systemctl status cron
+# 2. Check logs: grep CRON /var/log/syslog
+# 3. Verify script permissions: ls -l /path/to/script.sh
+# 4. Test script manually: /path/to/script.sh
+# 5. Check script paths in crontab
+#
+# Scripts failing?
+# 1. Check script logs in $LOG_DIR
+# 2. Verify Docker containers are running: docker compose ps
+# 3. Check disk space: df -h
+# 4. Verify database connectivity
+#
+# ============================================================================

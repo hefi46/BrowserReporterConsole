@@ -6,6 +6,8 @@ import csv
 import io
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
+from pathlib import Path
+import asyncpg
 
 from fastapi import FastAPI, Depends, Request, Form, HTTPException, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
@@ -800,6 +802,118 @@ async def user_page(username: str, request: Request):
     return templates.TemplateResponse("user.html", {"request": request, "username": username})
 
 
+# -------------------------- Auto-Migration Functions --------------------
+
+async def auto_apply_migrations():
+    """
+    Automatically apply database migrations on startup.
+    This runs before the application starts serving requests.
+    """
+    # Database connection settings
+    # Use 'db' as host when running inside Docker, otherwise 'localhost'
+    db_host = os.getenv("DB_HOST", "db")  # Default to 'db' for Docker
+    db_config = {
+        "host": db_host,
+        "port": int(os.getenv("DB_PORT", "5432")),
+        "user": os.getenv("DB_USER", "browser_reporter"),
+        "password": os.getenv("DB_PASSWORD", "browser_reporter"),
+        "database": os.getenv("DB_NAME", "browser_reporter"),
+    }
+
+    conn = None
+    try:
+        # Connect to database
+        print("🔄 Checking for pending database migrations...")
+        conn = await asyncpg.connect(**db_config)
+
+        # Create migration tracking table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                id SERIAL PRIMARY KEY,
+                migration_name VARCHAR(255) UNIQUE NOT NULL,
+                applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                execution_time_seconds DECIMAL(10, 3)
+            )
+        """)
+
+        # Find migration files
+        migrations_dir = Path(__file__).parent / "migrations"
+        if not migrations_dir.exists():
+            print("⚠️  No migrations directory found, skipping migrations")
+            return
+
+        migration_files = sorted(migrations_dir.glob("*.sql"))
+
+        if not migration_files:
+            print("✓ No SQL migration files found")
+            return
+
+        # Apply each migration
+        applied_count = 0
+        skipped_count = 0
+
+        for migration_file in migration_files:
+            migration_name = migration_file.name
+
+            # Check if already applied
+            is_applied = await conn.fetchval(
+                "SELECT COUNT(*) FROM schema_migrations WHERE migration_name = $1",
+                migration_name
+            )
+
+            if is_applied:
+                skipped_count += 1
+                continue
+
+            # Apply migration
+            print(f"📋 Applying migration: {migration_name}")
+            sql_content = migration_file.read_text()
+
+            start_time = datetime.now()
+
+            try:
+                await conn.execute(sql_content)
+                execution_time = (datetime.now() - start_time).total_seconds()
+
+                # Record migration
+                await conn.execute(
+                    """
+                    INSERT INTO schema_migrations (migration_name, execution_time_seconds)
+                    VALUES ($1, $2)
+                    """,
+                    migration_name,
+                    execution_time
+                )
+
+                print(f"   ✅ Applied in {execution_time:.2f}s")
+                applied_count += 1
+
+            except Exception as e:
+                print(f"   ❌ Migration failed: {e}")
+                # Continue with other migrations
+                continue
+
+        # Summary
+        if applied_count > 0:
+            print(f"✅ Applied {applied_count} new migration(s)")
+        if skipped_count > 0:
+            print(f"⏭️  Skipped {skipped_count} already-applied migration(s)")
+        if applied_count == 0 and skipped_count == 0:
+            print("✓ No migrations needed")
+
+    except asyncpg.exceptions.InvalidCatalogNameError:
+        print("⚠️  Database does not exist yet, will be created by SQLAlchemy")
+    except asyncpg.exceptions.PostgresConnectionError as e:
+        print(f"⚠️  Could not connect to database for migrations: {e}")
+        print("   Migrations will be skipped. Database may not be ready yet.")
+    except Exception as e:
+        print(f"⚠️  Migration error: {e}")
+        print("   Application will continue startup, but performance may be degraded")
+    finally:
+        if conn:
+            await conn.close()
+
+
 # -------------------------- Startup Events -----------------------------
 
 @app.on_event("startup")
@@ -807,6 +921,8 @@ async def on_startup():
     # Create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # Auto-apply database migrations
+    await auto_apply_migrations()
     # ensure initial admin exists
     await create_initial_admin()
 
@@ -882,6 +998,162 @@ async def admin_get_current_config(
         
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to read current config: {exc}")
+
+
+@app.get("/api/admin/db-stats")
+async def admin_get_database_stats(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get comprehensive database statistics and health metrics.
+    Admin only endpoint for monitoring database performance and size.
+    """
+    await require_admin(request, db)
+
+    try:
+        # Table sizes and record counts
+        table_stats_query = text("""
+            SELECT
+                schemaname,
+                tablename,
+                pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+                pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+                pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) as index_size,
+                pg_total_relation_size(schemaname||'.'||tablename) as total_bytes
+            FROM pg_tables
+            WHERE schemaname = 'public'
+            ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+        """)
+
+        table_stats_result = await db.execute(table_stats_query)
+        table_stats = [dict(row._mapping) for row in table_stats_result]
+
+        # Record counts for main tables
+        visits_total = await db.scalar(select(func.count()).select_from(Visit))
+        users_total = await db.scalar(select(func.count()).select_from(User))
+
+        # Check if archive table exists and get its count
+        archive_exists = await db.scalar(text("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_name = 'visits_archive'
+            );
+        """))
+
+        visits_archive_total = 0
+        if archive_exists:
+            visits_archive_total = await db.scalar(text("SELECT COUNT(*) FROM visits_archive"))
+
+        # Date range for visits
+        oldest_visit = await db.scalar(select(func.min(Visit.visit_time)))
+        newest_visit = await db.scalar(select(func.max(Visit.visit_time)))
+
+        # Visits in last 24 hours
+        last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+        visits_24h = await db.scalar(
+            select(func.count()).select_from(Visit).where(Visit.visit_time >= last_24h)
+        )
+
+        # Visits in last 7 days
+        last_7d = datetime.now(timezone.utc) - timedelta(days=7)
+        visits_7d = await db.scalar(
+            select(func.count()).select_from(Visit).where(Visit.visit_time >= last_7d)
+        )
+
+        # Active users (visited in last 24h)
+        active_users_24h = await db.scalar(
+            select(func.count(func.distinct(Visit.user_id)))
+            .select_from(Visit)
+            .where(Visit.visit_time >= last_24h)
+        )
+
+        # Database size
+        db_size_query = text("""
+            SELECT pg_size_pretty(pg_database_size(current_database())) as db_size,
+                   pg_database_size(current_database()) as db_bytes;
+        """)
+        db_size_result = await db.execute(db_size_query)
+        db_size_row = db_size_result.fetchone()
+        db_size = dict(db_size_row._mapping) if db_size_row else {"db_size": "Unknown", "db_bytes": 0}
+
+        # Index usage statistics
+        index_stats_query = text("""
+            SELECT
+                schemaname,
+                tablename,
+                indexname,
+                idx_scan as times_used,
+                pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+            FROM pg_stat_user_indexes
+            WHERE schemaname = 'public'
+              AND indexname LIKE 'idx_%'
+            ORDER BY idx_scan DESC
+            LIMIT 20;
+        """)
+
+        index_stats_result = await db.execute(index_stats_query)
+        index_stats = [dict(row._mapping) for row in index_stats_result]
+
+        # Connection stats
+        connection_stats_query = text("""
+            SELECT
+                count(*) as total_connections,
+                count(*) FILTER (WHERE state = 'active') as active_connections,
+                count(*) FILTER (WHERE state = 'idle') as idle_connections
+            FROM pg_stat_activity
+            WHERE datname = current_database();
+        """)
+
+        connection_stats_result = await db.execute(connection_stats_query)
+        connection_stats_row = connection_stats_result.fetchone()
+        connection_stats = dict(connection_stats_row._mapping) if connection_stats_row else {}
+
+        # Slow query detection (if pg_stat_statements is enabled)
+        try:
+            slow_queries_query = text("""
+                SELECT
+                    substring(query, 1, 100) as query_preview,
+                    calls,
+                    mean_exec_time,
+                    total_exec_time
+                FROM pg_stat_statements
+                WHERE mean_exec_time > 100
+                ORDER BY mean_exec_time DESC
+                LIMIT 10;
+            """)
+            slow_queries_result = await db.execute(slow_queries_query)
+            slow_queries = [dict(row._mapping) for row in slow_queries_result]
+        except:
+            slow_queries = []  # pg_stat_statements not enabled
+
+        return {
+            "database": {
+                "total_size": db_size["db_size"],
+                "total_bytes": db_size["db_bytes"],
+                "connection_info": connection_stats,
+            },
+            "tables": table_stats,
+            "records": {
+                "users": users_total,
+                "visits": visits_total,
+                "visits_archive": visits_archive_total,
+                "total_visits": visits_total + visits_archive_total,
+            },
+            "activity": {
+                "oldest_visit": oldest_visit.isoformat() if oldest_visit else None,
+                "newest_visit": newest_visit.isoformat() if newest_visit else None,
+                "visits_last_24h": visits_24h,
+                "visits_last_7d": visits_7d,
+                "active_users_24h": active_users_24h,
+            },
+            "indexes": index_stats,
+            "slow_queries": slow_queries,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve database statistics: {str(e)}")
 
 
 @app.get("/secureconfig.json")
