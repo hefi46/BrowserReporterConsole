@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Mock Data Generator for Browser Reporter
-Generates realistic browsing data for 20 users across 4 homegroups
+Generates realistic browsing data for 540 users across 18 homegroups (1A-6C)
 """
 
 import requests
@@ -15,8 +15,8 @@ from typing import List, Dict
 API_URL = "http://localhost:8000/api/reports/data"
 
 # Homegroups and user distribution for load testing
-HOMEGROUPS = ["3A", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "6C", "Engineering", "Marketing", "Sales", "HR", "Finance", "IT", "Research", "Support", "Admin", "Legal", "Operations", "Quality"]
-USERS_PER_GROUP = 12  # 24 groups * 12 users = 288 users (close to 300)
+HOMEGROUPS = ["1A", "1B", "1C", "2A", "2B", "2C", "3A", "3B", "3C", "4A", "4B", "4C", "5A", "5B", "5C", "6A", "6B", "6C"]
+USERS_PER_GROUP = 30  # 18 groups * 30 users = 540 users
 
 # Sample data for realistic browsing - expanded for load testing
 FIRST_NAMES = [
@@ -27,16 +27,29 @@ FIRST_NAMES = [
     "Donald", "Dorothy", "Steven", "Sandra", "Brian", "Donna", "Edward", "Carol",
     "Ronald", "Ruth", "Timothy", "Sharon", "Jason", "Michelle", "Jeffrey", "Laura",
     "Ryan", "Kimberly", "Jacob", "Deborah", "Gary", "Amy", "Nicholas", "Angela",
-    "Eric", "Brenda", "Jonathan", "Emma", "Stephen", "Olivia", "Larry", "Cynthia",
+    "Eric", "Brenda", "Jonathan", "Sophia", "Stephen", "Olivia", "Larry", "Cynthia",
     "Justin", "Marie", "Scott", "Janet", "Brandon", "Catherine", "Benjamin", "Frances",
     "Samuel", "Christine", "Gregory", "Samantha", "Frank", "Debra", "Raymond", "Rachel",
-    "Alexander", "Carolyn", "Patrick", "Virginia", "Jack", "Maria", "Dennis", "Heather",
+    "Alexander", "Carolyn", "Patrick", "Virginia", "Jack", "Isabella", "Dennis", "Heather",
     "Jerry", "Diane", "Tyler", "Julie", "Aaron", "Joyce", "Jose", "Victoria",
     "Henry", "Kelly", "Adam", "Christina", "Douglas", "Joan", "Nathan", "Evelyn",
     "Peter", "Lauren", "Zachary", "Judith", "Kyle", "Megan", "Arthur", "Cheryl",
     "Noah", "Andrea", "Carl", "Hannah", "Wayne", "Jacqueline", "Ralph", "Martha",
     "Roy", "Gloria", "Eugene", "Teresa", "Louis", "Sara", "Philip", "Janice",
-    "Bobby", "Marie", "Johnny", "Julia", "Mason", "Kathryn", "Austin", "Frances"
+    "Bobby", "Madison", "Johnny", "Julia", "Mason", "Kathryn", "Austin", "Abigail",
+    "Ethan", "Alexis", "Kevin", "Natalie", "Christian", "Grace", "Elijah", "Chloe",
+    "Dylan", "Alyssa", "Jordan", "Brianna", "Caleb", "Ella", "Lucas", "Lily",
+    "Logan", "Hailey", "Owen", "Anna", "Isaac", "Zoe", "Carter", "Leah",
+    "Connor", "Allison", "Landon", "Avery", "Wyatt", "Addison", "Hunter", "Audrey",
+    "Cameron", "Maya", "Adrian", "Riley", "Evan", "Brooklyn", "Jaxon", "Savannah",
+    "Gavin", "Claire", "Jeremiah", "Aubrey", "Colton", "Bella", "Dominic", "Violet",
+    "Blake", "Skylar", "Ian", "Aria", "Sebastian", "Penelope", "Cooper", "Hazel",
+    "Levi", "Nora", "Hudson", "Scarlett", "Chase", "Eleanor", "Grayson", "Lucy",
+    "Maxwell", "Paisley", "Easton", "Kennedy", "Liam", "Sadie", "Oliver", "Aaliyah",
+    "Aiden", "Piper", "Jackson", "Autumn", "Jayden", "Ruby", "Lincoln", "Stella",
+    "Nolan", "Aurora", "Miles", "Alice", "Parker", "Vivian", "Tristan", "Madelyn",
+    "Xavier", "Ellie", "Sawyer", "Clara", "Brayden", "Eva", "Brody", "Naomi",
+    "Declan", "Lydia", "Bentley", "Faith", "Vincent", "Isla", "Harrison", "Quinn"
 ]
 
 LAST_NAMES = [
@@ -48,21 +61,34 @@ LAST_NAMES = [
     "Flores", "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell",
     "Mitchell", "Carter", "Roberts", "Turner", "Phillips", "Parker", "Evans", "Edwards",
     "Collins", "Stewart", "Morris", "Rogers", "Reed", "Cook", "Morgan", "Bell",
-    "Murphy", "Bailey", "Cooper", "Richardson", "Cox", "Howard", "Ward", "Torres",
-    "Peterson", "Gray", "Ramirez", "James", "Watson", "Brooks", "Kelly", "Sanders",
-    "Price", "Bennett", "Wood", "Barnes", "Ross", "Henderson", "Coleman", "Jenkins",
-    "Perry", "Powell", "Long", "Patterson", "Hughes", "Flores", "Washington", "Butler",
-    "Simmons", "Foster", "Gonzales", "Bryant", "Alexander", "Russell", "Griffin", "Diaz",
-    "Hayes", "Myers", "Ford", "Hamilton", "Graham", "Sullivan", "Wallace", "Woods",
-    "Cole", "West", "Jordan", "Owens", "Reynolds", "Fisher", "Ellis", "Harrison",
-    "Gibson", "Mcdonald", "Cruz", "Marshall", "Ortiz", "Gomez", "Murray", "Freeman",
-    "Wells", "Webb", "Simpson", "Stevens", "Tucker", "Porter", "Hunter", "Hicks"
+    "Murphy", "Bailey", "Cooper", "Richardson", "Cox", "Howard", "Ward", "Diaz",
+    "Peterson", "Gray", "James", "Watson", "Brooks", "Kelly", "Sanders", "Price",
+    "Bennett", "Wood", "Barnes", "Ross", "Henderson", "Coleman", "Jenkins", "Perry",
+    "Powell", "Long", "Patterson", "Hughes", "Washington", "Butler", "Simmons", "Foster",
+    "Gonzales", "Bryant", "Alexander", "Russell", "Griffin", "Hayes", "Myers", "Ford",
+    "Hamilton", "Graham", "Sullivan", "Wallace", "Woods", "Cole", "West", "Jordan",
+    "Owens", "Reynolds", "Fisher", "Ellis", "Harrison", "Gibson", "McDonald", "Cruz",
+    "Marshall", "Ortiz", "Gomez", "Murray", "Freeman", "Wells", "Webb", "Simpson",
+    "Stevens", "Tucker", "Porter", "Hunter", "Hicks", "Crawford", "Henry", "Boyd",
+    "Mason", "Morales", "Kennedy", "Warren", "Dixon", "Ramos", "Reyes", "Burns",
+    "Gordon", "Shaw", "Holmes", "Rice", "Robertson", "Hunt", "Black", "Daniels",
+    "Palmer", "Mills", "Nichols", "Grant", "Knight", "Ferguson", "Rose", "Stone",
+    "Hawkins", "Dunn", "Perkins", "Hudson", "Spencer", "Gardner", "Stephens", "Payne",
+    "Pierce", "Berry", "Matthews", "Arnold", "Wagner", "Willis", "Ray", "Watkins",
+    "Olson", "Carroll", "Duncan", "Snyder", "Hart", "Cunningham", "Bradley", "Lane",
+    "Andrews", "Ruiz", "Harper", "Fox", "Riley", "Armstrong", "Carpenter", "Weaver",
+    "Greene", "Lawrence", "Elliott", "Chavez", "Sims", "Austin", "Peters", "Kelley",
+    "Franklin", "Lawson", "Fields", "Gutierrez", "Ryan", "Schmidt", "Carr", "Vasquez",
+    "Castillo", "Wheeler", "Chapman", "Oliver", "Montgomery", "Richards", "Williamson", "Johnston",
+    "Banks", "Meyer", "Bishop", "McCoy", "Howell", "Alvarez", "Morrison", "Hansen"
 ]
 
 # Realistic websites with categories
 WEBSITES = {
     "work": [
         ("https://github.com", "GitHub"),
+        ("https://gitlab.com", "GitLab"),
+        ("https://bitbucket.org", "Bitbucket"),
         ("https://stackoverflow.com", "Stack Overflow"),
         ("https://docs.microsoft.com", "Microsoft Docs"),
         ("https://developer.mozilla.org", "MDN Web Docs"),
@@ -77,6 +103,13 @@ WEBSITES = {
         ("https://trello.com", "Trello"),
         ("https://asana.com", "Asana"),
         ("https://notion.so", "Notion"),
+        ("https://monday.com", "Monday.com"),
+        ("https://clickup.com", "ClickUp"),
+        ("https://basecamp.com", "Basecamp"),
+        ("https://figma.com", "Figma"),
+        ("https://miro.com", "Miro"),
+        ("https://canva.com", "Canva"),
+        ("https://adobe.com", "Adobe Creative Cloud"),
     ],
     "research": [
         ("https://wikipedia.org", "Wikipedia"),
@@ -87,6 +120,13 @@ WEBSITES = {
         ("https://ieee.org", "IEEE Xplore"),
         ("https://acm.org", "ACM Digital Library"),
         ("https://springerlink.com", "Springer Link"),
+        ("https://sciencedirect.com", "ScienceDirect"),
+        ("https://jstor.org", "JSTOR"),
+        ("https://nature.com", "Nature"),
+        ("https://science.org", "Science Magazine"),
+        ("https://semanticscholar.org", "Semantic Scholar"),
+        ("https://mendeley.com", "Mendeley"),
+        ("https://wolframalpha.com", "Wolfram Alpha"),
     ],
     "news": [
         ("https://bbc.com", "BBC News"),
@@ -96,6 +136,14 @@ WEBSITES = {
         ("https://arstechnica.com", "Ars Technica"),
         ("https://wired.com", "Wired"),
         ("https://theverge.com", "The Verge"),
+        ("https://nytimes.com", "New York Times"),
+        ("https://wsj.com", "Wall Street Journal"),
+        ("https://bloomberg.com", "Bloomberg"),
+        ("https://forbes.com", "Forbes"),
+        ("https://techradar.com", "TechRadar"),
+        ("https://engadget.com", "Engadget"),
+        ("https://mashable.com", "Mashable"),
+        ("https://hackernews.com", "Hacker News"),
     ],
     "productivity": [
         ("https://gmail.com", "Gmail"),
@@ -105,6 +153,12 @@ WEBSITES = {
         ("https://dropbox.com", "Dropbox"),
         ("https://onedrive.live.com", "OneDrive"),
         ("https://evernote.com", "Evernote"),
+        ("https://onenote.com", "OneNote"),
+        ("https://box.com", "Box"),
+        ("https://todoist.com", "Todoist"),
+        ("https://any.do", "Any.do"),
+        ("https://airtable.com", "Airtable"),
+        ("https://coda.io", "Coda"),
     ],
     "casual": [
         ("https://youtube.com", "YouTube"),
@@ -115,6 +169,15 @@ WEBSITES = {
         ("https://instagram.com", "Instagram"),
         ("https://netflix.com", "Netflix"),
         ("https://spotify.com", "Spotify"),
+        ("https://tiktok.com", "TikTok"),
+        ("https://twitch.tv", "Twitch"),
+        ("https://discord.com", "Discord"),
+        ("https://pinterest.com", "Pinterest"),
+        ("https://medium.com", "Medium"),
+        ("https://dev.to", "DEV Community"),
+        ("https://imgur.com", "Imgur"),
+        ("https://vimeo.com", "Vimeo"),
+        ("https://soundcloud.com", "SoundCloud"),
     ]
 }
 
@@ -123,16 +186,30 @@ COMPUTER_NAMES = [
     "DEV-MACHINE-02", "ANALYST-PC", "ADMIN-LAPTOP", "RESEARCHER-01",
     "STUDENT-PC-01", "FACULTY-LAPTOP", "LAB-COMPUTER-A", "OFFICE-DESKTOP",
     "REMOTE-LAPTOP", "HOME-OFFICE-PC", "MOBILE-WORKSTATION", "CONFERENCE-PC",
-    "TRAINING-PC-01", "BACKUP-MACHINE", "TEST-COMPUTER", "SHARED-WORKSTATION"
+    "TRAINING-PC-01", "BACKUP-MACHINE", "TEST-COMPUTER", "SHARED-WORKSTATION",
+    "MACBOOK-PRO-01", "IMAC-STUDIO", "THINKPAD-T14", "SURFACE-LAPTOP-5",
+    "HP-ELITEBOOK", "DELL-PRECISION", "LENOVO-YOGA", "ASUS-ZENBOOK",
+    "ACER-ASPIRE", "RAZER-BLADE", "MSI-PRESTIGE", "FRAMEWORK-LAPTOP",
+    "ALIENWARE-M15", "CHROMEBOOK-01", "TABLET-SURFACE", "IPAD-PRO-12",
+    "HOME-PC-WIN11", "LAB-MAC-MINI", "SERVER-TERM-01", "KIOSK-LOBBY"
 ]
 
-def generate_user_data(user_index: int, homegroup: str) -> Dict:
-    """Generate user data for a specific user"""
-    # Use modulo to cycle through names and add user index for uniqueness
-    first_name = FIRST_NAMES[user_index % len(FIRST_NAMES)]
-    last_name = LAST_NAMES[user_index % len(LAST_NAMES)]
-    username = f"{first_name.lower()}.{last_name.lower()}{user_index:03d}"  # Add index for uniqueness
-    
+def generate_user_data(user_index: int, homegroup: str, used_names: set) -> Dict:
+    """Generate user data for a specific user with unique name combinations"""
+    # Generate a unique name combination for this user
+    max_attempts = 100
+    for _ in range(max_attempts):
+        first_name = random.choice(FIRST_NAMES)
+        last_name = random.choice(LAST_NAMES)
+        name_key = f"{first_name}_{last_name}"
+
+        if name_key not in used_names:
+            used_names.add(name_key)
+            break
+
+    # Create username with homegroup identifier for uniqueness
+    username = f"{first_name.lower()}.{last_name.lower()}.{homegroup.lower()}"
+
     return {
         "Username": username,
         "DisplayName": f"{first_name} {last_name}",
@@ -163,25 +240,53 @@ def generate_visits(user_info: Dict, num_visits: int) -> List[Dict]:
     """Generate realistic browsing visits for a user"""
     visits = []
     browsing_pattern = generate_browsing_pattern()
-    computer_name = random.choice(COMPUTER_NAMES)
-    
-    # Generate visits over the last 60 days for more spread
+
+    # Users may use multiple computers
+    primary_computer = random.choice(COMPUTER_NAMES)
+    use_multiple_computers = random.random() < 0.3  # 30% chance of using multiple computers
+
+    # Generate visits over the last 90 days for more spread
     end_time = datetime.now()
-    start_time = end_time - timedelta(days=60)
-    
+    start_time = end_time - timedelta(days=90)
+
     for i in range(num_visits):
-        # Pick category based on browsing pattern
-        category = random.choice(browsing_pattern)
+        # Pick category based on browsing pattern (but allow some randomness)
+        if random.random() < 0.85:
+            category = random.choice(browsing_pattern)
+        else:
+            category = random.choice(list(WEBSITES.keys()))
+
         url, title = random.choice(WEBSITES[category])
-        
-        # Generate realistic timing (business hours weighted)
-        random_time = start_time + timedelta(
-            days=random.randint(0, 59),
-            hours=random.choices([8, 9, 10, 11, 12, 13, 14, 15, 16, 17], 
-                                weights=[5, 10, 15, 15, 10, 10, 15, 15, 10, 5])[0],
-            minutes=random.randint(0, 59),
-            seconds=random.randint(0, 59)
+
+        # Some users work on weekends, most don't
+        works_weekends = random.random() < 0.2
+
+        # Generate realistic timing with varied patterns
+        day_offset = random.randint(0, 89)
+        selected_day = start_time + timedelta(days=day_offset)
+
+        # Skip weekends for most users
+        if not works_weekends and selected_day.weekday() >= 5:
+            day_offset = (day_offset - (selected_day.weekday() - 4)) % 90
+            selected_day = start_time + timedelta(days=day_offset)
+
+        # Varied hour patterns - some early birds, some night owls
+        hour_pattern = random.choices(
+            [[7,8,9,10,11,12,13,14,15,16], [9,10,11,12,13,14,15,16,17,18], [10,11,12,13,14,15,16,17,18,19]],
+            weights=[20, 60, 20]
+        )[0]
+
+        random_time = selected_day.replace(
+            hour=random.choice(hour_pattern),
+            minute=random.randint(0, 59),
+            second=random.randint(0, 59)
         )
+
+        # Select computer
+        if use_multiple_computers and random.random() < 0.2:
+            computer_name = random.choice(COMPUTER_NAMES)
+        else:
+            computer_name = primary_computer
         
         # Add some specific page paths for realism
         if "github.com" in url:
@@ -230,60 +335,65 @@ def main():
     print(f"📊 Generating data for {len(HOMEGROUPS) * USERS_PER_GROUP} users")
     print(f"🏢 Homegroups: {len(HOMEGROUPS)} groups ({USERS_PER_GROUP} users each)")
     print(f"🌐 API Endpoint: {API_URL}")
-    print(f"📈 Target: 1000 visits per user = {len(HOMEGROUPS) * USERS_PER_GROUP * 1000:,} total records")
-    print(f"⏱️  Estimated time: {(len(HOMEGROUPS) * USERS_PER_GROUP) * 2 / 60:.1f} minutes")
+    print(f"📈 Target: 500-1500 visits per user (randomized)")
     print()
-    
+
     total_users = 0
     successful_uploads = 0
     total_visits = 0
     start_time = time.time()
-    
+
     for group_index, homegroup in enumerate(HOMEGROUPS):
         print(f"📁 Processing homegroup: {homegroup} ({group_index + 1}/{len(HOMEGROUPS)})")
-        
+
+        # Track used names per homegroup to ensure uniqueness
+        used_names_in_group = set()
+
         for user_in_group in range(USERS_PER_GROUP):
             user_index = group_index * USERS_PER_GROUP + user_in_group
-            
-            # Generate user data
-            user_info = generate_user_data(user_index, homegroup)
-            
-            # Generate 1000 visits for load testing
-            num_visits = 1000
+
+            # Generate user data with unique names per homegroup
+            user_info = generate_user_data(user_index, homegroup, used_names_in_group)
+
+            # Random number of visits for variety (500-1500)
+            num_visits = random.randint(500, 1500)
             visits = generate_visits(user_info, num_visits)
-            
+
             # Send data
             if send_user_data(user_info, visits):
                 successful_uploads += 1
                 total_visits += len(visits)
-                print(f"   ✅ [{total_users + 1:3d}/{len(HOMEGROUPS) * USERS_PER_GROUP}] {user_info['Username']}")
+                print(f"   ✅ [{total_users + 1:3d}/{len(HOMEGROUPS) * USERS_PER_GROUP}] {user_info['Username']} ({len(visits)} visits)")
             else:
                 print(f"   ❌ [{total_users + 1:3d}/{len(HOMEGROUPS) * USERS_PER_GROUP}] FAILED: {user_info['Username']}")
-            
+
             total_users += 1
-            
-            # Small delay to avoid overwhelming the server
-            time.sleep(0.2)
+
+            # Minimal delay for faster ingestion (50ms)
+            time.sleep(0.05)
     
     end_time = time.time()
     duration = end_time - start_time
-    
+
     print()
     print("=" * 60)
-    print("📈 Load Test Data Generation Summary:")
+    print("📈 Data Generation Summary:")
     print(f"   👥 Total users: {total_users}")
     print(f"   ✅ Successful uploads: {successful_uploads}")
     print(f"   ❌ Failed uploads: {total_users - successful_uploads}")
     print(f"   📊 Total visits generated: {total_visits:,}")
     print(f"   📊 Average visits per user: {total_visits / successful_uploads if successful_uploads > 0 else 0:.0f}")
+    print(f"   🏢 Homegroups: {len(HOMEGROUPS)} (1A-6C)")
+    print(f"   👤 Users per homegroup: {USERS_PER_GROUP}")
     print(f"   ⏱️  Total time: {duration:.1f} seconds ({duration/60:.1f} minutes)")
-    print(f"   🚀 Upload rate: {successful_uploads / duration:.1f} users/second")
+    print(f"   🚀 Upload rate: {successful_uploads / duration:.2f} users/second")
     print(f"   📈 Data rate: {total_visits / duration:.0f} visits/second")
-    
+
     if successful_uploads == total_users:
-        print(f"\n🎉 Load test data generation completed successfully!")
+        print(f"\n🎉 Data generation completed successfully!")
         print(f"💪 Generated {total_visits:,} browsing records across {successful_uploads} users")
-        print(f"🔥 Your pagination system is ready for serious load testing!")
+        print(f"📁 Distributed across 18 homegroups (1A-6C) with 30 users each")
+        print(f"🌐 Data sent via API (realistic client simulation)")
         print("💡 View the data in the dashboard at http://localhost:8000")
     else:
         print(f"\n⚠️  {total_users - successful_uploads} uploads failed. Check the API server status.")
