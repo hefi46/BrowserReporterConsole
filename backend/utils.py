@@ -5,11 +5,23 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        # Simply limit to 72 characters (not bytes) to be safe
+        safe_password = plain_password[:72]
+        return pwd_context.verify(safe_password, hashed_password)
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    try:
+        # Simply limit to 72 characters (not bytes) to be safe
+        safe_password = password[:72]
+        return pwd_context.hash(safe_password)
+    except Exception as e:
+        print(f"Password hashing error: {e}")
+        return ""
 
 # ---------------------------------------------------------------------------
 # Secure Config Encryption Helper

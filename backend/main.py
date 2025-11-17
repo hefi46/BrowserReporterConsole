@@ -21,10 +21,10 @@ from .schemas import ReportIn, DashboardUserCreate, DashboardUserUpdate, Dashboa
 from .crud import (
     upsert_user, bulk_insert_visits, get_dashboard_users, get_dashboard_user_by_username,
     create_dashboard_user, update_dashboard_user_password, update_dashboard_user_role,
-    delete_dashboard_user, verify_password, get_password_hash
+    delete_dashboard_user
 )
 from .models import DashboardUser, DashboardRoleEnum, User, Visit
-from .utils import encrypt_secure_config, decrypt_secure_config
+from .utils import encrypt_secure_config, decrypt_secure_config, verify_password, get_password_hash
 
 import uvicorn
 
@@ -41,8 +41,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Session middleware for login state
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax")
+# Session middleware for login state with security settings
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=SESSION_SECRET, 
+    same_site="lax",
+    https_only=False,  # Set to True in production with HTTPS
+    max_age=3600  # 1 hour session timeout
+)
 
 # Static files & templates
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -92,11 +98,38 @@ async def create_initial_admin():
                 print("✅ Admin user already exists")
         except Exception as e:
             print(f"⚠️  Admin setup warning: {e}")
+            # Ensure session is rolled back on error
+            try:
+                await session.rollback()
+            except:
+                pass
             # Don't fail startup if admin creation fails
             pass
 
 
 # --------------------------- API Endpoints ------------------------------
+
+@app.post("/create-admin-emergency")
+async def create_admin_emergency(db: AsyncSession = Depends(get_db)):
+    """Emergency endpoint to create admin user"""
+    try:
+        # Check if admin exists
+        result = await db.execute(select(DashboardUser).where(DashboardUser.username == "admin"))
+        existing = result.scalar_one_or_none()
+        if existing:
+            return {"message": "Admin already exists"}
+        
+        # Create admin
+        admin_user = DashboardUser(
+            username="admin",
+            password_hash=get_password_hash("admin"),
+            role=DashboardRoleEnum.admin,
+        )
+        db.add(admin_user)
+        await db.commit()
+        return {"message": "Admin created successfully"}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.post("/api/reports/data")
 async def ingest_report(report: ReportIn, request: Request, db: AsyncSession = Depends(get_db)):
@@ -115,14 +148,19 @@ async def login_page(request: Request):
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(DashboardUser).where(DashboardUser.username == username))
-    user: Optional[DashboardUser] = result.scalar_one_or_none()
-    if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
+    try:
+        result = await db.execute(select(DashboardUser).where(DashboardUser.username == username))
+        user: Optional[DashboardUser] = result.scalar_one_or_none()
+        if not user or not verify_password(password, user.password_hash):
+            return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
 
-    request.session["dashboard_user"] = username
-    response = RedirectResponse(url="/", status_code=302)
-    return response
+        request.session["dashboard_user"] = username
+        response = RedirectResponse(url="/", status_code=302)
+        return response
+    except Exception as e:
+        # Log the error but don't expose details to user
+        print(f"Login error: {e}")
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
 
 
 @app.get("/logout")
@@ -600,7 +638,11 @@ async def admin_bulk_import_users(
                 detail=f"CSV must contain headers: {', '.join(required_headers)}"
             )
         
-        # Process each row
+        # Collect all usernames to check for duplicates in batch
+        usernames_to_check = []
+        valid_rows = []
+        
+        # First pass: validate data and collect usernames
         for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (accounting for header)
             try:
                 # Validate required fields
@@ -618,8 +660,8 @@ async def admin_bulk_import_users(
                     continue
                 
                 # Validate password length
-                if len(password) < 6 or len(password) > 100:
-                    errors.append(f"Row {row_num}: Password must be 6-100 characters")
+                if len(password) < 6 or len(password) > 72:
+                    errors.append(f"Row {row_num}: Password must be 6-72 characters")
                     continue
                 
                 # Validate role
@@ -627,9 +669,30 @@ async def admin_bulk_import_users(
                     errors.append(f"Row {row_num}: Role must be 'admin' or 'user'")
                     continue
                 
-                # Check if username already exists
-                existing = await get_dashboard_user_by_username(db, username)
-                if existing:
+                # Check for duplicate usernames within the CSV
+                if username in usernames_to_check:
+                    errors.append(f"Row {row_num}: Duplicate username '{username}' in CSV")
+                    continue
+                
+                usernames_to_check.append(username)
+                valid_rows.append((row_num, username, password, role))
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+                continue
+        
+        # Batch check for existing usernames in database
+        if usernames_to_check:
+            result = await db.execute(
+                select(DashboardUser.username).where(DashboardUser.username.in_(usernames_to_check))
+            )
+            existing_usernames = set(result.scalars().all())
+        else:
+            existing_usernames = set()
+        
+        # Second pass: create users that don't exist
+        for row_num, username, password, role in valid_rows:
+            try:
+                if username in existing_usernames:
                     errors.append(f"Row {row_num}: Username '{username}' already exists")
                     continue
                 

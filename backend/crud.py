@@ -11,14 +11,8 @@ from passlib.context import CryptContext
 from .models import User, Visit, DashboardUser, DashboardRoleEnum
 from .schemas import ReportIn, UserInfoIn, VisitIn
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+# Import password functions from utils to avoid duplication
+from .utils import get_password_hash, verify_password
 
 async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
     """Upsert user and return id."""

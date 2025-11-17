@@ -37,6 +37,13 @@ docker compose down -v
 docker compose up -d
 ```
 
+### Testing & Quality
+```bash
+# No automated testing framework configured
+# Manual testing via web interface at http://localhost:8000
+# API testing can be done via browser or curl commands
+```
+
 ## Architecture Overview
 
 ### Core Components
@@ -80,13 +87,17 @@ docker compose up -d
 ## Environment Configuration
 
 Required environment variables:
-- `DATABASE_URL`: PostgreSQL connection string
+- `DATABASE_URL`: PostgreSQL connection string  
 - `SESSION_SECRET`: Session encryption key (auto-generated if not set)
 
 Default database credentials (development):
 - Username: `browser_reporter`
 - Password: `browser_reporter`
 - Database: `browser_reporter`
+
+Default admin credentials:
+- Username: `admin`
+- Password: `admin` (should be changed immediately)
 
 ## Common Development Patterns
 
@@ -106,3 +117,15 @@ Default database credentials (development):
 - Admin routes check for admin role
 - API endpoints use header-based API key authentication
 - Use `get_current_user()` dependency for protected routes
+
+### Frontend Development
+- Templates use Jinja2 with Bootstrap 5 styling
+- Static files served from `backend/static/`
+- No build process required - edit HTML/CSS/JS directly
+- Dashboard features: pagination controls, search, filtering, export
+
+### Data Management
+- CSV bulk import format: `username,password,role`
+- Export functionality supports large datasets with proper streaming
+- Mock data generator creates realistic browsing patterns
+- Homegroup filtering: 3A, 4A, 5A, 6C organizational groups
