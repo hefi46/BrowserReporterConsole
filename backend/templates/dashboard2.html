@@ -58,7 +58,7 @@
 		</div>
 
 		<div class="d-flex gap-2 mb-3">
-			<button class="btn btn-primary" id="apply"><i class="fas fa-filter me-1"></i>Apply</button>
+			<button class="btn btn-primary" id="apply"><i class="fas fa-search me-1"></i>Search</button>
 			<button class="btn btn-outline-secondary" id="clear"><i class="fas fa-eraser me-1"></i>Clear</button>
 		</div>
 
@@ -137,7 +137,7 @@
 		document.getElementById('prev').addEventListener('click', () => { if (page>1) { page--; load(); } });
 		document.getElementById('next').addEventListener('click', () => { const max = Math.ceil(total/pageSize); if (page<max) { page++; load(); } });
 		document.getElementById('pp').addEventListener('change', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); load(); });
-		window.addEventListener('load', async () => { await loadHGs(); await load(); });
+		window.addEventListener('load', async () => { await loadHGs(); });
 	</script>
 </body>
 </html>
