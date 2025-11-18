@@ -59,7 +59,7 @@
 
 		<div class="d-flex gap-2 mb-3">
 			<button class="btn btn-primary" id="apply"><i class="fas fa-search me-1"></i>Search</button>
-			<button class="btn btn-outline-secondary" id="clear"><i class="fas fa-eraser me-1"></i>Clear</button>
+			<button class="btn btn-outline-secondary" id="clear"><i class="fas fa-undo me-1"></i>Reset</button>
 		</div>
 
 		<div class="card">
@@ -147,7 +147,7 @@
 			`).join('');
 		}
 		document.getElementById('apply').addEventListener('click', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); load(); });
-		document.getElementById('clear').addEventListener('click', () => { document.getElementById('hg').value=''; document.getElementById('days').value=''; document.getElementById('q').value=''; page=1; load(); });
+		document.getElementById('clear').addEventListener('click', () => { document.getElementById('hg').value=''; document.getElementById('days').value=''; document.getElementById('q').value=''; page=1; total=0; document.querySelector('#tbl tbody').innerHTML=''; document.getElementById('t').textContent='0'; document.getElementById('s').textContent='0'; document.getElementById('e').textContent='0'; document.getElementById('prev').disabled=true; document.getElementById('next').disabled=true; });
 		document.getElementById('prev').addEventListener('click', () => { if (page>1) { page--; load(); } });
 		document.getElementById('next').addEventListener('click', () => { const max = Math.ceil(total/pageSize); if (page<max) { page++; load(); } });
 		document.getElementById('pp').addEventListener('change', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); load(); });
