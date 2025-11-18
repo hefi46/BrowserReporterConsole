@@ -104,6 +104,103 @@
 
                     <div class="col-md-8">
                         <div class="card">
+                            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="fas fa-database me-2"></i>Database Statistics</h6>
+                                <button class="btn btn-outline-light btn-sm" onclick="loadDatabaseStats()">
+                                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="dbStatsLoading" class="text-center p-4">
+                                    <div class="spinner-border text-info" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading database statistics...</p>
+                                </div>
+                                <div id="dbStatsContent" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <h6 class="text-info mb-2"><i class="fas fa-hdd me-2"></i>Database Size</h6>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span id="dbSize" class="fs-4 fw-bold">-</span>
+                                                <span id="dbSizePercent" class="badge bg-secondary">-</span>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div id="dbSizeBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <h6 class="text-info mb-2"><i class="fas fa-calendar-alt me-2"></i>Date Range</h6>
+                                            <div class="small">
+                                                <div><strong>Oldest:</strong> <span id="oldestVisit">-</span></div>
+                                                <div><strong>Newest:</strong> <span id="newestVisit">-</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center p-3">
+                                                    <div class="text-muted small">Active Visits</div>
+                                                    <div id="activeVisits" class="fs-5 fw-bold text-primary">-</div>
+                                                    <div class="text-muted small">0-90 days</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center p-3">
+                                                    <div class="text-muted small">Archived Visits</div>
+                                                    <div id="archivedVisits" class="fs-5 fw-bold text-secondary">-</div>
+                                                    <div class="text-muted small">90+ days</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center p-3">
+                                                    <div class="text-muted small">Total Records</div>
+                                                    <div id="totalRecords" class="fs-5 fw-bold text-success">-</div>
+                                                    <div class="text-muted small">All visits</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center p-3">
+                                                    <div class="text-muted small">Users</div>
+                                                    <div id="totalUsers" class="fs-5 fw-bold text-info">-</div>
+                                                    <div class="text-muted small">Tracked</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="text-info mb-2"><i class="fas fa-chart-line me-2"></i>Last 24 Hours</h6>
+                                            <div class="small">
+                                                <div><strong>Visits:</strong> <span id="visits24h" class="text-primary">-</span></div>
+                                                <div><strong>Active Users:</strong> <span id="activeUsers24h" class="text-success">-</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="text-info mb-2"><i class="fas fa-clock me-2"></i>Last Updated</h6>
+                                            <div id="lastUpdated" class="small text-muted">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="dbStatsError" style="display: none;" class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Failed to load database statistics.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card">
                             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0"><i class="fas fa-users me-2"></i>Existing Dashboard Users</h6>
                                 <button class="btn btn-outline-light btn-sm" onclick="loadAdminUsers()">
@@ -176,9 +273,14 @@
         let currentUser = {};
         let adminUsers = [];
         let editingUser = null;
+        let dbStatsRefreshInterval = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             loadAdminUsers();
+            loadDatabaseStats();
+
+            // Auto-refresh database stats every 3 minutes
+            dbStatsRefreshInterval = setInterval(loadDatabaseStats, 180000);
         });
 
         async function loadAdminUsers() {
@@ -217,6 +319,88 @@
                     </td>
                 </tr>
             `).join('');
+        }
+
+        async function loadDatabaseStats() {
+            try {
+                document.getElementById('dbStatsLoading').style.display = 'block';
+                document.getElementById('dbStatsContent').style.display = 'none';
+                document.getElementById('dbStatsError').style.display = 'none';
+
+                const response = await fetch('/api/admin/db-stats');
+                if (!response.ok) throw new Error(`Failed to load database stats: ${response.status}`);
+
+                const stats = await response.json();
+                displayDatabaseStats(stats);
+            } catch (error) {
+                console.error('Error loading database stats:', error);
+                document.getElementById('dbStatsLoading').style.display = 'none';
+                document.getElementById('dbStatsError').style.display = 'block';
+            }
+        }
+
+        function displayDatabaseStats(stats) {
+            document.getElementById('dbStatsLoading').style.display = 'none';
+            document.getElementById('dbStatsContent').style.display = 'block';
+
+            // Database size with progress bar
+            const dbSizeBytes = stats.database.total_bytes || 0;
+            const dbSizeGB = dbSizeBytes / (1024 * 1024 * 1024);
+            const maxSizeGB = 20; // Assume 20GB max for progress bar
+            const sizePercent = Math.min((dbSizeGB / maxSizeGB) * 100, 100);
+
+            document.getElementById('dbSize').textContent = stats.database.total_size || '-';
+            document.getElementById('dbSizePercent').textContent = `${sizePercent.toFixed(1)}%`;
+
+            const progressBar = document.getElementById('dbSizeBar');
+            progressBar.style.width = `${sizePercent}%`;
+            progressBar.className = 'progress-bar';
+            if (sizePercent < 50) {
+                progressBar.classList.add('bg-success');
+            } else if (sizePercent < 75) {
+                progressBar.classList.add('bg-warning');
+            } else {
+                progressBar.classList.add('bg-danger');
+            }
+
+            // Record counts
+            document.getElementById('activeVisits').textContent = formatNumber(stats.records.visits || 0);
+            document.getElementById('archivedVisits').textContent = formatNumber(stats.records.visits_archive || 0);
+            document.getElementById('totalRecords').textContent = formatNumber(stats.records.total_visits || 0);
+            document.getElementById('totalUsers').textContent = formatNumber(stats.records.users || 0);
+
+            // Date range
+            if (stats.activity.oldest_visit) {
+                document.getElementById('oldestVisit').textContent = new Date(stats.activity.oldest_visit).toLocaleDateString();
+            } else {
+                document.getElementById('oldestVisit').textContent = 'N/A';
+            }
+            if (stats.activity.newest_visit) {
+                document.getElementById('newestVisit').textContent = new Date(stats.activity.newest_visit).toLocaleDateString();
+            } else {
+                document.getElementById('newestVisit').textContent = 'N/A';
+            }
+
+            // Activity metrics
+            document.getElementById('visits24h').textContent = formatNumber(stats.activity.visits_last_24h || 0);
+            document.getElementById('activeUsers24h').textContent = formatNumber(stats.activity.active_users_24h || 0);
+
+            // Last updated timestamp
+            if (stats.timestamp) {
+                const lastUpdate = new Date(stats.timestamp);
+                document.getElementById('lastUpdated').textContent = lastUpdate.toLocaleString();
+            } else {
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+            }
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toLocaleString();
         }
 
         document.getElementById('createUserForm').addEventListener('submit', async (e) => {

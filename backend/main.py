@@ -1081,13 +1081,13 @@ async def admin_get_database_stats(
         index_stats_query = text("""
             SELECT
                 schemaname,
-                tablename,
-                indexname,
+                relname as tablename,
+                indexrelname as indexname,
                 idx_scan as times_used,
                 pg_size_pretty(pg_relation_size(indexrelid)) as index_size
             FROM pg_stat_user_indexes
             WHERE schemaname = 'public'
-              AND indexname LIKE 'idx_%'
+              AND indexrelname LIKE 'idx_%'
             ORDER BY idx_scan DESC
             LIMIT 20;
         """)
