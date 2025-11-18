@@ -1,8 +1,13 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
+#This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Please Remind me next session to look at changing 
+the 'clear' button functionality to clear the entries listed and return to an empty list, currently it clears 
+the filters which i think is less important also change it to a reset buitton perhaps. also please 
+emind me to remove this note after we have dealt with that!!#!!!! Please Remind me next session 
+ 
 ## Development Commands
+
 
 ### Running the Application
 ```bash
