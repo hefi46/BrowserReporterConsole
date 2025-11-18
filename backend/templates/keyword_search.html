@@ -40,7 +40,7 @@
 		<div class="row g-3 align-items-end mb-3">
 			<div class="col-md-4">
 				<label class="form-label">Keyword</label>
-				<input id="term" class="form-control" placeholder="e.g. google, youtube, sharepoint" />
+				<input id="term" class="form-control" placeholder="e.g. google, youtube, sharepoint" onkeypress="if(event.key==='Enter') { page=1; pageSize=parseInt(document.getElementById('pp').value); search(); }" />
 			</div>
 			<div class="col-md-3">
 				<label class="form-label">Homegroup</label>

@@ -1795,8 +1795,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
-                searchInput.addEventListener('keypress', function(e) {
+                searchInput.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {
+                        e.preventDefault();
                         applyFilters();
                     }
                 });

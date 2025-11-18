@@ -151,6 +151,7 @@
 		document.getElementById('prev').addEventListener('click', () => { if (page>1) { page--; load(); } });
 		document.getElementById('next').addEventListener('click', () => { const max = Math.ceil(total/pageSize); if (page<max) { page++; load(); } });
 		document.getElementById('pp').addEventListener('change', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); load(); });
+		document.getElementById('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); page = 1; pageSize = parseInt(document.getElementById('pp').value); load(); } });
 		window.addEventListener('load', async () => { await checkUserRole(); await loadHGs(); });
 	</script>
 </body>
