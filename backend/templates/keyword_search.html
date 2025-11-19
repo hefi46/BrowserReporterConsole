@@ -70,7 +70,17 @@
 			<button class="btn btn-outline-secondary" id="clear"><i class="fas fa-undo me-1"></i>Reset</button>
 		</div>
 
-		<div class="card">
+		<!-- Empty state message -->
+		<div class="card" id="emptyState">
+			<div class="card-body text-center py-5">
+				<i class="fas fa-search fa-3x text-muted mb-3"></i>
+				<h5 class="text-muted">Search to begin</h5>
+				<p class="text-muted small">Enter a keyword above and click Search or press Enter</p>
+			</div>
+		</div>
+
+		<!-- Results table (hidden initially) -->
+		<div class="card" id="resultsCard" style="display: none;">
 			<div class="card-body">
 				<div class="table-responsive">
 					<table class="table table-hover align-middle">
@@ -122,6 +132,11 @@
 		async function search() {
 			const term = document.getElementById('term').value.trim();
 			if (!term) return;
+
+			// Show results, hide empty state
+			document.getElementById('emptyState').style.display = 'none';
+			document.getElementById('resultsCard').style.display = 'block';
+
 			const params = new URLSearchParams({ url: term, page: String(page), page_size: String(pageSize) });
 			const days = document.getElementById('days').value;
 			const hg = document.getElementById('hg').value;
@@ -149,7 +164,7 @@
 			}).join('');
 		}
 		document.getElementById('apply').addEventListener('click', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); search(); });
-		document.getElementById('clear').addEventListener('click', () => { document.getElementById('term').value=''; document.getElementById('hg').value=''; document.getElementById('days').value=''; page=1; total=0; document.getElementById('rows').innerHTML=''; document.getElementById('t').textContent='0'; document.getElementById('s').textContent='0'; document.getElementById('e').textContent='0'; });
+		document.getElementById('clear').addEventListener('click', () => { document.getElementById('term').value=''; document.getElementById('hg').value=''; document.getElementById('days').value=''; page=1; total=0; document.getElementById('rows').innerHTML=''; document.getElementById('t').textContent='0'; document.getElementById('s').textContent='0'; document.getElementById('e').textContent='0'; document.getElementById('resultsCard').style.display='none'; document.getElementById('emptyState').style.display='block'; });
 		document.getElementById('prev').addEventListener('click', () => { if (page>1) { page--; search(); } });
 		document.getElementById('next').addEventListener('click', () => { const max = Math.ceil(total/pageSize); if (page<max) { page++; search(); } });
 		document.getElementById('pp').addEventListener('change', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); search(); });
