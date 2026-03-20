@@ -100,6 +100,22 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="card mt-3">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Student Data Enrichment</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="enrichmentFile" class="form-label">School Export CSV</label>
+                                    <input type="file" class="form-control" id="enrichmentFile" accept=".csv" required>
+                                    <div class="form-text">Export from your central system. Only login, name, and class data will be stored.</div>
+                                </div>
+                                <button type="button" class="btn btn-success w-100" onclick="importStudentEnrichment()">
+                                    <i class="fas fa-cloud-upload-alt me-2"></i>Import &amp; Enrich
+                                </button>
+                                <div id="enrichmentResult" class="mt-3" style="display: none;"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-md-8">
@@ -532,6 +548,50 @@
             } finally {
                 uploadBtn.innerHTML = originalText;
                 uploadBtn.disabled = false;
+            }
+        }
+
+        async function importStudentEnrichment() {
+            const fileInput = document.getElementById('enrichmentFile');
+            const file = fileInput.files[0];
+            if (!file) return showAdminMessage('Please select a CSV file to upload', 'warning');
+            if (!file.name.endsWith('.csv')) return showAdminMessage('Please select a CSV file', 'warning');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const btn = document.querySelector('button[onclick="importStudentEnrichment()"]');
+            const originalText = btn.innerHTML;
+            const resultDiv = document.getElementById('enrichmentResult');
+            resultDiv.style.display = 'none';
+
+            try {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
+                btn.disabled = true;
+
+                const response = await fetch('/api/admin/enrich-students', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail || 'Import failed');
+
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Import complete</strong><br>
+                        <small>
+                            ${result.imported.toLocaleString()} records imported &bull;
+                            ${result.users_updated.toLocaleString()} existing users enriched
+                            ${result.skipped > 0 ? ` &bull; ${result.skipped} rows skipped` : ''}
+                        </small>
+                    </div>`;
+                fileInput.value = '';
+            } catch (error) {
+                console.error('Error importing enrichment data:', error);
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${error.message}</div>`;
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
 

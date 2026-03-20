@@ -23,7 +23,7 @@ from .schemas import ReportIn, DashboardUserCreate, DashboardUserUpdate, Dashboa
 from .crud import (
     upsert_user, bulk_insert_visits, get_dashboard_users, get_dashboard_user_by_username,
     create_dashboard_user, update_dashboard_user_password, update_dashboard_user_role,
-    delete_dashboard_user
+    delete_dashboard_user, upsert_student_enrichments, apply_enrichment_to_existing_users
 )
 from .models import DashboardUser, DashboardRoleEnum, User, Visit
 from .utils import encrypt_secure_config, decrypt_secure_config, verify_password, get_password_hash
@@ -754,6 +754,73 @@ charlie.dev,DevPass654,user"""
             "Content-Disposition": "attachment; filename=users_import_example.csv"
         }
     )
+
+
+@app.post("/api/admin/enrich-students")
+async def admin_enrich_students(
+    request: Request,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Import school CSV export to enrich student user records (admin only).
+    Only stores: login, firstName, lastName, displayName, studClass.
+    All other columns are ignored.
+    """
+    await require_admin(request, db)
+
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+
+    try:
+        content = await file.read()
+        csv_content = content.decode("utf-8-sig")  # handle BOM if present
+        csv_reader = csv.DictReader(io.StringIO(csv_content))
+
+        required_cols = {"login", "firstName", "lastName", "displayName", "studClass"}
+        if not required_cols.issubset(set(csv_reader.fieldnames or [])):
+            raise HTTPException(
+                status_code=400,
+                detail=f"CSV must contain columns: {', '.join(sorted(required_cols))}",
+            )
+
+        rows = []
+        skipped = 0
+        now = datetime.now(timezone.utc)
+
+        for row in csv_reader:
+            login = (row.get("login") or "").strip().upper()
+            if not login:
+                skipped += 1
+                continue
+            rows.append(
+                dict(
+                    login=login,
+                    first_name=(row.get("firstName") or "").strip() or None,
+                    last_name=(row.get("lastName") or "").strip() or None,
+                    display_name=(row.get("displayName") or "").strip() or None,
+                    homegroup=(row.get("studClass") or "").strip() or None,
+                    imported_at=now,
+                )
+            )
+
+        imported = await upsert_student_enrichments(db, rows)
+        users_updated = await apply_enrichment_to_existing_users(db)
+        await db.commit()
+
+        return {
+            "success": True,
+            "imported": imported,
+            "users_updated": users_updated,
+            "skipped": skipped,
+        }
+
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File must be UTF-8 encoded")
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
 
 
 # Serve Bootstrap dashboard -------------------------------------------

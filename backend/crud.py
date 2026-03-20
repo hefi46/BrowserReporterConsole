@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Sequence, Optional, List
 
-from sqlalchemy import insert, select, update, delete
+from sqlalchemy import insert, select, update, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from passlib.context import CryptContext
 
-from .models import User, Visit, DashboardUser, DashboardRoleEnum
+from .models import User, Visit, DashboardUser, DashboardRoleEnum, StudentEnrichment
 from .schemas import ReportIn, UserInfoIn, VisitIn
 
 # Import password functions from utils to avoid duplication
@@ -38,6 +38,25 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
 
     result = await db.execute(stmt)
     user_id = result.scalar_one()
+
+    # Apply student enrichment if available (for Chrome extension users who only send email)
+    email = info.Email or info.Username or ""
+    if "@schools.vic.edu.au" in email:
+        login = email.split("@")[0].upper()
+        enrichment_result = await db.execute(
+            select(StudentEnrichment).where(StudentEnrichment.login == login)
+        )
+        enrichment = enrichment_result.scalar_one_or_none()
+        if enrichment:
+            await db.execute(
+                update(User).where(User.id == user_id).values(
+                    first_name=enrichment.first_name,
+                    last_name=enrichment.last_name,
+                    display_name=enrichment.display_name,
+                    homegroup=enrichment.homegroup,
+                )
+            )
+
     return user_id
 
 
@@ -104,4 +123,40 @@ async def delete_dashboard_user(db: AsyncSession, username: str) -> bool:
     """Delete dashboard user."""
     stmt = delete(DashboardUser).where(DashboardUser.username == username)
     result = await db.execute(stmt)
-    return result.rowcount > 0 
+    return result.rowcount > 0
+
+
+# Student Enrichment Operations
+
+async def upsert_student_enrichments(db: AsyncSession, rows: list) -> int:
+    """Upsert student enrichment records. Returns count of rows imported."""
+    if not rows:
+        return 0
+    stmt = pg_insert(StudentEnrichment).values(rows).on_conflict_do_update(
+        index_elements=[StudentEnrichment.login],
+        set_=dict(
+            first_name=pg_insert(StudentEnrichment).excluded.first_name,
+            last_name=pg_insert(StudentEnrichment).excluded.last_name,
+            display_name=pg_insert(StudentEnrichment).excluded.display_name,
+            homegroup=pg_insert(StudentEnrichment).excluded.homegroup,
+            imported_at=pg_insert(StudentEnrichment).excluded.imported_at,
+        ),
+    )
+    await db.execute(stmt)
+    return len(rows)
+
+
+async def apply_enrichment_to_existing_users(db: AsyncSession) -> int:
+    """Bulk-update existing users with enrichment data. Returns count of updated rows."""
+    result = await db.execute(text("""
+        UPDATE users u
+        SET
+            first_name   = se.first_name,
+            last_name    = se.last_name,
+            display_name = se.display_name,
+            homegroup    = se.homegroup
+        FROM student_enrichments se
+        WHERE UPPER(SPLIT_PART(u.email, '@', 1)) = se.login
+           OR UPPER(SPLIT_PART(u.username, '@', 1)) = se.login
+    """))
+    return result.rowcount 
