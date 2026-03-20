@@ -102,13 +102,19 @@
                         </div>
                         <div class="card mt-3">
                             <div class="card-header bg-success text-white">
-                                <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Student Data Enrichment</h6>
+                                <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Chromebook Extension Data Enrichment</h6>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label for="enrichmentFile" class="form-label">School Export CSV</label>
                                     <input type="file" class="form-control" id="enrichmentFile" accept=".csv" required>
-                                    <div class="form-text">Export from your central system. Only login, name, and class data will be stored.</div>
+                                    <div class="form-text mt-2">
+                                        <ol class="mb-1 ps-3">
+                                            <li>Log in to <a href="https://stmc.education.vic.gov.au/" target="_blank" rel="noopener">STMC</a></li>
+                                            <li>Select <strong>Access Management &gt; Student Passwords</strong></li>
+                                            <li>Select your school &gt; <strong>Export</strong></li>
+                                        </ol>
+                                    </div>
                                 </div>
                                 <button type="button" class="btn btn-success w-100" onclick="importStudentEnrichment()">
                                     <i class="fas fa-cloud-upload-alt me-2"></i>Import &amp; Enrich
