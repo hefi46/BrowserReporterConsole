@@ -40,6 +40,18 @@ class Visit(Base):
     user = relationship("User", back_populates="visits")
 
 
+class StudentEnrichment(Base):
+    __tablename__ = "student_enrichments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    login = Column(String, unique=True, nullable=False, index=True)  # e.g. "TJAMA2"
+    first_name = Column(String)
+    last_name = Column(String)
+    display_name = Column(String)
+    homegroup = Column(String)
+    imported_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+
 class DashboardRoleEnum(str, PyEnum):
     admin = "admin"
     user = "user"
