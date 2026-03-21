@@ -297,6 +297,11 @@
         let editingUser = null;
         let dbStatsRefreshInterval = null;
 
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadAdminUsers();
             loadDatabaseStats();
@@ -330,17 +335,19 @@
             const tableBody = document.getElementById('adminUsersTableBody');
             tableBody.innerHTML = adminUsers.map(user => `
                 <tr>
-                    <td><strong>${user.username}</strong></td>
-                    <td><span class="badge ${user.role === 'admin' ? 'bg-primary' : 'bg-secondary'}">${user.role.toUpperCase()}</span></td>
-                    <td><small class="text-muted">${new Date(user.created_at).toLocaleDateString()}</small></td>
+                    <td><strong>${escapeHtml(user.username)}</strong></td>
+                    <td><span class="badge ${user.role === 'admin' ? 'bg-primary' : 'bg-secondary'}">${escapeHtml(user.role).toUpperCase()}</span></td>
+                    <td><small class="text-muted">${escapeHtml(new Date(user.created_at).toLocaleDateString())}</small></td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-warning" onclick="editUser('${user.username}', '${user.role}')" title="Edit User"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-outline-danger" onclick="deleteUser('${user.username}')" title="Delete User"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-outline-warning" data-action="edit" data-username="${escapeHtml(user.username)}" data-role="${escapeHtml(user.role)}" title="Edit User"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-outline-danger" data-action="delete" data-username="${escapeHtml(user.username)}" title="Delete User"><i class="fas fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>
             `).join('');
+            tableBody.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => editUser(btn.dataset.username, btn.dataset.role)));
+            tableBody.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteUser(btn.dataset.username)));
         }
 
         async function loadDatabaseStats() {
@@ -540,12 +547,12 @@
                 if (!response.ok) throw new Error(result.detail || 'Upload failed');
                 let message = result.message;
                 if (result.errors && result.errors.length > 0) {
-                    message += `<br><br><strong>Errors:</strong><ul>` + result.errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                    message += `<br><br><strong>Errors:</strong><ul>` + result.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('') + '</ul>';
                 }
                 if (result.created_users && result.created_users.length > 0) {
-                    message += `<br><br><strong>Created Users:</strong><ul>` + result.created_users.map(u => `<li>${u.username} (${u.role})</li>`).join('') + '</ul>';
+                    message += `<br><br><strong>Created Users:</strong><ul>` + result.created_users.map(u => `<li>${escapeHtml(u.username)} (${escapeHtml(u.role)})</li>`).join('') + '</ul>';
                 }
-                showAdminMessage(message, result.errors.length === 0 ? 'success' : 'warning');
+                showAdminMessage(message, result.errors.length === 0 ? 'success' : 'warning', true);
                 fileInput.value = '';
                 loadAdminUsers();
             } catch (error) {
@@ -594,19 +601,21 @@
             } catch (error) {
                 console.error('Error importing enrichment data:', error);
                 resultDiv.style.display = 'block';
-                resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${error.message}</div>`;
+                resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(error.message)}</div>`;
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         }
 
-        function showAdminMessage(message, type) {
+        function showAdminMessage(message, type, allowHtml = false) {
             const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.className = `alert alert-${escapeHtml(type)} alert-dismissible fade show`;
+            const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
+            const safeMessage = allowHtml ? message : escapeHtml(message);
             alertDiv.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
-                ${message}
+                <i class="fas fa-${icon} me-2"></i>
+                ${safeMessage}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             const container = document.querySelector('.card-body');

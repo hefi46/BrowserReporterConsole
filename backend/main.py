@@ -34,10 +34,11 @@ SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_urlsafe(32))
 
 app = FastAPI(title="Browser Reporter Server")
 
-# CORS (optional - you can restrict origins within LAN)
+# CORS – restrict to same-origin by default; override via CORS_ORIGINS env var
+_cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,7 +104,7 @@ async def create_initial_admin():
             # Ensure session is rolled back on error
             try:
                 await session.rollback()
-            except:
+            except Exception:
                 pass
             # Don't fail startup if admin creation fails
             pass
@@ -112,16 +113,14 @@ async def create_initial_admin():
 # --------------------------- API Endpoints ------------------------------
 
 @app.post("/create-admin-emergency")
-async def create_admin_emergency(db: AsyncSession = Depends(get_db)):
-    """Emergency endpoint to create admin user"""
+async def create_admin_emergency(request: Request, db: AsyncSession = Depends(get_db)):
+    """Emergency endpoint to create admin user (admin-only)."""
+    await require_admin(request, db)
     try:
-        # Check if admin exists
         result = await db.execute(select(DashboardUser).where(DashboardUser.username == "admin"))
         existing = result.scalar_one_or_none()
         if existing:
             return {"message": "Admin already exists"}
-        
-        # Create admin
         admin_user = DashboardUser(
             username="admin",
             password_hash=get_password_hash("admin"),
@@ -130,6 +129,8 @@ async def create_admin_emergency(db: AsyncSession = Depends(get_db)):
         db.add(admin_user)
         await db.commit()
         return {"message": "Admin created successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
 
@@ -366,8 +367,11 @@ async def search_website(
         .select_from(Visit)
         .join(User, Visit.user_id == User.id)
         .where(
-            # Use OR condition: full-text search OR ILIKE for maximum flexibility
-            (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term))) |
+            # Use OR condition: full-text search (when vector exists) OR ILIKE fallback
+            (
+                (Visit.search_vector.isnot(None)) &
+                (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term)))
+            ) |
             (Visit.url.ilike(f"%{search_term}%")) |
             (Visit.title.ilike(f"%{search_term}%"))
         )
@@ -389,7 +393,10 @@ async def search_website(
         .join(User, Visit.user_id == User.id)
         .where(
             # Same OR condition as main query
-            (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term))) |
+            (
+                (Visit.search_vector.isnot(None)) &
+                (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term)))
+            ) |
             (Visit.url.ilike(f"%{search_term}%")) |
             (Visit.title.ilike(f"%{search_term}%"))
         )
@@ -515,7 +522,7 @@ async def reports_user(username: str, request: Request, days: float | None = Non
     return {
         "data": [
             {
-                "timestamp": v.visit_time.isoformat(),
+                "timestamp": v.visit_time.isoformat() if v.visit_time else None,
                 "title": v.title,
                 "url": v.url,
                 "computerName": v.computer_name,
@@ -871,6 +878,38 @@ async def user_page(username: str, request: Request):
 
 # -------------------------- Auto-Migration Functions --------------------
 
+def _split_sql_statements(sql_content: str) -> list[str]:
+    """Split SQL content into individual statements, respecting DO $$ blocks."""
+    statements: list[str] = []
+    current: list[str] = []
+    in_dollar_block = False
+
+    for line in sql_content.splitlines():
+        stripped = line.strip()
+        if not stripped or (stripped.startswith("--") and not current):
+            continue
+        current.append(line)
+        if stripped.upper().startswith("DO $$") or stripped.upper().startswith("DO $"):
+            in_dollar_block = True
+        if in_dollar_block and stripped.endswith("$$;"):
+            in_dollar_block = False
+            statements.append("\n".join(current))
+            current = []
+            continue
+        if not in_dollar_block and stripped.endswith(";"):
+            statements.append("\n".join(current))
+            current = []
+
+    if current:
+        stmt = "\n".join(current).strip()
+        if stmt:
+            statements.append(stmt)
+
+    return [s for s in statements if s.strip() and not all(
+        ln.strip().startswith("--") or not ln.strip() for ln in s.splitlines()
+    )]
+
+
 async def auto_apply_migrations():
     """
     Automatically apply database migrations on startup.
@@ -932,14 +971,23 @@ async def auto_apply_migrations():
                 skipped_count += 1
                 continue
 
-            # Apply migration
+            # Apply migration — execute each statement individually so that
+            # CREATE INDEX CONCURRENTLY works (cannot run inside a transaction).
             print(f"📋 Applying migration: {migration_name}")
             sql_content = migration_file.read_text()
 
             start_time = datetime.now()
 
             try:
-                await conn.execute(sql_content)
+                for stmt in _split_sql_statements(sql_content):
+                    try:
+                        await conn.execute(stmt)
+                    except Exception as stmt_err:
+                        err_msg = str(stmt_err).lower()
+                        if "already exists" in err_msg or "duplicate" in err_msg:
+                            continue
+                        raise
+
                 execution_time = (datetime.now() - start_time).total_seconds()
 
                 # Record migration
@@ -985,13 +1033,58 @@ async def auto_apply_migrations():
 
 @app.on_event("startup")
 async def on_startup():
-    # Create tables
+    # Create tables (only creates new tables, doesn't alter existing ones)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    # Auto-apply database migrations
+
+    # Ensure schema matches models — add any missing columns that
+    # create_all won't handle on existing tables.
+    await _ensure_schema_columns()
+
+    # Auto-apply database migrations (indexes, etc.)
     await auto_apply_migrations()
     # ensure initial admin exists
     await create_initial_admin()
+
+
+async def _ensure_schema_columns():
+    """Add missing columns to existing tables so queries don't crash.
+    create_all only creates new tables — it won't ALTER existing ones."""
+    import asyncpg as _apg
+
+    db_host = os.getenv("DB_HOST", "db")
+    conn = None
+    try:
+        conn = await _apg.connect(
+            host=db_host,
+            port=int(os.getenv("DB_PORT", "5432")),
+            user=os.getenv("DB_USER", "browser_reporter"),
+            password=os.getenv("DB_PASSWORD", "browser_reporter"),
+            database=os.getenv("DB_NAME", "browser_reporter"),
+        )
+
+        # Map of (table, column) -> SQL type to ensure exist
+        required_columns = [
+            ("visits", "search_vector", "TSVECTOR"),
+        ]
+
+        for table, column, col_type in required_columns:
+            exists = await conn.fetchval(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name = $1 AND column_name = $2",
+                table, column,
+            )
+            if not exists:
+                await conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
+                )
+                print(f"   ✅ Added missing column {table}.{column}")
+
+    except Exception as e:
+        print(f"⚠️  Schema check skipped: {e}")
+    finally:
+        if conn:
+            await conn.close()
 
 
 # -------------------------- Secure Config -------------------------------
@@ -1191,7 +1284,7 @@ async def admin_get_database_stats(
             """)
             slow_queries_result = await db.execute(slow_queries_query)
             slow_queries = [dict(row._mapping) for row in slow_queries_result]
-        except:
+        except Exception:
             slow_queries = []  # pg_stat_statements not enabled
 
         return {

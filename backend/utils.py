@@ -42,8 +42,9 @@ except ImportError as e:  # pragma: no cover
     unpad = None  # type: ignore
     print("⚠️  PyCryptodome not installed. Secure config encryption will fail.")
 
-# Master key hard-coded in Windows collector
-_MASTER_KEY = b"BrowserReporter2024!MasterKey"
+# Master key – loaded from environment variable for security.
+# The Windows collector must use the same key.
+_MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY", "BrowserReporter2024!MasterKey").encode()
 _AES_KEY = hashlib.sha256(_MASTER_KEY).digest()  # 32-byte key for AES-256
 
 

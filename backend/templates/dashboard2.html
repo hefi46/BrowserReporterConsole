@@ -102,6 +102,7 @@
 
 	<script>
 		let page = 1, pageSize = 50, total = 0;
+		function escapeHtml(str) { if (str == null) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 		async function checkUserRole() {
 			try {
 				const r = await fetch('/api/auth/user');
@@ -120,7 +121,7 @@
 			const r = await fetch('/api/meta/homegroups');
 			const j = r.ok ? await r.json() : { homegroups: [] };
 			const hg = document.getElementById('hg');
-			hg.innerHTML = '<option value="">All</option>' + (j.homegroups||[]).map(h => `<option value="${h}">${h}</option>`).join('');
+			hg.innerHTML = '<option value="">All</option>' + (j.homegroups||[]).map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
 		}
 		async function load() {
 			// Show results, hide empty state
@@ -149,14 +150,14 @@
 			tbody.innerHTML = j.data.map(u => `
 				<tr>
 					<td>
-						<div class="fw-bold">${u.displayName || u.username}</div>
-						<small class="text-muted">${u.email || ''}</small>
+						<div class="fw-bold">${escapeHtml(u.displayName || u.username)}</div>
+						<small class="text-muted">${escapeHtml(u.email || '')}</small>
 					</td>
-					<td>${u.department || ''}</td>
+					<td>${escapeHtml(u.department || '')}</td>
 					<td><span class="badge bg-primary">${u.totalVisits||0}</span></td>
 					<td><span class="badge bg-info">${u.uniqueUrls||0}</span></td>
 					<td><small class="text-muted">${u.lastActivity ? new Date(u.lastActivity).toLocaleDateString() : 'Never'}</small></td>
-					<td><a class="btn btn-sm btn-outline-primary" href="/user/${u.username}"><i class="fas fa-eye"></i></a></td>
+					<td><a class="btn btn-sm btn-outline-primary" href="/user/${encodeURIComponent(u.username)}"><i class="fas fa-eye"></i></a></td>
 				</tr>
 			`).join('');
 		}

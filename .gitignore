@@ -53,7 +53,6 @@ ehthumbs.db
 Thumbs.db
 
 # Docker
-.dockerignore
 docker-compose.override.yml
 
 # Node modules (if any frontend deps)
