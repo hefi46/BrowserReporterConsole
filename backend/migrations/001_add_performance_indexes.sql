@@ -4,6 +4,20 @@
 -- Run with: CONCURRENTLY to avoid table locking
 
 -- ============================================================================
+-- ADD MISSING COLUMNS (safe: uses IF NOT EXISTS via DO block)
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'visits' AND column_name = 'search_vector'
+    ) THEN
+        ALTER TABLE visits ADD COLUMN search_vector TSVECTOR;
+    END IF;
+END $$;
+
+-- ============================================================================
 -- VISITS TABLE INDEXES
 -- ============================================================================
 
@@ -66,11 +80,11 @@ ON users (last_seen_at DESC) WHERE last_seen_at IS NOT NULL;
 -- COMPOSITE INDEXES FOR COMMON QUERY PATTERNS
 -- ============================================================================
 
--- Index 8: Combined time + URL for search result sorting
--- Used by: Search queries that need to sort by relevance and time
--- Supports: WHERE visit_time > ? ORDER BY visit_time DESC with URL filtering
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_visits_time_url
-ON visits (visit_time DESC, url) WHERE url IS NOT NULL;
+-- Index 8: Time-based index for search result sorting
+-- Used by: Search queries that need to sort by time
+-- Note: URL excluded from btree index as values can exceed max row size
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_visits_time_filtered
+ON visits (visit_time DESC) WHERE url IS NOT NULL;
 
 -- ============================================================================
 -- VERIFY INDEX CREATION

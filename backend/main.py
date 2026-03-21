@@ -878,6 +878,38 @@ async def user_page(username: str, request: Request):
 
 # -------------------------- Auto-Migration Functions --------------------
 
+def _split_sql_statements(sql_content: str) -> list[str]:
+    """Split SQL content into individual statements, respecting DO $$ blocks."""
+    statements: list[str] = []
+    current: list[str] = []
+    in_dollar_block = False
+
+    for line in sql_content.splitlines():
+        stripped = line.strip()
+        if not stripped or (stripped.startswith("--") and not current):
+            continue
+        current.append(line)
+        if stripped.upper().startswith("DO $$") or stripped.upper().startswith("DO $"):
+            in_dollar_block = True
+        if in_dollar_block and stripped.endswith("$$;"):
+            in_dollar_block = False
+            statements.append("\n".join(current))
+            current = []
+            continue
+        if not in_dollar_block and stripped.endswith(";"):
+            statements.append("\n".join(current))
+            current = []
+
+    if current:
+        stmt = "\n".join(current).strip()
+        if stmt:
+            statements.append(stmt)
+
+    return [s for s in statements if s.strip() and not all(
+        ln.strip().startswith("--") or not ln.strip() for ln in s.splitlines()
+    )]
+
+
 async def auto_apply_migrations():
     """
     Automatically apply database migrations on startup.
@@ -939,14 +971,23 @@ async def auto_apply_migrations():
                 skipped_count += 1
                 continue
 
-            # Apply migration
+            # Apply migration — execute each statement individually so that
+            # CREATE INDEX CONCURRENTLY works (cannot run inside a transaction).
             print(f"📋 Applying migration: {migration_name}")
             sql_content = migration_file.read_text()
 
             start_time = datetime.now()
 
             try:
-                await conn.execute(sql_content)
+                for stmt in _split_sql_statements(sql_content):
+                    try:
+                        await conn.execute(stmt)
+                    except Exception as stmt_err:
+                        err_msg = str(stmt_err).lower()
+                        if "already exists" in err_msg or "duplicate" in err_msg:
+                            continue
+                        raise
+
                 execution_time = (datetime.now() - start_time).total_seconds()
 
                 # Record migration

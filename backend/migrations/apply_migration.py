@@ -69,8 +69,48 @@ async def record_migration(conn, migration_name, execution_time):
     )
 
 
+def _split_sql_statements(sql_content: str) -> list[str]:
+    """Split SQL content into individual statements, respecting DO $$ blocks."""
+    statements = []
+    current = []
+    in_dollar_block = False
+
+    for line in sql_content.splitlines():
+        stripped = line.strip()
+        # Skip empty lines and comments outside of statements
+        if not stripped or (stripped.startswith("--") and not current):
+            continue
+
+        current.append(line)
+
+        # Track DO $$ ... END $$; blocks
+        if stripped.upper().startswith("DO $$") or stripped.upper().startswith("DO $"):
+            in_dollar_block = True
+        if in_dollar_block and stripped.endswith("$$;"):
+            in_dollar_block = False
+            statements.append("\n".join(current))
+            current = []
+            continue
+
+        # Normal statement ending with semicolon (outside dollar blocks)
+        if not in_dollar_block and stripped.endswith(";"):
+            statements.append("\n".join(current))
+            current = []
+
+    # Catch any trailing statement without semicolon
+    if current:
+        stmt = "\n".join(current).strip()
+        if stmt:
+            statements.append(stmt)
+
+    return [s for s in statements if s.strip() and not all(
+        l.strip().startswith("--") or not l.strip() for l in s.splitlines()
+    )]
+
+
 async def apply_migration(conn, migration_file: Path):
-    """Apply a single SQL migration file"""
+    """Apply a single SQL migration file, executing each statement individually
+    so that CREATE INDEX CONCURRENTLY works (it cannot run in a transaction)."""
     migration_name = migration_file.name
 
     # Check if already applied
@@ -80,32 +120,31 @@ async def apply_migration(conn, migration_file: Path):
 
     print(f"\n📋 Applying migration: {migration_name}")
 
-    # Read SQL file
     sql_content = migration_file.read_text()
+    statements = _split_sql_statements(sql_content)
 
-    # Start timing
     start_time = datetime.now()
 
     try:
-        # Execute migration
-        # Note: We don't use transactions for CREATE INDEX CONCURRENTLY
-        # as it cannot run inside a transaction block
-        await conn.execute(sql_content)
+        for i, stmt in enumerate(statements, 1):
+            try:
+                await conn.execute(stmt)
+            except Exception as e:
+                # Skip "already exists" errors for IF NOT EXISTS statements
+                err_msg = str(e).lower()
+                if "already exists" in err_msg or "duplicate" in err_msg:
+                    print(f"   ⏭️  Statement {i}/{len(statements)}: already exists, skipping")
+                    continue
+                raise
 
-        # Calculate execution time
         execution_time = (datetime.now() - start_time).total_seconds()
-
-        # Record successful migration
         await record_migration(conn, migration_name, execution_time)
 
-        print(f"✅ Migration applied successfully in {execution_time:.2f} seconds")
+        print(f"   ✅ Applied in {execution_time:.2f} seconds ({len(statements)} statements)")
         return True
 
     except Exception as e:
-        print(f"❌ Migration failed: {e}")
-        print("\n⚠️  Error details:")
-        print(f"   Migration: {migration_name}")
-        print(f"   Error: {str(e)}")
+        print(f"   ❌ Migration failed: {e}")
         return False
 
 
