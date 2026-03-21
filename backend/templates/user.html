@@ -78,6 +78,7 @@
     </div>
 
     <script>
+        function escapeHtml(str) { if (str == null) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         const params = new URLSearchParams(window.location.search);
         const username = window.location.pathname.split('/').pop();
         let page = 1;
@@ -107,11 +108,12 @@
             tbody.innerHTML = data.data.map(v => {
                 const ts = new Date(v.timestamp);
                 const tstr = `${ts.toLocaleDateString()} ${ts.toLocaleTimeString()}`;
+                const safeUrl = escapeHtml(v.url);
                 return `<tr>
                     <td>${tstr}</td>
-                    <td>${v.title || ''}</td>
-                    <td class="url-cell"><a href="${v.url}" target="_blank" title="${v.url}">${v.url}</a></td>
-                    <td><span class="badge bg-secondary">${v.computerName}</span></td>
+                    <td>${escapeHtml(v.title || '')}</td>
+                    <td class="url-cell"><a href="${safeUrl}" target="_blank" rel="noopener" title="${safeUrl}">${safeUrl}</a></td>
+                    <td><span class="badge bg-secondary">${escapeHtml(v.computerName)}</span></td>
                 </tr>`;
             }).join('');
         }

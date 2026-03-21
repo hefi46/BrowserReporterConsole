@@ -108,7 +108,7 @@
                         <h6 class="text-info mb-3 mt-4"><i class="fas fa-lock me-2"></i>Application Security</h6>
                         <div class="mb-3">
                             <label for="exitPassword" class="form-label">Exit Password</label>
-                            <input type="text" class="form-control" id="exitPassword" value="BRAdmin2025" oninput="updateConfigJson()">
+                            <input type="password" class="form-control" id="exitPassword" value="" placeholder="Set an exit password" oninput="updateConfigJson()">
                             <div class="form-text">Password required to exit the application from system tray</div>
                         </div>
                         <h6 class="text-info mb-3 mt-4"><i class="fas fa-code me-2"></i>Generated Configuration</h6>
@@ -188,7 +188,7 @@
             }
             document.getElementById('logMaxMb').value = config.log_max_mb || 5;
             document.getElementById('logRollCount').value = config.log_roll_count || 3;
-            document.getElementById('exitPassword').value = config.exit_password || 'BRAdmin2025';
+            document.getElementById('exitPassword').value = config.exit_password || '';
         }
 
         function resetToDefaults() {
@@ -203,7 +203,7 @@
             document.getElementById('edgeEnabled').checked = true;
             document.getElementById('logMaxMb').value = '5';
             document.getElementById('logRollCount').value = '3';
-            document.getElementById('exitPassword').value = 'BRAdmin2025';
+            document.getElementById('exitPassword').value = '';
             updateConfigJson();
         }
 

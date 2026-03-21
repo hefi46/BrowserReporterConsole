@@ -34,10 +34,11 @@ SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_urlsafe(32))
 
 app = FastAPI(title="Browser Reporter Server")
 
-# CORS (optional - you can restrict origins within LAN)
+# CORS – restrict to same-origin by default; override via CORS_ORIGINS env var
+_cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,7 +104,7 @@ async def create_initial_admin():
             # Ensure session is rolled back on error
             try:
                 await session.rollback()
-            except:
+            except Exception:
                 pass
             # Don't fail startup if admin creation fails
             pass
@@ -112,16 +113,14 @@ async def create_initial_admin():
 # --------------------------- API Endpoints ------------------------------
 
 @app.post("/create-admin-emergency")
-async def create_admin_emergency(db: AsyncSession = Depends(get_db)):
-    """Emergency endpoint to create admin user"""
+async def create_admin_emergency(request: Request, db: AsyncSession = Depends(get_db)):
+    """Emergency endpoint to create admin user (admin-only)."""
+    await require_admin(request, db)
     try:
-        # Check if admin exists
         result = await db.execute(select(DashboardUser).where(DashboardUser.username == "admin"))
         existing = result.scalar_one_or_none()
         if existing:
             return {"message": "Admin already exists"}
-        
-        # Create admin
         admin_user = DashboardUser(
             username="admin",
             password_hash=get_password_hash("admin"),
@@ -130,6 +129,8 @@ async def create_admin_emergency(db: AsyncSession = Depends(get_db)):
         db.add(admin_user)
         await db.commit()
         return {"message": "Admin created successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
 
@@ -1191,7 +1192,7 @@ async def admin_get_database_stats(
             """)
             slow_queries_result = await db.execute(slow_queries_query)
             slow_queries = [dict(row._mapping) for row in slow_queries_result]
-        except:
+        except Exception:
             slow_queries = []  # pg_stat_statements not enabled
 
         return {

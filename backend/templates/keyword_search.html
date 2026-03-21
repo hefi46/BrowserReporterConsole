@@ -109,6 +109,7 @@
 
 	<script>
 		let page = 1, pageSize = 50, total = 0;
+		function escapeHtml(str) { if (str == null) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 		async function checkUserRole() {
 			try {
 				const r = await fetch('/api/auth/user');
@@ -127,7 +128,7 @@
 			const r = await fetch('/api/meta/homegroups');
 			const j = r.ok ? await r.json() : { homegroups: [] };
 			const hg = document.getElementById('hg');
-			hg.innerHTML = '<option value="">All</option>' + (j.homegroups||[]).map(h => `<option value="${h}">${h}</option>`).join('');
+			hg.innerHTML = '<option value="">All</option>' + (j.homegroups||[]).map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
 		}
 		async function search() {
 			const term = document.getElementById('term').value.trim();
@@ -154,12 +155,13 @@
 			const tbody = document.getElementById('rows');
 			tbody.innerHTML = j.data.map(v => {
 				const ts = new Date(v.timestamp);
+				const safeUrl = escapeHtml(v.url);
 				return `<tr>
-					<td><div class="fw-semibold">${v.displayName}</div><small class="text-muted">${v.username} | ${v.homegroup}</small></td>
-					<td><a href="${v.url}" target="_blank">${v.url}</a></td>
-					<td>${v.title || ''}</td>
+					<td><div class="fw-semibold">${escapeHtml(v.displayName)}</div><small class="text-muted">${escapeHtml(v.username)} | ${escapeHtml(v.homegroup)}</small></td>
+					<td><a href="${safeUrl}" target="_blank" rel="noopener">${safeUrl}</a></td>
+					<td>${escapeHtml(v.title || '')}</td>
 					<td><small class="text-muted">${ts.toLocaleDateString()} ${ts.toLocaleTimeString()}</small></td>
-					<td><span class="badge bg-secondary">${v.computerName}</span></td>
+					<td><span class="badge bg-secondary">${escapeHtml(v.computerName)}</span></td>
 				</tr>`;
 			}).join('');
 		}
