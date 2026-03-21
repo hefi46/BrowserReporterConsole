@@ -1,176 +1,147 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Keyword Search</title>
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-	<style>
-		.table th:nth-child(1), .table td:nth-child(1) { width: 20%; }
-		.table th:nth-child(2), .table td:nth-child(2) { width: 30%; max-width: 300px; }
-		.table th:nth-child(3), .table td:nth-child(3) { width: 25%; }
-		.table th:nth-child(4), .table td:nth-child(4) { width: 15%; }
-		.table th:nth-child(5), .table td:nth-child(5) { width: 10%; }
-		.table td:nth-child(2) a {
-			display: block;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-			max-width: 100%;
-		}
-	</style>
-</head>
-<body>
-	<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-		<div class="container d-flex justify-content-between align-items-center">
-			<div class="d-flex gap-2">
-				<a class="btn btn-outline-light btn-sm" href="/"><i class="fas fa-users me-1"></i>User Search</a>
-				<a class="btn btn-light btn-sm text-dark" href="/keyword-search"><i class="fas fa-search me-1"></i>Keyword Search</a>
-			</div>
-			<div class="navbar-nav ms-auto d-flex align-items-center">
-				<a class="nav-link" href="/admin" id="adminLink" style="display: none;">Admin</a>
-				<a class="nav-link" href="/client-config" id="clientConfigLink" style="display: none;">Client Config</a>
-				<a class="nav-link" href="/logout">Logout</a>
-			</div>
-		</div>
-	</nav>
+{% extends "base.html" %}
 
-	<div class="container py-4">
-		<div class="row g-3 align-items-end mb-3">
-			<div class="col-md-4">
-				<label class="form-label">Keyword</label>
-				<input id="term" class="form-control" placeholder="e.g. google, youtube, sharepoint" onkeypress="if(event.key==='Enter') { page=1; pageSize=parseInt(document.getElementById('pp').value); search(); }" />
-			</div>
-			<div class="col-md-3">
-				<label class="form-label">Homegroup</label>
-				<select id="hg" class="form-select"></select>
-			</div>
-			<div class="col-md-3">
-				<label class="form-label">Activity (days)</label>
-				<select id="days" class="form-select">
-					<option value="">All</option>
-					<option value="1">1</option>
-					<option value="7">7</option>
-					<option value="30">30</option>
-					<option value="90">90</option>
-				</select>
-			</div>
-			<div class="col-md-2">
-				<label class="form-label">Per page</label>
-				<select id="pp" class="form-select">
-					<option value="25">25</option>
-					<option value="50" selected>50</option>
-					<option value="100">100</option>
-				</select>
-			</div>
-		</div>
-		<div class="d-flex gap-2 mb-3">
-			<button class="btn btn-primary" id="apply"><i class="fas fa-search me-1"></i>Search</button>
-			<button class="btn btn-outline-secondary" id="clear"><i class="fas fa-undo me-1"></i>Reset</button>
-		</div>
+{% block title %}Keyword Search{% endblock %}
+{% block nav_keyword_search_class %}btn-light text-dark{% endblock %}
 
-		<!-- Empty state message -->
-		<div class="card" id="emptyState">
-			<div class="card-body text-center py-5">
-				<i class="fas fa-search fa-3x text-muted mb-3"></i>
-				<h5 class="text-muted">Search to begin</h5>
-				<p class="text-muted small">Enter a keyword above and click Search or press Enter</p>
-			</div>
-		</div>
+{% block head %}
+<style>
+    .table th:nth-child(1), .table td:nth-child(1) { width: 20%; }
+    .table th:nth-child(2), .table td:nth-child(2) { width: 30%; max-width: 300px; }
+    .table th:nth-child(3), .table td:nth-child(3) { width: 25%; }
+    .table th:nth-child(4), .table td:nth-child(4) { width: 15%; }
+    .table th:nth-child(5), .table td:nth-child(5) { width: 10%; }
+    .table td:nth-child(2) a { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+</style>
+{% endblock %}
 
-		<!-- Results table (hidden initially) -->
-		<div class="card" id="resultsCard" style="display: none;">
-			<div class="card-body">
-				<div class="table-responsive">
-					<table class="table table-hover align-middle">
-						<thead class="table-light">
-							<tr>
-								<th>User</th>
-								<th>URL</th>
-								<th>Title</th>
-								<th>Timestamp</th>
-								<th>Computer</th>
-							</tr>
-						</thead>
-						<tbody id="rows"></tbody>
-					</table>
-				</div>
-				<div class="d-flex justify-content-between align-items-center">
-					<small class="text-muted">Showing <span id="s">0</span>-<span id="e">0</span> of <span id="t">0</span></small>
-					<div class="btn-group btn-group-sm">
-						<button class="btn btn-outline-secondary" id="prev">Prev</button>
-						<button class="btn btn-outline-secondary" id="next">Next</button>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+{% block content %}
+<div class="row g-3 align-items-end mb-3">
+    <div class="col-md-4">
+        <label class="form-label">Keyword</label>
+        <input id="term" class="form-control" placeholder="e.g. google, youtube, sharepoint">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Homegroup</label>
+        <select id="hg" class="form-select"></select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Activity (days)</label>
+        <select id="days" class="form-select">
+            <option value="">All</option>
+            <option value="1">1</option>
+            <option value="7">7</option>
+            <option value="30">30</option>
+            <option value="90">90</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Per page</label>
+        <select id="pp" class="form-select">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+        </select>
+    </div>
+</div>
 
-	<script>
-		let page = 1, pageSize = 50, total = 0;
-		function escapeHtml(str) { if (str == null) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-		async function checkUserRole() {
-			try {
-				const r = await fetch('/api/auth/user');
-				if (r.ok) {
-					const user = await r.json();
-					if (user.role === 'admin') {
-						document.getElementById('adminLink').style.display = '';
-						document.getElementById('clientConfigLink').style.display = '';
-					}
-				}
-			} catch (e) {
-				console.error('Failed to check user role:', e);
-			}
-		}
-		async function loadHGs() {
-			const r = await fetch('/api/meta/homegroups');
-			const j = r.ok ? await r.json() : { homegroups: [] };
-			const hg = document.getElementById('hg');
-			hg.innerHTML = '<option value="">All</option>' + (j.homegroups||[]).map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
-		}
-		async function search() {
-			const term = document.getElementById('term').value.trim();
-			if (!term) return;
+<div class="d-flex gap-2 mb-3">
+    <button class="btn btn-primary" id="apply"><i class="fas fa-search me-1"></i>Search</button>
+    <button class="btn btn-outline-secondary" id="clear"><i class="fas fa-undo me-1"></i>Reset</button>
+</div>
 
-			// Show results, hide empty state
-			document.getElementById('emptyState').style.display = 'none';
-			document.getElementById('resultsCard').style.display = 'block';
+<div class="card" id="emptyState">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">Search to begin</h5>
+        <p class="text-muted small">Enter a keyword above and click Search or press Enter</p>
+    </div>
+</div>
 
-			const params = new URLSearchParams({ url: term, page: String(page), page_size: String(pageSize) });
-			const days = document.getElementById('days').value;
-			const hg = document.getElementById('hg').value;
-			if (days) params.set('days', days);
-			if (hg) params.set('homegroup', hg);
-			const r = await fetch(`/api/reports/search?${params.toString()}`);
-			if (!r.ok) return;
-			const j = await r.json();
-			total = j.pagination.total_count;
-			document.getElementById('t').textContent = total;
-			document.getElementById('s').textContent = ((j.pagination.page - 1) * j.pagination.page_size) + 1;
-			document.getElementById('e').textContent = Math.min(j.pagination.page * j.pagination.page_size, total);
-			document.getElementById('prev').disabled = !j.pagination.has_prev;
-			document.getElementById('next').disabled = !j.pagination.has_next;
-			const tbody = document.getElementById('rows');
-			tbody.innerHTML = j.data.map(v => {
-				const ts = new Date(v.timestamp);
-				const safeUrl = escapeHtml(v.url);
-				return `<tr>
-					<td><div class="fw-semibold">${escapeHtml(v.displayName)}</div><small class="text-muted">${escapeHtml(v.username)} | ${escapeHtml(v.homegroup)}</small></td>
-					<td><a href="${safeUrl}" target="_blank" rel="noopener">${safeUrl}</a></td>
-					<td>${escapeHtml(v.title || '')}</td>
-					<td><small class="text-muted">${ts.toLocaleDateString()} ${ts.toLocaleTimeString()}</small></td>
-					<td><span class="badge bg-secondary">${escapeHtml(v.computerName)}</span></td>
-				</tr>`;
-			}).join('');
-		}
-		document.getElementById('apply').addEventListener('click', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); search(); });
-		document.getElementById('clear').addEventListener('click', () => { document.getElementById('term').value=''; document.getElementById('hg').value=''; document.getElementById('days').value=''; page=1; total=0; document.getElementById('rows').innerHTML=''; document.getElementById('t').textContent='0'; document.getElementById('s').textContent='0'; document.getElementById('e').textContent='0'; document.getElementById('resultsCard').style.display='none'; document.getElementById('emptyState').style.display='block'; });
-		document.getElementById('prev').addEventListener('click', () => { if (page>1) { page--; search(); } });
-		document.getElementById('next').addEventListener('click', () => { const max = Math.ceil(total/pageSize); if (page<max) { page++; search(); } });
-		document.getElementById('pp').addEventListener('change', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); search(); });
-		window.addEventListener('load', async () => { await checkUserRole(); await loadHGs(); });
-	</script>
-</body>
-</html>
+<div class="card" id="resultsCard" style="display: none;">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>URL</th>
+                        <th>Title</th>
+                        <th>Timestamp</th>
+                        <th>Computer</th>
+                    </tr>
+                </thead>
+                <tbody id="rows"></tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">Showing <span id="s">0</span>-<span id="e">0</span> of <span id="t">0</span></small>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary" id="prev">Prev</button>
+                <button class="btn btn-outline-secondary" id="next">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let page = 1, pageSize = 50, total = 0;
+
+    async function doSearch() {
+        const term = document.getElementById('term').value.trim();
+        if (!term) return;
+
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('resultsCard').style.display = 'block';
+
+        const params = new URLSearchParams({ url: term, page: String(page), page_size: String(pageSize) });
+        const days = document.getElementById('days').value;
+        const hg = document.getElementById('hg').value;
+        if (days) params.set('days', days);
+        if (hg) params.set('homegroup', hg);
+
+        const r = await fetch(`/api/reports/search?${params.toString()}`);
+        if (!r.ok) { showError('Search failed'); return; }
+        const j = await r.json();
+        total = j.pagination.total_count;
+        document.getElementById('t').textContent = total;
+        document.getElementById('s').textContent = ((j.pagination.page - 1) * j.pagination.page_size) + 1;
+        document.getElementById('e').textContent = Math.min(j.pagination.page * j.pagination.page_size, total);
+        document.getElementById('prev').disabled = !j.pagination.has_prev;
+        document.getElementById('next').disabled = !j.pagination.has_next;
+
+        document.getElementById('rows').innerHTML = j.data.map(v => {
+            const ts = new Date(v.timestamp);
+            const safeUrl = escapeHtml(v.url);
+            return `<tr>
+                <td><div class="fw-semibold">${escapeHtml(v.displayName)}</div><small class="text-muted">${escapeHtml(v.username)} | ${escapeHtml(v.homegroup)}</small></td>
+                <td><a href="${safeUrl}" target="_blank" rel="noopener">${safeUrl}</a></td>
+                <td>${escapeHtml(v.title || '')}</td>
+                <td><small class="text-muted">${ts.toLocaleDateString()} ${ts.toLocaleTimeString()}</small></td>
+                <td><span class="badge bg-secondary">${escapeHtml(v.computerName)}</span></td>
+            </tr>`;
+        }).join('');
+    }
+
+    document.getElementById('apply').addEventListener('click', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); doSearch(); });
+    document.getElementById('clear').addEventListener('click', () => {
+        document.getElementById('term').value = '';
+        document.getElementById('hg').value = '';
+        document.getElementById('days').value = '';
+        page = 1; total = 0;
+        document.getElementById('rows').innerHTML = '';
+        document.getElementById('t').textContent = '0';
+        document.getElementById('s').textContent = '0';
+        document.getElementById('e').textContent = '0';
+        document.getElementById('resultsCard').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+    });
+    document.getElementById('prev').addEventListener('click', () => { if (page > 1) { page--; doSearch(); } });
+    document.getElementById('next').addEventListener('click', () => { if (page < Math.ceil(total / pageSize)) { page++; doSearch(); } });
+    document.getElementById('pp').addEventListener('change', () => { page = 1; pageSize = parseInt(document.getElementById('pp').value); doSearch(); });
+    document.getElementById('term').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); page = 1; pageSize = parseInt(document.getElementById('pp').value); doSearch(); } });
+
+    window.addEventListener('load', async () => { await checkUserRole(); await loadHomegroups('hg'); });
+</script>
+{% endblock %}
