@@ -6,13 +6,10 @@ from typing import Sequence, Optional, List
 from sqlalchemy import insert, select, update, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from passlib.context import CryptContext
 
 from .models import User, Visit, DashboardUser, DashboardRoleEnum, StudentEnrichment
-from .schemas import ReportIn, UserInfoIn, VisitIn
-
-# Import password functions from utils to avoid duplication
-from .utils import get_password_hash, verify_password
+from .schemas import UserInfoIn, VisitIn
+from .utils import get_password_hash
 
 async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
     """Upsert user and return id."""
