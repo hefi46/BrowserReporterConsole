@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select, text
@@ -47,11 +47,11 @@ async def ingest_report(report: ReportIn, request: Request, db: AsyncSession = D
 @router.get("/api/reports/all")
 async def reports_all(
     request: Request,
-    page: int = 1,
-    page_size: int = 50,
-    homegroup: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=1000),
+    homegroup: Optional[str] = Query(None, max_length=100),
     days: Optional[float] = None,
-    search: Optional[str] = None,
+    search: Optional[str] = Query(None, max_length=500),
     db: AsyncSession = Depends(get_db),
 ):
     require_login(request)
@@ -151,11 +151,11 @@ async def get_homegroups(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/api/reports/search")
 async def search_website(
     request: Request,
-    url: str,
-    page: int = 1,
-    page_size: int = 50,
+    url: str = Query(..., min_length=1, max_length=500, description="Search term for URL/title matching"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=1000),
     days: float | None = None,
-    homegroup: Optional[str] = None,
+    homegroup: Optional[str] = Query(None, max_length=100),
     db: AsyncSession = Depends(get_db),
 ):
     """Search for users who visited a specific URL or website."""
@@ -256,18 +256,16 @@ async def search_website(
 
 @router.get("/api/reports/user/{username}")
 async def reports_user(
-    username: str,
     request: Request,
+    username: str = Path(..., min_length=1, max_length=255),
     days: float | None = None,
-    page: int = 1,
-    page_size: int = 50,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ):
     require_login(request)
     page, page_size = validate_pagination(page, page_size)
     cutoff = parse_days_cutoff(days)
-
-    from fastapi import HTTPException
 
     result = await db.execute(select(User.id).where(User.username == username))
     user_id = result.scalar_one_or_none()
@@ -309,6 +307,6 @@ async def reports_user(
 # ── Template pages ──────────────────────────────────────────────────────
 
 @router.get("/user/{username}", response_class=HTMLResponse)
-async def user_page(username: str, request: Request):
+async def user_page(request: Request, username: str = Path(..., min_length=1, max_length=255)):
     require_login(request)
     return templates.TemplateResponse("user.html", {"request": request, "username": username})

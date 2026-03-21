@@ -13,12 +13,11 @@ from typing import Optional
 
 import asyncpg
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi import HTTPException, Request, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.sessions import SessionMiddleware
@@ -79,6 +78,19 @@ admin.configure(templates, SECURECONFIG_PATH)
 app.include_router(auth.router)
 app.include_router(reports.router)
 app.include_router(admin.router)
+
+
+# ── Global exception handler ────────────────────────────────────────────
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch unhandled exceptions and return a consistent JSON 500 response
+    instead of leaking stack traces to the client."""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 
 # ── Thin page routes that don't fit neatly in a single router ────────────

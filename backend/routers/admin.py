@@ -9,7 +9,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select, text
@@ -91,7 +91,7 @@ async def admin_create_user(
 
 @router.put("/api/admin/users/{username}")
 async def admin_update_user(
-    username: str,
+    username: str = Path(..., min_length=1, max_length=50),
     user_data: DashboardUserUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -112,7 +112,7 @@ async def admin_update_user(
 
 
 @router.delete("/api/admin/users/{username}")
-async def admin_delete_user(username: str, request: Request, db: AsyncSession = Depends(get_db)):
+async def admin_delete_user(request: Request, username: str = Path(..., min_length=1, max_length=50), db: AsyncSession = Depends(get_db)):
     """Delete a dashboard user (admin only)."""
     admin_user = await require_admin(request, db)
     if admin_user.username == username:
