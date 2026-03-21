@@ -1033,13 +1033,58 @@ async def auto_apply_migrations():
 
 @app.on_event("startup")
 async def on_startup():
-    # Create tables
+    # Create tables (only creates new tables, doesn't alter existing ones)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    # Auto-apply database migrations
+
+    # Ensure schema matches models — add any missing columns that
+    # create_all won't handle on existing tables.
+    await _ensure_schema_columns()
+
+    # Auto-apply database migrations (indexes, etc.)
     await auto_apply_migrations()
     # ensure initial admin exists
     await create_initial_admin()
+
+
+async def _ensure_schema_columns():
+    """Add missing columns to existing tables so queries don't crash.
+    create_all only creates new tables — it won't ALTER existing ones."""
+    import asyncpg as _apg
+
+    db_host = os.getenv("DB_HOST", "db")
+    conn = None
+    try:
+        conn = await _apg.connect(
+            host=db_host,
+            port=int(os.getenv("DB_PORT", "5432")),
+            user=os.getenv("DB_USER", "browser_reporter"),
+            password=os.getenv("DB_PASSWORD", "browser_reporter"),
+            database=os.getenv("DB_NAME", "browser_reporter"),
+        )
+
+        # Map of (table, column) -> SQL type to ensure exist
+        required_columns = [
+            ("visits", "search_vector", "TSVECTOR"),
+        ]
+
+        for table, column, col_type in required_columns:
+            exists = await conn.fetchval(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name = $1 AND column_name = $2",
+                table, column,
+            )
+            if not exists:
+                await conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
+                )
+                print(f"   ✅ Added missing column {table}.{column}")
+
+    except Exception as e:
+        print(f"⚠️  Schema check skipped: {e}")
+    finally:
+        if conn:
+            await conn.close()
 
 
 # -------------------------- Secure Config -------------------------------
