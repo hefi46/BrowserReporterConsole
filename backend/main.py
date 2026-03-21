@@ -367,8 +367,11 @@ async def search_website(
         .select_from(Visit)
         .join(User, Visit.user_id == User.id)
         .where(
-            # Use OR condition: full-text search OR ILIKE for maximum flexibility
-            (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term))) |
+            # Use OR condition: full-text search (when vector exists) OR ILIKE fallback
+            (
+                (Visit.search_vector.isnot(None)) &
+                (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term)))
+            ) |
             (Visit.url.ilike(f"%{search_term}%")) |
             (Visit.title.ilike(f"%{search_term}%"))
         )
@@ -390,7 +393,10 @@ async def search_website(
         .join(User, Visit.user_id == User.id)
         .where(
             # Same OR condition as main query
-            (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term))) |
+            (
+                (Visit.search_vector.isnot(None)) &
+                (Visit.search_vector.op('@@')(func.websearch_to_tsquery('english', search_term)))
+            ) |
             (Visit.url.ilike(f"%{search_term}%")) |
             (Visit.title.ilike(f"%{search_term}%"))
         )
@@ -516,7 +522,7 @@ async def reports_user(username: str, request: Request, days: float | None = Non
     return {
         "data": [
             {
-                "timestamp": v.visit_time.isoformat(),
+                "timestamp": v.visit_time.isoformat() if v.visit_time else None,
                 "title": v.title,
                 "url": v.url,
                 "computerName": v.computer_name,
