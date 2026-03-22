@@ -28,7 +28,7 @@ class User(Base):
 class Visit(Base):
     __tablename__ = "visits"
 
-    id = Column(BigInteger, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     computer_name = Column(String)
     url = Column(Text)

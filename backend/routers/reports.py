@@ -9,6 +9,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import expression
+from sqlalchemy.ext.compiler import compiles
 
 from ..database import get_db
 from ..models import User, Visit
@@ -22,6 +24,35 @@ from .deps import (
 )
 
 logger = logging.getLogger("browser_reporter")
+
+
+# ── Cross-database DISTINCT string aggregation ────────────────────────────
+# PostgreSQL uses string_agg(DISTINCT col, sep), SQLite uses group_concat(DISTINCT col, sep).
+
+class _string_agg_distinct(expression.FunctionElement):
+    """Cross-database aggregate: concatenate distinct values with a separator."""
+    type = func.group_concat("x").type  # text return type
+    inherit_cache = True
+
+    def __init__(self, column, separator):
+        super().__init__(column, separator)
+        self.column = column
+        self.separator = separator
+
+
+@compiles(_string_agg_distinct)
+def _compile_string_agg_pg(element, compiler, **kw):
+    col = compiler.process(element.clauses.clauses[0], **kw)
+    sep = compiler.process(element.clauses.clauses[1], **kw)
+    return f"string_agg(DISTINCT {col}, {sep})"
+
+
+@compiles(_string_agg_distinct, "sqlite")
+def _compile_string_agg_sqlite(element, compiler, **kw):
+    col = compiler.process(element.clauses.clauses[0], **kw)
+    # SQLite's group_concat(DISTINCT col) doesn't accept a separator arg,
+    # but defaults to comma which is close enough for tests.
+    return f"group_concat(DISTINCT {col})"
 router = APIRouter()
 
 templates: Jinja2Templates = None  # type: ignore[assignment]
@@ -59,6 +90,8 @@ async def reports_all(
     cutoff = parse_days_cutoff(days)
 
     # Base columns
+    # Use column.distinct() rather than func.distinct(column) so that
+    # both PostgreSQL and SQLite render "COUNT(DISTINCT col)" correctly.
     selectable = (
         select(
             User.username,
@@ -66,9 +99,9 @@ async def reports_all(
             User.email,
             User.homegroup.label("department"),
             func.count(Visit.id).label("total_visits"),
-            func.count(func.distinct(Visit.url)).label("unique_urls"),
+            func.count(Visit.url.distinct()).label("unique_urls"),
             func.max(Visit.visit_time).label("last_activity"),
-            func.string_agg(func.distinct(Visit.computer_name), text("', '")).label("computers"),
+            _string_agg_distinct(Visit.computer_name, text("', '")).label("computers"),
         )
         .select_from(User)
         .outerjoin(Visit, Visit.user_id == User.id)
@@ -92,7 +125,7 @@ async def reports_all(
 
     # Count
     count_q = (
-        select(func.count(func.distinct(User.id)))
+        select(func.count(User.id.distinct()))
         .select_from(User)
         .outerjoin(Visit, Visit.user_id == User.id)
     )
@@ -214,7 +247,7 @@ async def search_website(
 
     # Unique users
     unique_q = (
-        select(func.count(func.distinct(User.id)))
+        select(func.count(User.id.distinct()))
         .select_from(Visit)
         .join(User, Visit.user_id == User.id)
         .where(Visit.url.ilike(f"%{url}%"))

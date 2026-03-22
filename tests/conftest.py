@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event, text
+from sqlalchemy import BigInteger, event, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import TSVECTOR
@@ -68,6 +68,12 @@ from sqlalchemy.ext.compiler import compiles
 @compiles(TSVECTOR, "sqlite")
 def _compile_tsvector_sqlite(element, compiler, **kw):
     return "TEXT"
+
+# SQLite only auto-increments columns declared as exactly "INTEGER".
+# BigInteger renders as "BIGINT" which doesn't auto-increment on SQLite.
+@compiles(BigInteger, "sqlite")
+def _compile_biginteger_sqlite(element, compiler, **kw):
+    return "INTEGER"
 
 
 @event.listens_for(test_engine.sync_engine, "connect")
