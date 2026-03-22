@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.responses import HTMLResponse
@@ -53,12 +52,14 @@ def _compile_string_agg_sqlite(element, compiler, **kw):
     # SQLite's group_concat(DISTINCT col) doesn't accept a separator arg,
     # but defaults to comma which is close enough for tests.
     return f"group_concat(DISTINCT {col})"
+
+
 router = APIRouter()
 
 templates: Jinja2Templates = None  # type: ignore[assignment]
 
 
-def _apply_homegroup_cutoff(q, homegroup: Optional[str], cutoff):
+def _apply_homegroup_cutoff(q, homegroup: str | None, cutoff):
     """Apply homegroup and time-cutoff WHERE clauses to a query."""
     if homegroup:
         q = q.where(User.homegroup == homegroup)
@@ -67,10 +68,15 @@ def _apply_homegroup_cutoff(q, homegroup: Optional[str], cutoff):
     return q
 
 
-def _apply_user_search(q, search: Optional[str]):
+def _escape_like(term: str) -> str:
+    """Escape SQL LIKE metacharacters so they match literally."""
+    return term.replace("%", r"\%").replace("_", r"\_")
+
+
+def _apply_user_search(q, search: str | None):
     """Apply username/display-name/email/homegroup text search to a query."""
     if search:
-        pattern = f"%{search.lower()}%"
+        pattern = f"%{_escape_like(search.lower())}%"
         q = q.where(
             func.lower(User.username).like(pattern)
             | func.lower(func.coalesce(User.display_name, "")).like(pattern)
@@ -102,9 +108,9 @@ async def reports_all(
     request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
-    homegroup: Optional[str] = Query(None, max_length=100),
+    homegroup: str | None = Query(None, max_length=100),
     days: Optional[float] = None,
-    search: Optional[str] = Query(None, max_length=500),
+    search: str | None = Query(None, max_length=500),
     db: AsyncSession = Depends(get_db),
 ):
     require_login(request)
@@ -190,7 +196,7 @@ async def search_website(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
     days: float | None = None,
-    homegroup: Optional[str] = Query(None, max_length=100),
+    homegroup: str | None = Query(None, max_length=100),
     db: AsyncSession = Depends(get_db),
 ):
     """Search for users who visited a specific URL or website."""
@@ -205,8 +211,8 @@ async def search_website(
             (Visit.search_vector.isnot(None))
             & (Visit.search_vector.op("@@")(func.websearch_to_tsquery("english", search_term)))
         )
-        | (Visit.url.ilike(f"%{search_term}%"))
-        | (Visit.title.ilike(f"%{search_term}%"))
+        | (Visit.url.ilike(f"%{_escape_like(search_term)}%"))
+        | (Visit.title.ilike(f"%{_escape_like(search_term)}%"))
     )
 
     query = (
@@ -246,7 +252,7 @@ async def search_website(
         select(func.count(User.id.distinct()))
         .select_from(Visit)
         .join(User, Visit.user_id == User.id)
-        .where(Visit.url.ilike(f"%{url}%"))
+        .where(Visit.url.ilike(f"%{_escape_like(search_term)}%"))
     )
     unique_q = _apply_homegroup_cutoff(unique_q, homegroup, cutoff)
     unique_users_count = (await db.execute(unique_q)).scalar() or 0

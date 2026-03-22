@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from fastapi import HTTPException, Request, status
 from sqlalchemy import select
@@ -14,7 +13,7 @@ from ..models import DashboardUser, DashboardRoleEnum
 logger = logging.getLogger("browser_reporter")
 
 
-def get_current_dashboard_user(request: Request) -> Optional[str]:
+def get_current_dashboard_user(request: Request) -> str | None:
     """Return the logged-in dashboard username, or None."""
     return request.session.get("dashboard_user")
 
@@ -36,7 +35,7 @@ async def require_admin(request: Request, db: AsyncSession) -> DashboardUser:
     result = await db.execute(
         select(DashboardUser).where(DashboardUser.username == username)
     )
-    user: Optional[DashboardUser] = result.scalar_one_or_none()
+    user: DashboardUser | None = result.scalar_one_or_none()
     if not user or user.role != DashboardRoleEnum.admin:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
@@ -51,7 +50,7 @@ def validate_pagination(page: int, page_size: int) -> tuple[int, int]:
     return page, page_size
 
 
-def parse_days_cutoff(days: Optional[float]) -> Optional[datetime]:
+def parse_days_cutoff(days: float | None) -> datetime | None:
     """Convert a days-ago value to a UTC cutoff datetime, or None."""
     if days is None:
         return None

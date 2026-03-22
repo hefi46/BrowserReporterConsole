@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -23,7 +23,7 @@ class UserInfoIn(BaseModel):
 
 class ReportIn(BaseModel):
     Username: str
-    Visits: List[VisitIn]
+    Visits: list[VisitIn]
     UserInfo: UserInfoIn
 
     @field_validator("Visits")

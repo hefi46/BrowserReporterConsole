@@ -8,24 +8,23 @@ from __future__ import annotations
 import logging
 import os
 import secrets
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
 import asyncpg
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
 
-from .database import get_db, engine, Base, AsyncSessionLocal
+from .database import engine, Base, AsyncSessionLocal
 from .models import DashboardUser, DashboardRoleEnum
 from .utils import get_password_hash
 from .migrations.runner import get_db_config, ensure_schema_columns, apply_migrations
@@ -41,11 +40,74 @@ logging.basicConfig(
 )
 logger = logging.getLogger("browser_reporter")
 
+# ── Startup ──────────────────────────────────────────────────────────────
+
+async def _create_initial_admin() -> None:
+    """Ensure the default admin account exists."""
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(DashboardUser).where(DashboardUser.username == "admin")
+            )
+            if not result.scalar_one_or_none():
+                session.add(DashboardUser(
+                    username="admin",
+                    password_hash=get_password_hash("admin"),
+                    role=DashboardRoleEnum.admin,
+                ))
+                await session.commit()
+                logger.warning("Created default admin: admin / admin — change the password immediately")
+            else:
+                logger.info("Admin user already exists")
+        except Exception:
+            logger.exception("Admin setup warning")
+            try:
+                await session.rollback()
+            except Exception:
+                pass
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 1. Create any brand-new tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    # 2. Schema fixups + migrations via a raw asyncpg connection
+    db_config = get_db_config()
+    conn = None
+    try:
+        conn = await asyncpg.connect(**db_config)
+        await ensure_schema_columns(conn)
+
+        migrations_dir = Path(__file__).parent / "migrations"
+        if migrations_dir.exists():
+            applied, skipped = await apply_migrations(conn, migrations_dir)
+            if applied:
+                logger.info("Applied %d new migration(s)", applied)
+            if skipped:
+                logger.info("Skipped %d already-applied migration(s)", skipped)
+    except asyncpg.exceptions.InvalidCatalogNameError:
+        logger.warning("Database does not exist yet — will be created by SQLAlchemy")
+    except asyncpg.exceptions.PostgresConnectionError:
+        logger.warning("Could not connect to database for migrations — skipping")
+    except Exception:
+        logger.exception("Migration error — app will continue but performance may be degraded")
+    finally:
+        if conn:
+            await conn.close()
+
+    # 3. Ensure default admin exists
+    await _create_initial_admin()
+
+    yield
+
+
 # ── App creation ─────────────────────────────────────────────────────────
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_urlsafe(32))
 
-app = FastAPI(title="Browser Reporter Server")
+app = FastAPI(title="Browser Reporter Server", lifespan=lifespan)
 
 
 # ── Security headers middleware ────────────────────────────────────────────
@@ -185,67 +247,6 @@ async def download_secureconfig():
     if not os.path.exists(SECURECONFIG_PATH):
         raise HTTPException(status_code=404, detail="secureconfig.json not found. Generate it first via the admin panel.")
     return FileResponse(SECURECONFIG_PATH, media_type="application/json")
-
-
-# ── Startup ──────────────────────────────────────────────────────────────
-
-async def _create_initial_admin() -> None:
-    """Ensure the default admin account exists."""
-    async with AsyncSessionLocal() as session:
-        try:
-            result = await session.execute(
-                select(DashboardUser).where(DashboardUser.username == "admin")
-            )
-            if not result.scalar_one_or_none():
-                session.add(DashboardUser(
-                    username="admin",
-                    password_hash=get_password_hash("admin"),
-                    role=DashboardRoleEnum.admin,
-                ))
-                await session.commit()
-                logger.warning("Created default admin: admin / admin — change the password immediately")
-            else:
-                logger.info("Admin user already exists")
-        except Exception:
-            logger.exception("Admin setup warning")
-            try:
-                await session.rollback()
-            except Exception:
-                pass
-
-
-@app.on_event("startup")
-async def on_startup():
-    # 1. Create any brand-new tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    # 2. Schema fixups + migrations via a raw asyncpg connection
-    db_config = get_db_config()
-    conn = None
-    try:
-        conn = await asyncpg.connect(**db_config)
-        await ensure_schema_columns(conn)
-
-        migrations_dir = Path(__file__).parent / "migrations"
-        if migrations_dir.exists():
-            applied, skipped = await apply_migrations(conn, migrations_dir)
-            if applied:
-                logger.info("Applied %d new migration(s)", applied)
-            if skipped:
-                logger.info("Skipped %d already-applied migration(s)", skipped)
-    except asyncpg.exceptions.InvalidCatalogNameError:
-        logger.warning("Database does not exist yet — will be created by SQLAlchemy")
-    except asyncpg.exceptions.PostgresConnectionError:
-        logger.warning("Could not connect to database for migrations — skipping")
-    except Exception:
-        logger.exception("Migration error — app will continue but performance may be degraded")
-    finally:
-        if conn:
-            await conn.close()
-
-    # 3. Ensure default admin exists
-    await _create_initial_admin()
 
 
 # ── CLI entry-point ──────────────────────────────────────────────────────

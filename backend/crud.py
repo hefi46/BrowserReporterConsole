@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Sequence, Optional, List
+from typing import Sequence
 
 from sqlalchemy import insert, select, update, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ from .utils import get_password_hash
 
 async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
     """Upsert user and return id."""
-    stmt = pg_insert(User).values(
+    values = dict(
         username=info.Username,
         display_name=info.DisplayName or info.Username,
         first_name=info.FirstName,
@@ -21,16 +21,10 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
         homegroup=info.Department,
         email=info.Email,
         last_seen_at=datetime.now(timezone.utc),
-    ).on_conflict_do_update(
+    )
+    stmt = pg_insert(User).values(**values).on_conflict_do_update(
         index_elements=[User.username],
-        set_=dict(
-            display_name=info.DisplayName or info.Username,
-            first_name=info.FirstName,
-            last_name=info.LastName,
-            homegroup=info.Department,
-            email=info.Email,
-            last_seen_at=datetime.now(timezone.utc),
-        ),
+        set_={k: v for k, v in values.items() if k != "username"},
     ).returning(User.id)
 
     result = await db.execute(stmt)
@@ -82,13 +76,13 @@ async def bulk_insert_visits(db: AsyncSession, user_id: int, visits: Sequence[Vi
 
 # Admin Management CRUD Operations
 
-async def get_dashboard_users(db: AsyncSession) -> List[DashboardUser]:
+async def get_dashboard_users(db: AsyncSession) -> list[DashboardUser]:
     """Get all dashboard users."""
     result = await db.execute(select(DashboardUser).order_by(DashboardUser.created_at))
     return result.scalars().all()
 
 
-async def get_dashboard_user_by_username(db: AsyncSession, username: str) -> Optional[DashboardUser]:
+async def get_dashboard_user_by_username(db: AsyncSession, username: str) -> DashboardUser | None:
     """Get dashboard user by username."""
     result = await db.execute(select(DashboardUser).where(DashboardUser.username == username))
     return result.scalar_one_or_none()
@@ -136,15 +130,11 @@ async def upsert_student_enrichments(db: AsyncSession, rows: list) -> int:
     """Upsert student enrichment records. Returns count of rows imported."""
     if not rows:
         return 0
-    stmt = pg_insert(StudentEnrichment).values(rows).on_conflict_do_update(
+    stmt = pg_insert(StudentEnrichment).values(rows)
+    update_cols = ("first_name", "last_name", "display_name", "homegroup", "imported_at")
+    stmt = stmt.on_conflict_do_update(
         index_elements=[StudentEnrichment.login],
-        set_=dict(
-            first_name=pg_insert(StudentEnrichment).excluded.first_name,
-            last_name=pg_insert(StudentEnrichment).excluded.last_name,
-            display_name=pg_insert(StudentEnrichment).excluded.display_name,
-            homegroup=pg_insert(StudentEnrichment).excluded.homegroup,
-            imported_at=pg_insert(StudentEnrichment).excluded.imported_at,
-        ),
+        set_={col: stmt.excluded[col] for col in update_cols},
     )
     await db.execute(stmt)
     return len(rows)
