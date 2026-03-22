@@ -11,7 +11,7 @@
         </div>
         <div class="navbar-nav ms-auto d-flex align-items-center">
             <a class="nav-link" href="/admin">Admin</a>
-            <a class="nav-link" href="/client-config">Client Config</a>
+            <a class="nav-link active" href="/client-config">Client Config</a>
             <a class="nav-link" href="/logout">Logout</a>
         </div>
     </div>
@@ -20,20 +20,21 @@
 
 {% block body %}
 <div class="container my-4">
-    <div class="card shadow-sm">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0"><i class="fab fa-windows me-2"></i>Generate Windows Client Config</h5>
+    <!-- Windows Client Config -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header page-header">
+            <h5 class="mb-0"><i class="fab fa-windows me-2"></i>Windows Client Configuration</h5>
         </div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <h6 class="text-info mb-3"><i class="fas fa-server me-2"></i>Server Settings</h6>
+                    <h6 class="text-muted mb-3"><i class="fas fa-server me-2"></i>Server Settings</h6>
                     <div class="mb-3">
                         <label for="serverUrl" class="form-label">Server URL</label>
                         <input type="url" class="form-control" id="serverUrl" value="http://browserreporter:8000">
                         <div class="form-text">Full URL where the BrowserReporter server is accessible</div>
                     </div>
-                    <h6 class="text-info mb-3 mt-4"><i class="fas fa-clock me-2"></i>Collection Settings</h6>
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-clock me-2"></i>Collection Settings</h6>
                     <div class="mb-3">
                         <label for="intervalMinutes" class="form-label">Collection Interval (minutes)</label>
                         <input type="number" class="form-control" id="intervalMinutes" value="5" min="1" max="60">
@@ -44,7 +45,7 @@
                         <input type="number" class="form-control" id="maxHistoryDays" value="30" min="1" max="365">
                         <div class="form-text">How many days of history to keep (1-365 days)</div>
                     </div>
-                    <h6 class="text-info mb-3 mt-4"><i class="fas fa-users me-2"></i>User Monitoring</h6>
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-users me-2"></i>User Monitoring</h6>
                     <div class="mb-3">
                         <label for="monitoredUsersGroup" class="form-label">Monitored Users Group</label>
                         <input type="text" class="form-control" id="monitoredUsersGroup" value="">
@@ -55,7 +56,7 @@
                         <textarea class="form-control" id="monitoredUsers" rows="3" placeholder="user1&#10;user2&#10;user3"></textarea>
                         <div class="form-text">One username per line. Leave empty to use group-based monitoring</div>
                     </div>
-                    <h6 class="text-info mb-3 mt-4"><i class="fas fa-clock me-2"></i>Time-Based Monitoring</h6>
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-clock me-2"></i>Time-Based Monitoring</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -74,7 +75,7 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <h6 class="text-info mb-3"><i class="fas fa-browser me-2"></i>Browser Settings</h6>
+                    <h6 class="text-muted mb-3"><i class="fas fa-globe me-2"></i>Browser Settings</h6>
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="chromeEnabled" checked>
@@ -85,7 +86,7 @@
                             <label class="form-check-label" for="edgeEnabled"><i class="fab fa-edge me-1"></i>Microsoft Edge</label>
                         </div>
                     </div>
-                    <h6 class="text-info mb-3 mt-4"><i class="fas fa-file-alt me-2"></i>Logging Settings</h6>
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-file-alt me-2"></i>Logging Settings</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -102,13 +103,13 @@
                             </div>
                         </div>
                     </div>
-                    <h6 class="text-info mb-3 mt-4"><i class="fas fa-lock me-2"></i>Application Security</h6>
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-lock me-2"></i>Application Security</h6>
                     <div class="mb-3">
                         <label for="exitPassword" class="form-label">Exit Password</label>
                         <input type="password" class="form-control" id="exitPassword" value="" placeholder="Set an exit password">
                         <div class="form-text">Password required to exit the application from system tray</div>
                     </div>
-                    <h6 class="text-info mb-3 mt-4"><i class="fas fa-code me-2"></i>Generated Configuration</h6>
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-code me-2"></i>Generated Configuration</h6>
                     <div class="mb-3">
                         <label for="plainConfigArea" class="form-label">JSON Configuration</label>
                         <textarea id="plainConfigArea" class="form-control" rows="12" spellcheck="false" style="font-family: 'Courier New', monospace; font-size: 0.85em;"></textarea>
@@ -118,9 +119,49 @@
             </div>
         </div>
         <div class="card-footer d-flex gap-2">
-            <button class="btn btn-info" id="loadConfigBtn"><i class="fas fa-download me-2"></i>Load Current Config</button>
-            <button class="btn btn-secondary" id="resetDefaultsBtn"><i class="fas fa-undo me-2"></i>Reset to Defaults</button>
+            <button class="btn btn-outline-secondary" id="loadConfigBtn"><i class="fas fa-download me-2"></i>Load Current Config</button>
+            <button class="btn btn-outline-secondary" id="resetDefaultsBtn"><i class="fas fa-undo me-2"></i>Reset to Defaults</button>
             <button class="btn btn-primary" id="submitConfigBtn"><i class="fas fa-save me-2"></i>Generate & Download secureconfig.json</button>
+        </div>
+    </div>
+
+    <!-- Chromebook Extension Data Enrichment -->
+    <div class="card shadow-sm">
+        <div class="card-header page-header">
+            <h5 class="mb-0"><i class="fab fa-chrome me-2"></i>Chromebook Extension - Data Enrichment</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted mb-3">
+                        Import student data from your school's STMC export to automatically enrich Chromebook extension user records
+                        with display names, homegroups, and class information.
+                    </p>
+                    <div class="mb-3">
+                        <label for="enrichmentFile" class="form-label">School Export CSV</label>
+                        <input type="file" class="form-control" id="enrichmentFile" accept=".csv" required>
+                    </div>
+                    <button type="button" class="btn btn-primary w-100" id="importEnrichmentBtn">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>Import &amp; Enrich
+                    </button>
+                    <div id="enrichmentResult" class="mt-3" style="display: none;"></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card section-card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>How to Export from STMC</h6>
+                        </div>
+                        <div class="card-body">
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-2">Log in to <a href="https://stmc.education.vic.gov.au/" target="_blank" rel="noopener">STMC</a></li>
+                                <li class="mb-2">Select <strong>Access Management &gt; Student Passwords</strong></li>
+                                <li class="mb-2">Select your school</li>
+                                <li>Click <strong>Export</strong> to download the CSV</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -142,6 +183,7 @@
     document.getElementById('loadConfigBtn').addEventListener('click', (e) => loadCurrentConfig(e));
     document.getElementById('resetDefaultsBtn').addEventListener('click', resetToDefaults);
     document.getElementById('submitConfigBtn').addEventListener('click', submitSecureConfig);
+    document.getElementById('importEnrichmentBtn').addEventListener('click', importStudentEnrichment);
 
     document.addEventListener('DOMContentLoaded', () => {
         loadCurrentConfig().catch(() => {
@@ -161,12 +203,12 @@
                 const btn = event.target.closest('button');
                 const originalText = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-check me-2"></i>Loaded!';
-                btn.classList.remove('btn-info');
+                btn.classList.remove('btn-outline-secondary');
                 btn.classList.add('btn-success');
                 setTimeout(() => {
                     btn.innerHTML = originalText;
                     btn.classList.remove('btn-success');
-                    btn.classList.add('btn-info');
+                    btn.classList.add('btn-outline-secondary');
                 }, 2000);
             }
         } catch (error) {
@@ -250,6 +292,50 @@
         } catch (err) {
             console.error('Secure config error', err);
             showError('Error: ' + err.message);
+        }
+    }
+
+    async function importStudentEnrichment() {
+        const fileInput = document.getElementById('enrichmentFile');
+        const file = fileInput.files[0];
+        if (!file) return showError('Please select a CSV file to upload');
+        if (!file.name.endsWith('.csv')) return showError('Please select a CSV file');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const btn = document.getElementById('importEnrichmentBtn');
+        const originalText = btn.innerHTML;
+        const resultDiv = document.getElementById('enrichmentResult');
+        resultDiv.style.display = 'none';
+
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
+            btn.disabled = true;
+
+            const response = await fetch('/api/admin/enrich-students', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'Import failed');
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="alert alert-success mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Import complete</strong><br>
+                    <small>
+                        ${result.imported.toLocaleString()} records imported &bull;
+                        ${result.users_updated.toLocaleString()} existing users enriched
+                        ${result.skipped > 0 ? ` &bull; ${result.skipped} rows skipped` : ''}
+                    </small>
+                </div>`;
+            fileInput.value = '';
+        } catch (error) {
+            console.error('Error importing enrichment data:', error);
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(error.message)}</div>`;
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     }
 </script>
