@@ -139,6 +139,9 @@ async def admin_bulk_import_users(
 
     try:
         content = await file.read()
+        # Reject excessively large CSV files (5 MB limit)
+        if len(content) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="CSV file too large (max 5 MB)")
         csv_content = content.decode("utf-8")
         csv_reader = csv.DictReader(io.StringIO(csv_content))
 
@@ -239,6 +242,9 @@ async def admin_enrich_students(
 
     try:
         content = await file.read()
+        # Reject excessively large CSV files (10 MB limit)
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="CSV file too large (max 10 MB)")
         csv_content = content.decode("utf-8-sig")
         csv_reader = csv.DictReader(io.StringIO(csv_content))
 

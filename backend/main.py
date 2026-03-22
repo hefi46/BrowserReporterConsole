@@ -14,13 +14,16 @@ from typing import Optional
 import asyncpg
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import Response
 
 from .database import get_db, engine, Base, AsyncSessionLocal
 from .models import DashboardUser, DashboardRoleEnum
@@ -43,6 +46,33 @@ logger = logging.getLogger("browser_reporter")
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_urlsafe(32))
 
 app = FastAPI(title="Browser Reporter Server")
+
+
+# ── Security headers middleware ────────────────────────────────────────────
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add standard security headers to every response."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        # CSP: allow self + CDN resources used by Bootstrap / FontAwesome
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "font-src 'self' https://cdnjs.cloudflare.com; "
+            "img-src 'self' data:; "
+            "connect-src 'self'"
+        )
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS – restrict to same-origin by default; override via CORS_ORIGINS env var
 _cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
@@ -69,6 +99,22 @@ templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 SECURECONFIG_PATH = os.path.join(BASE_DIR, "secureconfig.json")
 
+
+# ── Jinja2 template helpers ──────────────────────────────────────────────
+
+def _is_admin_user(request: Request) -> bool:
+    """Check if the current session user has admin role.
+
+    Designed to be called from Jinja2 templates as ``is_admin(request)``.
+    Uses a synchronous DB query via the existing session data — only checks
+    the session value, not the DB, so it's lightweight.
+    """
+    return request.session.get("dashboard_role") == "admin"
+
+
+templates.env.globals["is_admin"] = _is_admin_user
+
+
 # ── Wire routers ─────────────────────────────────────────────────────────
 
 auth.configure(templates)
@@ -85,7 +131,14 @@ app.include_router(admin.router)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch unhandled exceptions and return a consistent JSON 500 response
-    instead of leaking stack traces to the client."""
+    instead of leaking stack traces to the client.
+
+    FastAPI's built-in handlers for HTTPException and RequestValidationError
+    fire first, so this only catches truly unexpected errors.
+    """
+    # Let FastAPI handle its own exceptions natively
+    if isinstance(exc, (HTTPException, RequestValidationError)):
+        raise exc
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,

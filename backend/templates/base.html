@@ -22,8 +22,10 @@
                 <a class="btn {% block nav_keyword_search_class %}btn-outline-light{% endblock %} btn-sm" href="/keyword-search"><i class="fas fa-search me-1"></i>Keyword Search</a>
             </div>
             <div class="navbar-nav ms-auto d-flex align-items-center">
-                <a class="nav-link admin-only" href="/admin" style="display: none;">Admin</a>
-                <a class="nav-link admin-only" href="/client-config" style="display: none;">Client Config</a>
+                {% if is_admin(request) %}
+                <a class="nav-link" href="/admin">Admin</a>
+                <a class="nav-link" href="/client-config">Client Config</a>
+                {% endif %}
                 <a class="nav-link" href="/logout">Logout</a>
             </div>
         </div>

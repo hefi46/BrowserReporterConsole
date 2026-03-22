@@ -52,6 +52,7 @@ async def login(
             )
 
         request.session["dashboard_user"] = username
+        request.session["dashboard_role"] = user.role.value
         return RedirectResponse(url="/", status_code=302)
     except Exception:
         logger.exception("Login error")

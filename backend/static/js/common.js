@@ -16,22 +16,14 @@ function escapeHtml(str) {
 }
 
 /**
- * Check the current user's role and show/hide admin links accordingly.
+ * Check the current user's role.
+ *
+ * Admin nav links are now rendered server-side via Jinja2, so this
+ * function no longer toggles visibility.  It is kept as a no-op so
+ * existing callers (``await checkUserRole()``) don't break.
  */
 async function checkUserRole() {
-    try {
-        const r = await fetch('/api/auth/user');
-        if (r.ok) {
-            const user = await r.json();
-            if (user.role === 'admin') {
-                document.querySelectorAll('.admin-only').forEach(el => {
-                    el.style.display = '';
-                });
-            }
-        }
-    } catch (e) {
-        console.error('Failed to check user role:', e);
-    }
+    // Admin navigation is now handled server-side in base.html.
 }
 
 /**
