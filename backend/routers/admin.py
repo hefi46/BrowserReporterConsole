@@ -48,6 +48,61 @@ def configure(tpl: Jinja2Templates, secureconfig_path: str) -> None:
     SECURECONFIG_PATH = secureconfig_path
 
 
+async def _read_csv_upload(
+    file: UploadFile,
+    max_bytes: int,
+    required_headers: set[str],
+    encoding: str = "utf-8",
+) -> csv.DictReader:
+    """Read, size-check, decode, and validate headers of an uploaded CSV file."""
+    if not file.filename or not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+    content = await file.read()
+    if len(content) > max_bytes:
+        max_mb = max_bytes // (1024 * 1024)
+        raise HTTPException(status_code=400, detail=f"CSV file too large (max {max_mb} MB)")
+    try:
+        csv_content = content.decode(encoding)
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File must be UTF-8 encoded")
+    reader = csv.DictReader(io.StringIO(csv_content))
+    if not required_headers.issubset(set(reader.fieldnames or [])):
+        raise HTTPException(
+            status_code=400,
+            detail=f"CSV must contain headers: {', '.join(sorted(required_headers))}",
+        )
+    return reader
+
+
+def _validate_bulk_import_rows(csv_reader: csv.DictReader) -> tuple[list[tuple], list[str]]:
+    """Validate rows from a bulk-user-import CSV; return (valid_rows, errors)."""
+    errors: list[str] = []
+    usernames_seen: list[str] = []
+    valid_rows: list[tuple] = []
+    for row_num, row in enumerate(csv_reader, start=2):
+        username = row.get("username", "").strip()
+        password = row.get("password", "").strip()
+        role = row.get("role", "").strip().lower()
+        if not username or not password or not role:
+            errors.append(f"Row {row_num}: Missing required fields")
+            continue
+        if len(username) < 3 or len(username) > 50:
+            errors.append(f"Row {row_num}: Username must be 3-50 characters")
+            continue
+        if len(password) < 6 or len(password) > 72:
+            errors.append(f"Row {row_num}: Password must be 6-72 characters")
+            continue
+        if role not in ("admin", "user"):
+            errors.append(f"Row {row_num}: Role must be 'admin' or 'user'")
+            continue
+        if username in usernames_seen:
+            errors.append(f"Row {row_num}: Duplicate username '{username}' in CSV")
+            continue
+        usernames_seen.append(username)
+        valid_rows.append((row_num, username, password, role))
+    return valid_rows, errors
+
+
 # ── Dashboard user CRUD ──────────────────────────────────────────────────
 
 @router.post("/create-admin-emergency")
@@ -134,50 +189,11 @@ async def admin_bulk_import_users(
     """Bulk import dashboard users from CSV file (admin only)."""
     await require_admin(request, db)
 
-    if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="File must be a CSV")
-
     try:
-        content = await file.read()
-        # Reject excessively large CSV files (5 MB limit)
-        if len(content) > 5 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="CSV file too large (max 5 MB)")
-        csv_content = content.decode("utf-8")
-        csv_reader = csv.DictReader(io.StringIO(csv_content))
+        csv_reader = await _read_csv_upload(file, 5 * 1024 * 1024, {"username", "password", "role"})
+        valid_rows, errors = _validate_bulk_import_rows(csv_reader)
 
-        required_headers = {"username", "password", "role"}
-        if not required_headers.issubset(set(csv_reader.fieldnames or [])):
-            raise HTTPException(status_code=400, detail=f"CSV must contain headers: {', '.join(required_headers)}")
-
-        created_users: list[dict] = []
-        errors: list[str] = []
-        usernames_to_check: list[str] = []
-        valid_rows: list[tuple] = []
-
-        for row_num, row in enumerate(csv_reader, start=2):
-            username = row.get("username", "").strip()
-            password = row.get("password", "").strip()
-            role = row.get("role", "").strip().lower()
-
-            if not username or not password or not role:
-                errors.append(f"Row {row_num}: Missing required fields")
-                continue
-            if len(username) < 3 or len(username) > 50:
-                errors.append(f"Row {row_num}: Username must be 3-50 characters")
-                continue
-            if len(password) < 6 or len(password) > 72:
-                errors.append(f"Row {row_num}: Password must be 6-72 characters")
-                continue
-            if role not in ("admin", "user"):
-                errors.append(f"Row {row_num}: Role must be 'admin' or 'user'")
-                continue
-            if username in usernames_to_check:
-                errors.append(f"Row {row_num}: Duplicate username '{username}' in CSV")
-                continue
-
-            usernames_to_check.append(username)
-            valid_rows.append((row_num, username, password, role))
-
+        usernames_to_check = [row[1] for row in valid_rows]
         existing_usernames: set[str] = set()
         if usernames_to_check:
             result = await db.execute(
@@ -185,6 +201,7 @@ async def admin_bulk_import_users(
             )
             existing_usernames = set(result.scalars().all())
 
+        created_users: list[dict] = []
         for row_num, username, password, role in valid_rows:
             if username in existing_usernames:
                 errors.append(f"Row {row_num}: Username '{username}' already exists")
@@ -209,8 +226,6 @@ async def admin_bulk_import_users(
             "errors": errors,
         }
 
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File must be UTF-8 encoded")
     except HTTPException:
         raise
     except Exception as e:
@@ -237,20 +252,13 @@ async def admin_enrich_students(
     """Import school CSV export to enrich student user records (admin only)."""
     await require_admin(request, db)
 
-    if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="File must be a CSV")
-
     try:
-        content = await file.read()
-        # Reject excessively large CSV files (10 MB limit)
-        if len(content) > 10 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="CSV file too large (max 10 MB)")
-        csv_content = content.decode("utf-8-sig")
-        csv_reader = csv.DictReader(io.StringIO(csv_content))
-
-        required_cols = {"login", "firstName", "lastName", "displayName", "studClass"}
-        if not required_cols.issubset(set(csv_reader.fieldnames or [])):
-            raise HTTPException(status_code=400, detail=f"CSV must contain columns: {', '.join(sorted(required_cols))}")
+        csv_reader = await _read_csv_upload(
+            file,
+            10 * 1024 * 1024,
+            {"login", "firstName", "lastName", "displayName", "studClass"},
+            encoding="utf-8-sig",
+        )
 
         rows = []
         skipped = 0
@@ -276,8 +284,6 @@ async def admin_enrich_students(
 
         return {"success": True, "imported": imported, "users_updated": users_updated, "skipped": skipped}
 
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File must be UTF-8 encoded")
     except HTTPException:
         raise
     except Exception as e:

@@ -58,6 +58,28 @@ router = APIRouter()
 templates: Jinja2Templates = None  # type: ignore[assignment]
 
 
+def _apply_homegroup_cutoff(q, homegroup: Optional[str], cutoff):
+    """Apply homegroup and time-cutoff WHERE clauses to a query."""
+    if homegroup:
+        q = q.where(User.homegroup == homegroup)
+    if cutoff:
+        q = q.where(Visit.visit_time >= cutoff)
+    return q
+
+
+def _apply_user_search(q, search: Optional[str]):
+    """Apply username/display-name/email/homegroup text search to a query."""
+    if search:
+        pattern = f"%{search.lower()}%"
+        q = q.where(
+            func.lower(User.username).like(pattern)
+            | func.lower(func.coalesce(User.display_name, "")).like(pattern)
+            | func.lower(func.coalesce(User.email, "")).like(pattern)
+            | func.lower(func.coalesce(User.homegroup, "")).like(pattern)
+        )
+    return q
+
+
 def configure(tpl: Jinja2Templates) -> None:
     global templates
     templates = tpl
@@ -108,18 +130,8 @@ async def reports_all(
     )
 
     # Filters
-    if homegroup:
-        selectable = selectable.where(User.homegroup == homegroup)
-    if cutoff:
-        selectable = selectable.where(Visit.visit_time >= cutoff)
-    if search:
-        pattern = f"%{search.lower()}%"
-        selectable = selectable.where(
-            func.lower(User.username).like(pattern)
-            | func.lower(func.coalesce(User.display_name, "")).like(pattern)
-            | func.lower(func.coalesce(User.email, "")).like(pattern)
-            | func.lower(func.coalesce(User.homegroup, "")).like(pattern)
-        )
+    selectable = _apply_homegroup_cutoff(selectable, homegroup, cutoff)
+    selectable = _apply_user_search(selectable, search)
 
     selectable = selectable.group_by(User.id).order_by(User.username)
 
@@ -129,18 +141,8 @@ async def reports_all(
         .select_from(User)
         .outerjoin(Visit, Visit.user_id == User.id)
     )
-    if homegroup:
-        count_q = count_q.where(User.homegroup == homegroup)
-    if cutoff:
-        count_q = count_q.where(Visit.visit_time >= cutoff)
-    if search:
-        pattern = f"%{search.lower()}%"
-        count_q = count_q.where(
-            func.lower(User.username).like(pattern)
-            | func.lower(func.coalesce(User.display_name, "")).like(pattern)
-            | func.lower(func.coalesce(User.email, "")).like(pattern)
-            | func.lower(func.coalesce(User.homegroup, "")).like(pattern)
-        )
+    count_q = _apply_homegroup_cutoff(count_q, homegroup, cutoff)
+    count_q = _apply_user_search(count_q, search)
     total_count = (await db.execute(count_q)).scalar() or 0
 
     # Paginate
@@ -227,10 +229,7 @@ async def search_website(
         .where(search_filter)
         .order_by(text("rank DESC"), Visit.visit_time.desc())
     )
-    if homegroup:
-        query = query.where(User.homegroup == homegroup)
-    if cutoff:
-        query = query.where(Visit.visit_time >= cutoff)
+    query = _apply_homegroup_cutoff(query, homegroup, cutoff)
 
     # Count
     count_q = (
@@ -239,10 +238,7 @@ async def search_website(
         .join(User, Visit.user_id == User.id)
         .where(search_filter)
     )
-    if homegroup:
-        count_q = count_q.where(User.homegroup == homegroup)
-    if cutoff:
-        count_q = count_q.where(Visit.visit_time >= cutoff)
+    count_q = _apply_homegroup_cutoff(count_q, homegroup, cutoff)
     total_count = (await db.execute(count_q)).scalar() or 0
 
     # Unique users
@@ -252,10 +248,7 @@ async def search_website(
         .join(User, Visit.user_id == User.id)
         .where(Visit.url.ilike(f"%{url}%"))
     )
-    if homegroup:
-        unique_q = unique_q.where(User.homegroup == homegroup)
-    if cutoff:
-        unique_q = unique_q.where(Visit.visit_time >= cutoff)
+    unique_q = _apply_homegroup_cutoff(unique_q, homegroup, cutoff)
     unique_users_count = (await db.execute(unique_q)).scalar() or 0
 
     # Paginate
