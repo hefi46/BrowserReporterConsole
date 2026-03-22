@@ -523,17 +523,17 @@ async def admin_purge_data(
         if purge_type == "all":
             result = await purge_all_data(db)
             await db.commit()
-            logger.info("Admin purge: full data reset — %s", result)
+            logger.info("Admin clear data: full reset — %s", result)
             return {"success": True, "message": "Full data reset completed", **result}
         else:
             deleted = await purge_visits(db, retain_days=retain_days)
             await db.commit()
             label = f"older than {retain_days} days" if retain_days > 0 else "all"
-            logger.info("Admin purge: %d visits deleted (%s)", deleted, label)
-            return {"success": True, "message": f"{deleted:,} visits deleted", "visits_deleted": deleted}
+            logger.info("Admin clear data: %d visits deleted (%s)", deleted, label)
+            return {"success": True, "message": f"{deleted:,} visits cleared", "visits_deleted": deleted}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Purge failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Clear data failed: {e}")
 
 
 @router.get("/api/admin/purge-schedule")
@@ -575,7 +575,7 @@ async def admin_set_purge_schedule(
     await upsert_purge_schedule(db, schedule_type, retain_days, next_purge, admin_user.username)
     await db.commit()
 
-    logger.info("Purge schedule updated: type=%s, retain=%d days, next=%s, by=%s",
+    logger.info("Clear schedule updated: type=%s, retain=%d days, next=%s, by=%s",
                 schedule_type, retain_days, next_purge, admin_user.username)
 
     return {

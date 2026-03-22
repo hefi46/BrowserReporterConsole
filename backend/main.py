@@ -84,7 +84,7 @@ async def _purge_scheduler():
 
                 # Purge is due
                 deleted = await purge_visits(db, retain_days=schedule.retain_days)
-                logger.info("Scheduled purge executed: %d visits deleted (retain=%d days, type=%s)",
+                logger.info("Scheduled clear executed: %d visits deleted (retain=%d days, type=%s)",
                             deleted, schedule.retain_days, schedule.schedule_type)
 
                 # Calculate next purge date
@@ -93,7 +93,7 @@ async def _purge_scheduler():
                 schedule.next_purge_at = _calculate_next_purge(schedule.schedule_type)
                 await db.commit()
         except Exception:
-            logger.exception("Purge scheduler error")
+            logger.exception("Clear data scheduler error")
 
 
 @asynccontextmanager

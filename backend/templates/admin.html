@@ -183,15 +183,15 @@
                                 Failed to load database statistics.
                             </div>
 
-                            <!-- Database Purge -->
+                            <!-- Clear Data -->
                             <hr class="my-3">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <h6 class="text-muted mb-3"><i class="fas fa-trash-alt me-2"></i>Manual Purge</h6>
+                                    <h6 class="text-muted mb-3"><i class="fas fa-eraser me-2"></i>Clear Data</h6>
                                     <div class="mb-3">
-                                        <label for="purgeType" class="form-label">Purge Type</label>
+                                        <label for="purgeType" class="form-label">What to clear</label>
                                         <select class="form-select" id="purgeType">
-                                            <option value="visits">Visits only</option>
+                                            <option value="visits">All visits</option>
                                             <option value="visits_retain">Visits older than...</option>
                                             <option value="all">Full reset (visits + users + enrichment)</option>
                                         </select>
@@ -201,12 +201,12 @@
                                         <input type="number" class="form-control" id="purgeRetainDays" value="90" min="1" max="3650">
                                     </div>
                                     <button type="button" class="btn btn-danger w-100" id="purgeNowBtn">
-                                        <i class="fas fa-trash me-2"></i>Purge Now
+                                        <i class="fas fa-eraser me-2"></i>Clear Now
                                     </button>
                                     <div id="purgeResult" class="mt-2" style="display: none;"></div>
                                 </div>
                                 <div class="col-md-6">
-                                    <h6 class="text-muted mb-3"><i class="fas fa-calendar-check me-2"></i>Scheduled Purge</h6>
+                                    <h6 class="text-muted mb-3"><i class="fas fa-calendar-check me-2"></i>Scheduled Clear</h6>
                                     <div class="mb-2">
                                         <label for="scheduleType" class="form-label">Schedule</label>
                                         <select class="form-select" id="scheduleType">
@@ -220,7 +220,7 @@
                                     <div class="mb-2">
                                         <label for="scheduleRetainDays" class="form-label">Retain recent days</label>
                                         <input type="number" class="form-control" id="scheduleRetainDays" value="0" min="0" max="3650">
-                                        <div class="form-text">0 = delete all visits on purge</div>
+                                        <div class="form-text">0 = delete all visits when clearing</div>
                                     </div>
                                     <button type="button" class="btn btn-outline-secondary w-100 mb-2" id="saveScheduleBtn">
                                         <i class="fas fa-save me-2"></i>Save Schedule
@@ -582,11 +582,11 @@
 
         let confirmMsg;
         if (purgeType === 'all') {
-            confirmMsg = 'This will permanently delete ALL visits, users, and enrichment data. Dashboard login accounts will be preserved.\n\nAre you absolutely sure?';
+            confirmMsg = 'This will permanently clear ALL visits, users, and enrichment data. Dashboard login accounts will be preserved.\n\nAre you absolutely sure?';
         } else if (purgeType === 'visits_retain') {
-            confirmMsg = `This will permanently delete all visits older than ${retainDays} days. Continue?`;
+            confirmMsg = `This will permanently clear all visits older than ${retainDays} days. Continue?`;
         } else {
-            confirmMsg = 'This will permanently delete ALL visit records. Continue?';
+            confirmMsg = 'This will permanently clear ALL visit records. Continue?';
         }
         if (!confirm(confirmMsg)) return;
 
@@ -596,7 +596,7 @@
         resultDiv.style.display = 'none';
 
         try {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Purging...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Clearing...';
             btn.disabled = true;
 
             const body = purgeType === 'all'
@@ -615,7 +615,7 @@
             resultDiv.innerHTML = `<div class="alert alert-success mb-0 small"><i class="fas fa-check-circle me-1"></i>${escapeHtml(result.message)}</div>`;
             loadDatabaseStats();
         } catch (error) {
-            console.error('Purge error:', error);
+            console.error('Clear data error:', error);
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = `<div class="alert alert-danger mb-0 small"><i class="fas fa-exclamation-triangle me-1"></i>${escapeHtml(error.message)}</div>`;
         } finally {
@@ -640,15 +640,15 @@
     function updateScheduleInfo(schedule) {
         const info = document.getElementById('scheduleInfo');
         if (schedule.schedule_type === 'disabled') {
-            info.innerHTML = '<i class="fas fa-info-circle me-1"></i>No automatic purge scheduled';
+            info.innerHTML = '<i class="fas fa-info-circle me-1"></i>No automatic clear scheduled';
             return;
         }
         let html = '';
         if (schedule.next_purge_at) {
-            html += `<div><strong>Next purge:</strong> ${new Date(schedule.next_purge_at).toLocaleDateString()}</div>`;
+            html += `<div><strong>Next clear:</strong> ${new Date(schedule.next_purge_at).toLocaleDateString()}</div>`;
         }
         if (schedule.last_purge_at) {
-            html += `<div><strong>Last purge:</strong> ${new Date(schedule.last_purge_at).toLocaleDateString()}</div>`;
+            html += `<div><strong>Last clear:</strong> ${new Date(schedule.last_purge_at).toLocaleDateString()}</div>`;
         }
         if (schedule.updated_by) {
             html += `<div><strong>Set by:</strong> ${escapeHtml(schedule.updated_by)}</div>`;
