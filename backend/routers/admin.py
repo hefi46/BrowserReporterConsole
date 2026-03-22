@@ -91,9 +91,9 @@ async def admin_create_user(
 
 @router.put("/api/admin/users/{username}")
 async def admin_update_user(
-    username: str = Path(..., min_length=1, max_length=50),
     user_data: DashboardUserUpdate,
     request: Request,
+    username: str = Path(..., min_length=1, max_length=50),
     db: AsyncSession = Depends(get_db),
 ):
     """Update a dashboard user (admin only)."""
