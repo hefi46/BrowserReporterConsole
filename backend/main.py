@@ -5,10 +5,12 @@ for creating the app, wiring middleware, and running startup tasks.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import secrets
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 import asyncpg
@@ -26,6 +28,7 @@ from starlette.responses import Response
 
 from .database import engine, Base, AsyncSessionLocal
 from .models import DashboardUser, DashboardRoleEnum
+from .crud import get_purge_schedule, purge_visits, purge_all_data
 from .utils import get_password_hash
 from .migrations.runner import get_db_config, ensure_schema_columns, apply_migrations
 from .routers import auth, reports, admin
@@ -67,6 +70,32 @@ async def _create_initial_admin() -> None:
                 pass
 
 
+async def _purge_scheduler():
+    """Background task that checks hourly if a scheduled purge is due."""
+    while True:
+        await asyncio.sleep(3600)  # Check every hour
+        try:
+            async with AsyncSessionLocal() as db:
+                schedule = await get_purge_schedule(db)
+                if not schedule or schedule.schedule_type == "disabled" or not schedule.next_purge_at:
+                    continue
+                if datetime.now(timezone.utc) < schedule.next_purge_at:
+                    continue
+
+                # Purge is due
+                deleted = await purge_visits(db, retain_days=schedule.retain_days)
+                logger.info("Scheduled purge executed: %d visits deleted (retain=%d days, type=%s)",
+                            deleted, schedule.retain_days, schedule.schedule_type)
+
+                # Calculate next purge date
+                from .routers.admin import _calculate_next_purge
+                schedule.last_purge_at = datetime.now(timezone.utc)
+                schedule.next_purge_at = _calculate_next_purge(schedule.schedule_type)
+                await db.commit()
+        except Exception:
+            logger.exception("Purge scheduler error")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. Create any brand-new tables
@@ -100,7 +129,16 @@ async def lifespan(app: FastAPI):
     # 3. Ensure default admin exists
     await _create_initial_admin()
 
+    # 4. Start background purge scheduler
+    purge_task = asyncio.create_task(_purge_scheduler())
+
     yield
+
+    purge_task.cancel()
+    try:
+        await purge_task
+    except asyncio.CancelledError:
+        pass
 
 
 # ── App creation ─────────────────────────────────────────────────────────

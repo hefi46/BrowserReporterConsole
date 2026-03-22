@@ -57,6 +57,18 @@ class DashboardRoleEnum(str, PyEnum):
     user = "user"
 
 
+class PurgeSchedule(Base):
+    __tablename__ = "purge_schedule"
+
+    id = Column(Integer, primary_key=True, index=True)
+    schedule_type = Column(String, default="disabled")  # disabled, weekly, monthly, term, yearly
+    retain_days = Column(Integer, default=0)  # 0 = purge all visits, >0 = keep recent N days
+    last_purge_at = Column(DateTime(timezone=True))
+    next_purge_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_by = Column(String)
+
+
 class DashboardUser(Base):
     __tablename__ = "dashboard_users"
 

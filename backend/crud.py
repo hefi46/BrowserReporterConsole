@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Sequence
 
 from sqlalchemy import insert, select, update, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from .models import User, Visit, DashboardUser, DashboardRoleEnum, StudentEnrichment
+from .models import User, Visit, DashboardUser, DashboardRoleEnum, StudentEnrichment, PurgeSchedule
 from .schemas import UserInfoIn, VisitIn
 from .utils import get_password_hash
 
@@ -138,6 +138,63 @@ async def upsert_student_enrichments(db: AsyncSession, rows: list) -> int:
     )
     await db.execute(stmt)
     return len(rows)
+
+
+# Database Purge Operations
+
+async def purge_visits(db: AsyncSession, retain_days: int = 0) -> int:
+    """Delete visit records. If retain_days > 0, keep visits from the last N days."""
+    if retain_days > 0:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=retain_days)
+        result = await db.execute(delete(Visit).where(Visit.visit_time < cutoff))
+    else:
+        result = await db.execute(delete(Visit))
+    return result.rowcount
+
+
+async def purge_all_data(db: AsyncSession) -> dict:
+    """Delete all visits and users (full data reset). Dashboard users are preserved."""
+    visits_deleted = (await db.execute(delete(Visit))).rowcount
+    users_deleted = (await db.execute(delete(User))).rowcount
+    enrichments_deleted = (await db.execute(delete(StudentEnrichment))).rowcount
+    return {
+        "visits_deleted": visits_deleted,
+        "users_deleted": users_deleted,
+        "enrichments_deleted": enrichments_deleted,
+    }
+
+
+async def get_purge_schedule(db: AsyncSession) -> PurgeSchedule | None:
+    """Get the current purge schedule (single row)."""
+    result = await db.execute(select(PurgeSchedule).limit(1))
+    return result.scalar_one_or_none()
+
+
+async def upsert_purge_schedule(
+    db: AsyncSession,
+    schedule_type: str,
+    retain_days: int,
+    next_purge_at: datetime | None,
+    updated_by: str,
+) -> PurgeSchedule:
+    """Create or update the purge schedule."""
+    schedule = await get_purge_schedule(db)
+    if schedule:
+        schedule.schedule_type = schedule_type
+        schedule.retain_days = retain_days
+        schedule.next_purge_at = next_purge_at
+        schedule.updated_at = datetime.now(timezone.utc)
+        schedule.updated_by = updated_by
+    else:
+        schedule = PurgeSchedule(
+            schedule_type=schedule_type,
+            retain_days=retain_days,
+            next_purge_at=next_purge_at,
+            updated_by=updated_by,
+        )
+        db.add(schedule)
+    await db.flush()
+    return schedule
 
 
 async def apply_enrichment_to_existing_users(db: AsyncSession) -> int:

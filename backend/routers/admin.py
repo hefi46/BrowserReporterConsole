@@ -25,6 +25,10 @@ from ..crud import (
     delete_dashboard_user,
     upsert_student_enrichments,
     apply_enrichment_to_existing_users,
+    purge_visits,
+    purge_all_data,
+    get_purge_schedule,
+    upsert_purge_schedule,
 )
 from ..utils import encrypt_secure_config, decrypt_secure_config, get_password_hash
 from .deps import require_login, require_admin
@@ -457,6 +461,129 @@ async def admin_get_database_stats(request: Request, db: AsyncSession = Depends(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve database statistics: {e}")
+
+
+# ── Database purge ────────────────────────────────────────────────────────
+
+def _calculate_next_purge(schedule_type: str, from_date: datetime | None = None) -> datetime | None:
+    """Calculate the next purge date based on schedule type."""
+    now = from_date or datetime.now(timezone.utc)
+
+    if schedule_type == "weekly":
+        # Next Monday at 02:00 UTC
+        days_ahead = (7 - now.weekday()) % 7
+        if days_ahead == 0 and now.hour >= 2:
+            days_ahead = 7
+        return now.replace(hour=2, minute=0, second=0, microsecond=0) + timedelta(days=days_ahead)
+
+    elif schedule_type == "monthly":
+        # 1st of next month at 02:00 UTC
+        if now.month == 12:
+            return now.replace(year=now.year + 1, month=1, day=1, hour=2, minute=0, second=0, microsecond=0)
+        return now.replace(month=now.month + 1, day=1, hour=2, minute=0, second=0, microsecond=0)
+
+    elif schedule_type == "term":
+        # Victorian school term start dates (approximate)
+        term_starts = [
+            (1, 28),   # Term 1: ~Jan 28
+            (4, 14),   # Term 2: ~Apr 14
+            (7, 14),   # Term 3: ~Jul 14
+            (10, 7),   # Term 4: ~Oct 7
+        ]
+        for month, day in term_starts:
+            candidate = now.replace(month=month, day=day, hour=2, minute=0, second=0, microsecond=0)
+            if candidate > now:
+                return candidate
+        # All terms passed this year, use Term 1 next year
+        return now.replace(year=now.year + 1, month=1, day=28, hour=2, minute=0, second=0, microsecond=0)
+
+    elif schedule_type == "yearly":
+        # January 15 at 02:00 UTC (after school year starts)
+        candidate = now.replace(month=1, day=15, hour=2, minute=0, second=0, microsecond=0)
+        if candidate <= now:
+            candidate = candidate.replace(year=now.year + 1)
+        return candidate
+
+    return None
+
+
+@router.post("/api/admin/purge")
+async def admin_purge_data(
+    request: Request,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually purge database data. Admin only."""
+    await require_admin(request, db)
+
+    purge_type = body.get("type", "visits")  # "visits" or "all"
+    retain_days = body.get("retain_days", 0)
+
+    try:
+        if purge_type == "all":
+            result = await purge_all_data(db)
+            await db.commit()
+            logger.info("Admin purge: full data reset — %s", result)
+            return {"success": True, "message": "Full data reset completed", **result}
+        else:
+            deleted = await purge_visits(db, retain_days=retain_days)
+            await db.commit()
+            label = f"older than {retain_days} days" if retain_days > 0 else "all"
+            logger.info("Admin purge: %d visits deleted (%s)", deleted, label)
+            return {"success": True, "message": f"{deleted:,} visits deleted", "visits_deleted": deleted}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Purge failed: {e}")
+
+
+@router.get("/api/admin/purge-schedule")
+async def admin_get_purge_schedule(request: Request, db: AsyncSession = Depends(get_db)):
+    """Get current purge schedule. Admin only."""
+    await require_admin(request, db)
+    schedule = await get_purge_schedule(db)
+    if not schedule:
+        return {"schedule_type": "disabled", "retain_days": 0, "next_purge_at": None, "last_purge_at": None}
+    return {
+        "schedule_type": schedule.schedule_type,
+        "retain_days": schedule.retain_days,
+        "next_purge_at": schedule.next_purge_at.isoformat() if schedule.next_purge_at else None,
+        "last_purge_at": schedule.last_purge_at.isoformat() if schedule.last_purge_at else None,
+        "updated_by": schedule.updated_by,
+        "updated_at": schedule.updated_at.isoformat() if schedule.updated_at else None,
+    }
+
+
+@router.post("/api/admin/purge-schedule")
+async def admin_set_purge_schedule(
+    request: Request,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update purge schedule. Admin only."""
+    admin_user = await require_admin(request, db)
+
+    schedule_type = body.get("schedule_type", "disabled")
+    if schedule_type not in ("disabled", "weekly", "monthly", "term", "yearly"):
+        raise HTTPException(status_code=400, detail="Invalid schedule type")
+
+    retain_days = int(body.get("retain_days", 0))
+    if retain_days < 0:
+        raise HTTPException(status_code=400, detail="retain_days must be >= 0")
+
+    next_purge = _calculate_next_purge(schedule_type) if schedule_type != "disabled" else None
+
+    await upsert_purge_schedule(db, schedule_type, retain_days, next_purge, admin_user.username)
+    await db.commit()
+
+    logger.info("Purge schedule updated: type=%s, retain=%d days, next=%s, by=%s",
+                schedule_type, retain_days, next_purge, admin_user.username)
+
+    return {
+        "success": True,
+        "schedule_type": schedule_type,
+        "retain_days": retain_days,
+        "next_purge_at": next_purge.isoformat() if next_purge else None,
+    }
 
 
 # ── Template pages ───────────────────────────────────────────────────────

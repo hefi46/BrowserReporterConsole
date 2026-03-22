@@ -182,6 +182,52 @@
                                 <i class="fas fa-exclamation-triangle me-2"></i>
                                 Failed to load database statistics.
                             </div>
+
+                            <!-- Database Purge -->
+                            <hr class="my-3">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-3"><i class="fas fa-trash-alt me-2"></i>Manual Purge</h6>
+                                    <div class="mb-3">
+                                        <label for="purgeType" class="form-label">Purge Type</label>
+                                        <select class="form-select" id="purgeType">
+                                            <option value="visits">Visits only</option>
+                                            <option value="visits_retain">Visits older than...</option>
+                                            <option value="all">Full reset (visits + users + enrichment)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="retainDaysGroup" style="display: none;">
+                                        <label for="purgeRetainDays" class="form-label">Keep visits from last (days)</label>
+                                        <input type="number" class="form-control" id="purgeRetainDays" value="90" min="1" max="3650">
+                                    </div>
+                                    <button type="button" class="btn btn-danger w-100" id="purgeNowBtn">
+                                        <i class="fas fa-trash me-2"></i>Purge Now
+                                    </button>
+                                    <div id="purgeResult" class="mt-2" style="display: none;"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-3"><i class="fas fa-calendar-check me-2"></i>Scheduled Purge</h6>
+                                    <div class="mb-2">
+                                        <label for="scheduleType" class="form-label">Schedule</label>
+                                        <select class="form-select" id="scheduleType">
+                                            <option value="disabled">Disabled</option>
+                                            <option value="weekly">Weekly (every Monday)</option>
+                                            <option value="monthly">Monthly (1st of month)</option>
+                                            <option value="term">Each school term</option>
+                                            <option value="yearly">Yearly (January)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="scheduleRetainDays" class="form-label">Retain recent days</label>
+                                        <input type="number" class="form-control" id="scheduleRetainDays" value="0" min="0" max="3650">
+                                        <div class="form-text">0 = delete all visits on purge</div>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-secondary w-100 mb-2" id="saveScheduleBtn">
+                                        <i class="fas fa-save me-2"></i>Save Schedule
+                                    </button>
+                                    <div id="scheduleInfo" class="small text-muted"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -267,6 +313,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadAdminUsers();
         loadDatabaseStats();
+        loadPurgeSchedule();
 
         // Auto-refresh database stats every 3 minutes
         dbStatsRefreshInterval = setInterval(loadDatabaseStats, 180000);
@@ -285,6 +332,12 @@
     document.getElementById('refreshUsersBtn').addEventListener('click', loadAdminUsers);
     document.getElementById('uploadCsvBtn').addEventListener('click', uploadCSV);
     document.getElementById('downloadExampleCsvBtn').addEventListener('click', downloadExampleCSV);
+    document.getElementById('purgeNowBtn').addEventListener('click', purgeNow);
+    document.getElementById('saveScheduleBtn').addEventListener('click', saveSchedule);
+    document.getElementById('purgeType').addEventListener('change', () => {
+        document.getElementById('retainDaysGroup').style.display =
+            document.getElementById('purgeType').value === 'visits_retain' ? 'block' : 'none';
+    });
 
     async function loadAdminUsers() {
         try {
@@ -520,6 +573,117 @@
         } finally {
             uploadBtn.innerHTML = originalText;
             uploadBtn.disabled = false;
+        }
+    }
+
+    async function purgeNow() {
+        const purgeType = document.getElementById('purgeType').value;
+        const retainDays = parseInt(document.getElementById('purgeRetainDays').value) || 0;
+
+        let confirmMsg;
+        if (purgeType === 'all') {
+            confirmMsg = 'This will permanently delete ALL visits, users, and enrichment data. Dashboard login accounts will be preserved.\n\nAre you absolutely sure?';
+        } else if (purgeType === 'visits_retain') {
+            confirmMsg = `This will permanently delete all visits older than ${retainDays} days. Continue?`;
+        } else {
+            confirmMsg = 'This will permanently delete ALL visit records. Continue?';
+        }
+        if (!confirm(confirmMsg)) return;
+
+        const btn = document.getElementById('purgeNowBtn');
+        const originalText = btn.innerHTML;
+        const resultDiv = document.getElementById('purgeResult');
+        resultDiv.style.display = 'none';
+
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Purging...';
+            btn.disabled = true;
+
+            const body = purgeType === 'all'
+                ? { type: 'all' }
+                : { type: 'visits', retain_days: purgeType === 'visits_retain' ? retainDays : 0 };
+
+            const response = await fetch('/api/admin/purge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'Purge failed');
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="alert alert-success mb-0 small"><i class="fas fa-check-circle me-1"></i>${escapeHtml(result.message)}</div>`;
+            loadDatabaseStats();
+        } catch (error) {
+            console.error('Purge error:', error);
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="alert alert-danger mb-0 small"><i class="fas fa-exclamation-triangle me-1"></i>${escapeHtml(error.message)}</div>`;
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function loadPurgeSchedule() {
+        try {
+            const response = await fetch('/api/admin/purge-schedule');
+            if (!response.ok) return;
+            const schedule = await response.json();
+            document.getElementById('scheduleType').value = schedule.schedule_type || 'disabled';
+            document.getElementById('scheduleRetainDays').value = schedule.retain_days || 0;
+            updateScheduleInfo(schedule);
+        } catch (error) {
+            console.error('Error loading purge schedule:', error);
+        }
+    }
+
+    function updateScheduleInfo(schedule) {
+        const info = document.getElementById('scheduleInfo');
+        if (schedule.schedule_type === 'disabled') {
+            info.innerHTML = '<i class="fas fa-info-circle me-1"></i>No automatic purge scheduled';
+            return;
+        }
+        let html = '';
+        if (schedule.next_purge_at) {
+            html += `<div><strong>Next purge:</strong> ${new Date(schedule.next_purge_at).toLocaleDateString()}</div>`;
+        }
+        if (schedule.last_purge_at) {
+            html += `<div><strong>Last purge:</strong> ${new Date(schedule.last_purge_at).toLocaleDateString()}</div>`;
+        }
+        if (schedule.updated_by) {
+            html += `<div><strong>Set by:</strong> ${escapeHtml(schedule.updated_by)}</div>`;
+        }
+        info.innerHTML = html || '<i class="fas fa-info-circle me-1"></i>Schedule configured';
+    }
+
+    async function saveSchedule() {
+        const btn = document.getElementById('saveScheduleBtn');
+        const originalText = btn.innerHTML;
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            btn.disabled = true;
+
+            const body = {
+                schedule_type: document.getElementById('scheduleType').value,
+                retain_days: parseInt(document.getElementById('scheduleRetainDays').value) || 0,
+            };
+
+            const response = await fetch('/api/admin/purge-schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'Failed to save schedule');
+
+            updateScheduleInfo(result);
+            showAdminMessage('Purge schedule saved', 'success');
+        } catch (error) {
+            console.error('Error saving schedule:', error);
+            showAdminMessage(error.message, 'danger');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     }
 
