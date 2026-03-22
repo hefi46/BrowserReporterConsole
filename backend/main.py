@@ -60,10 +60,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-        # CSP: allow self + CDN resources used by Bootstrap / FontAwesome
+        # CSP: allow self + CDN resources used by Bootstrap / FontAwesome.
+        # 'unsafe-inline' is needed for script-src because templates use
+        # inline <script> blocks.  A future refactor could extract those to
+        # external .js files and remove 'unsafe-inline'.
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
             "font-src 'self' https://cdnjs.cloudflare.com; "
             "img-src 'self' data:; "
