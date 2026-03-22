@@ -1,260 +1,248 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Browser Reporter</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: #f8f9fa;
-        }
-        .card {
-            border: none;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container d-flex justify-content-between align-items-center">
-            <div class="d-flex gap-2">
-                <a class="btn btn-outline-light btn-sm" href="/"><i class="fas fa-users me-1"></i>User Search</a>
-                <a class="btn btn-outline-light btn-sm" href="/keyword-search"><i class="fas fa-search me-1"></i>Keyword Search</a>
-            </div>
-            <div class="navbar-nav ms-auto d-flex align-items-center">
-                <a class="nav-link" href="/admin">Admin</a>
-                <a class="nav-link" href="/client-config">Client Config</a>
-                <a class="nav-link" href="/logout">Logout</a>
-            </div>
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - Browser Reporter{% endblock %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-light btn-sm" href="/"><i class="fas fa-users me-1"></i>User Search</a>
+            <a class="btn btn-outline-light btn-sm" href="/keyword-search"><i class="fas fa-search me-1"></i>Keyword Search</a>
         </div>
-    </nav>
+        <div class="navbar-nav ms-auto d-flex align-items-center">
+            <a class="nav-link" href="/admin">Admin</a>
+            <a class="nav-link" href="/client-config">Client Config</a>
+            <a class="nav-link" href="/logout">Logout</a>
+        </div>
+    </div>
+</nav>
+{% endblock %}
 
-    <div class="container my-4">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-users-cog me-2"></i>
-                    Admin Panel - User Management
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card mb-3">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New User</h6>
-                            </div>
-                            <div class="card-body">
-                                <form id="createUserForm">
-                                    <div class="mb-3">
-                                        <label for="newUsername" class="form-label">Username</label>
-                                        <input type="text" class="form-control" id="newUsername" required minlength="3" maxlength="50">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="newPassword" class="form-label">Password</label>
-                                        <input type="password" class="form-control" id="newPassword" required minlength="6" maxlength="72">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="newRole" class="form-label">Role</label>
-                                        <select class="form-select" id="newRole" required>
-                                            <option value="">Select Role</option>
-                                            <option value="user">User</option>
-                                            <option value="admin">Admin</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary w-100">
-                                        <i class="fas fa-plus me-2"></i>Create User
-                                    </button>
-                                </form>
-                            </div>
+{% block body %}
+<div class="container my-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-users-cog me-2"></i>
+                Admin Panel - User Management
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New User</h6>
                         </div>
-
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0"><i class="fas fa-upload me-2"></i>Bulk CSV Import</h6>
-                            </div>
-                            <div class="card-body">
+                        <div class="card-body">
+                            <form id="createUserForm">
                                 <div class="mb-3">
-                                    <label for="csvFile" class="form-label">CSV File</label>
-                                    <input type="file" class="form-control" id="csvFile" accept=".csv" required>
-                                    <div class="form-text">Upload a CSV file with username, password, and role columns.</div>
+                                    <label for="newUsername" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="newUsername" required minlength="3" maxlength="50">
                                 </div>
-                                <button type="button" class="btn btn-primary w-100 mb-2" onclick="uploadCSV()">
-                                    <i class="fas fa-upload me-2"></i>Import Users
-                                </button>
-                                <div class="d-grid gap-2">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="downloadExampleCSV()">
-                                        <i class="fas fa-download me-2"></i>Download Example CSV
-                                    </button>
-                                </div>
-                                <div class="mt-3">
-                                    <small class="text-muted">
-                                        <strong>CSV Format:</strong><br>
-                                        • Header row: username,password,role<br>
-                                        • Username: 3-50 characters<br>
-                                        • Password: 6-100 characters<br>
-                                        • Role: admin or user<br>
-                                        • UTF-8 encoding required
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card mt-3">
-                            <div class="card-header bg-success text-white">
-                                <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Chromebook Extension Data Enrichment</h6>
-                            </div>
-                            <div class="card-body">
                                 <div class="mb-3">
-                                    <label for="enrichmentFile" class="form-label">School Export CSV</label>
-                                    <input type="file" class="form-control" id="enrichmentFile" accept=".csv" required>
-                                    <div class="form-text mt-2">
-                                        <ol class="mb-1 ps-3">
-                                            <li>Log in to <a href="https://stmc.education.vic.gov.au/" target="_blank" rel="noopener">STMC</a></li>
-                                            <li>Select <strong>Access Management &gt; Student Passwords</strong></li>
-                                            <li>Select your school &gt; <strong>Export</strong></li>
-                                        </ol>
-                                    </div>
+                                    <label for="newPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="newPassword" required minlength="6" maxlength="72">
                                 </div>
-                                <button type="button" class="btn btn-success w-100" onclick="importStudentEnrichment()">
-                                    <i class="fas fa-cloud-upload-alt me-2"></i>Import &amp; Enrich
+                                <div class="mb-3">
+                                    <label for="newRole" class="form-label">Role</label>
+                                    <select class="form-select" id="newRole" required>
+                                        <option value="">Select Role</option>
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-plus me-2"></i>Create User
                                 </button>
-                                <div id="enrichmentResult" class="mt-3" style="display: none;"></div>
-                            </div>
+                            </form>
                         </div>
                     </div>
 
-                    <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0"><i class="fas fa-database me-2"></i>Database Statistics</h6>
-                                <button class="btn btn-outline-light btn-sm" onclick="loadDatabaseStats()">
-                                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-upload me-2"></i>Bulk CSV Import</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="csvFile" class="form-label">CSV File</label>
+                                <input type="file" class="form-control" id="csvFile" accept=".csv" required>
+                                <div class="form-text">Upload a CSV file with username, password, and role columns.</div>
+                            </div>
+                            <button type="button" class="btn btn-primary w-100 mb-2" id="uploadCsvBtn">
+                                <i class="fas fa-upload me-2"></i>Import Users
+                            </button>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="downloadExampleCsvBtn">
+                                    <i class="fas fa-download me-2"></i>Download Example CSV
                                 </button>
                             </div>
-                            <div class="card-body">
-                                <div id="dbStatsLoading" class="text-center p-4">
-                                    <div class="spinner-border text-info" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                    <p class="mt-2">Loading database statistics...</p>
-                                </div>
-                                <div id="dbStatsContent" style="display: none;">
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <h6 class="text-info mb-2"><i class="fas fa-hdd me-2"></i>Database Size</h6>
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span id="dbSize" class="fs-4 fw-bold">-</span>
-                                                <span id="dbSizePercent" class="badge bg-secondary">-</span>
-                                            </div>
-                                            <div class="progress" style="height: 20px;">
-                                                <div id="dbSizeBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <h6 class="text-info mb-2"><i class="fas fa-calendar-alt me-2"></i>Date Range</h6>
-                                            <div class="small">
-                                                <div><strong>Oldest:</strong> <span id="oldestVisit">-</span></div>
-                                                <div><strong>Newest:</strong> <span id="newestVisit">-</span></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bg-light">
-                                                <div class="card-body text-center p-3">
-                                                    <div class="text-muted small">Active Visits</div>
-                                                    <div id="activeVisits" class="fs-5 fw-bold text-primary">-</div>
-                                                    <div class="text-muted small">0-90 days</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bg-light">
-                                                <div class="card-body text-center p-3">
-                                                    <div class="text-muted small">Archived Visits</div>
-                                                    <div id="archivedVisits" class="fs-5 fw-bold text-secondary">-</div>
-                                                    <div class="text-muted small">90+ days</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bg-light">
-                                                <div class="card-body text-center p-3">
-                                                    <div class="text-muted small">Total Records</div>
-                                                    <div id="totalRecords" class="fs-5 fw-bold text-success">-</div>
-                                                    <div class="text-muted small">All visits</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bg-light">
-                                                <div class="card-body text-center p-3">
-                                                    <div class="text-muted small">Users</div>
-                                                    <div id="totalUsers" class="fs-5 fw-bold text-info">-</div>
-                                                    <div class="text-muted small">Tracked</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <h6 class="text-info mb-2"><i class="fas fa-chart-line me-2"></i>Last 24 Hours</h6>
-                                            <div class="small">
-                                                <div><strong>Visits:</strong> <span id="visits24h" class="text-primary">-</span></div>
-                                                <div><strong>Active Users:</strong> <span id="activeUsers24h" class="text-success">-</span></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <h6 class="text-info mb-2"><i class="fas fa-clock me-2"></i>Last Updated</h6>
-                                            <div id="lastUpdated" class="small text-muted">-</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="dbStatsError" style="display: none;" class="alert alert-danger">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    Failed to load database statistics.
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <strong>CSV Format:</strong><br>
+                                    &bull; Header row: username,password,role<br>
+                                    &bull; Username: 3-50 characters<br>
+                                    &bull; Password: 6-100 characters<br>
+                                    &bull; Role: admin or user<br>
+                                    &bull; UTF-8 encoding required
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Chromebook Extension Data Enrichment</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="enrichmentFile" class="form-label">School Export CSV</label>
+                                <input type="file" class="form-control" id="enrichmentFile" accept=".csv" required>
+                                <div class="form-text mt-2">
+                                    <ol class="mb-1 ps-3">
+                                        <li>Log in to <a href="https://stmc.education.vic.gov.au/" target="_blank" rel="noopener">STMC</a></li>
+                                        <li>Select <strong>Access Management &gt; Student Passwords</strong></li>
+                                        <li>Select your school &gt; <strong>Export</strong></li>
+                                    </ol>
                                 </div>
                             </div>
+                            <button type="button" class="btn btn-success w-100" id="importEnrichmentBtn">
+                                <i class="fas fa-cloud-upload-alt me-2"></i>Import &amp; Enrich
+                            </button>
+                            <div id="enrichmentResult" class="mt-3" style="display: none;"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0"><i class="fas fa-users me-2"></i>Existing Dashboard Users</h6>
-                                <button class="btn btn-outline-light btn-sm" onclick="loadAdminUsers()">
-                                    <i class="fas fa-sync-alt me-1"></i>Refresh
-                                </button>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-database me-2"></i>Database Statistics</h6>
+                            <button class="btn btn-outline-light btn-sm" id="refreshDbStatsBtn">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="dbStatsLoading" class="text-center p-4">
+                                <div class="spinner-border text-info" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading database statistics...</p>
                             </div>
-                            <div class="card-body p-0">
-                                <div id="adminUsersLoading" class="text-center p-4">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
+                            <div id="dbStatsContent" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="text-info mb-2"><i class="fas fa-hdd me-2"></i>Database Size</h6>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span id="dbSize" class="fs-4 fw-bold">-</span>
+                                            <span id="dbSizePercent" class="badge bg-secondary">-</span>
+                                        </div>
+                                        <div class="progress" style="height: 20px;">
+                                            <div id="dbSizeBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
                                     </div>
-                                    <p class="mt-2">Loading users...</p>
-                                </div>
-                                <div id="adminUsersTable" style="display: none;">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover mb-0">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Username</th>
-                                                    <th>Role</th>
-                                                    <th>Created</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="adminUsersTableBody"></tbody>
-                                        </table>
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="text-info mb-2"><i class="fas fa-calendar-alt me-2"></i>Date Range</h6>
+                                        <div class="small">
+                                            <div><strong>Oldest:</strong> <span id="oldestVisit">-</span></div>
+                                            <div><strong>Newest:</strong> <span id="newestVisit">-</span></div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div id="adminUsersError" style="display: none;" class="alert alert-danger m-3">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    Failed to load users.
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center p-3">
+                                                <div class="text-muted small">Active Visits</div>
+                                                <div id="activeVisits" class="fs-5 fw-bold text-primary">-</div>
+                                                <div class="text-muted small">0-90 days</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center p-3">
+                                                <div class="text-muted small">Archived Visits</div>
+                                                <div id="archivedVisits" class="fs-5 fw-bold text-secondary">-</div>
+                                                <div class="text-muted small">90+ days</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center p-3">
+                                                <div class="text-muted small">Total Records</div>
+                                                <div id="totalRecords" class="fs-5 fw-bold text-success">-</div>
+                                                <div class="text-muted small">All visits</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center p-3">
+                                                <div class="text-muted small">Users</div>
+                                                <div id="totalUsers" class="fs-5 fw-bold text-info">-</div>
+                                                <div class="text-muted small">Tracked</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-info mb-2"><i class="fas fa-chart-line me-2"></i>Last 24 Hours</h6>
+                                        <div class="small">
+                                            <div><strong>Visits:</strong> <span id="visits24h" class="text-primary">-</span></div>
+                                            <div><strong>Active Users:</strong> <span id="activeUsers24h" class="text-success">-</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-info mb-2"><i class="fas fa-clock me-2"></i>Last Updated</h6>
+                                        <div id="lastUpdated" class="small text-muted">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="dbStatsError" style="display: none;" class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Failed to load database statistics.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-users me-2"></i>Existing Dashboard Users</h6>
+                            <button class="btn btn-outline-light btn-sm" id="refreshUsersBtn">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="adminUsersLoading" class="text-center p-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading users...</p>
+                            </div>
+                            <div id="adminUsersTable" style="display: none;">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Username</th>
+                                                <th>Role</th>
+                                                <th>Created</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="adminUsersTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="adminUsersError" style="display: none;" class="alert alert-danger m-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Failed to load users.
                             </div>
                         </div>
                     </div>
@@ -262,366 +250,359 @@
             </div>
         </div>
     </div>
+</div>
 
-    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="editUserModalLabel"><i class="fas fa-user-edit me-2"></i>Edit User: <span id="editUserUsername">username</span></h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editUserForm">
-                        <div class="mb-3">
-                            <label for="editPassword" class="form-label">New Password (leave empty to keep current)</label>
-                            <input type="password" class="form-control" id="editPassword" minlength="6" maxlength="72">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editRole" class="form-label">Role</label>
-                            <select class="form-select" id="editRole" required>
-                                <option value="user">User</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-2"></i>Update User</button>
-                    </form>
-                </div>
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editUserModalLabel"><i class="fas fa-user-edit me-2"></i>Edit User: <span id="editUserUsername">username</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">New Password (leave empty to keep current)</label>
+                        <input type="password" class="form-control" id="editPassword" minlength="6" maxlength="72">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRole" class="form-label">Role</label>
+                        <select class="form-select" id="editRole" required>
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-2"></i>Update User</button>
+                </form>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        let currentUser = {};
-        let adminUsers = [];
-        let editingUser = null;
-        let dbStatsRefreshInterval = null;
+{% block scripts %}
+<script>
+    let adminUsers = [];
+    let editingUser = null;
+    let dbStatsRefreshInterval = null;
 
-        function escapeHtml(str) {
-            if (str == null) return '';
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAdminUsers();
+        loadDatabaseStats();
+
+        // Auto-refresh database stats every 3 minutes
+        dbStatsRefreshInterval = setInterval(loadDatabaseStats, 180000);
+    });
+
+    // Clean up interval when navigating away to prevent memory leaks
+    window.addEventListener('beforeunload', () => {
+        if (dbStatsRefreshInterval) {
+            clearInterval(dbStatsRefreshInterval);
+            dbStatsRefreshInterval = null;
         }
+    });
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadAdminUsers();
-            loadDatabaseStats();
+    // Wire up button event listeners (replacing inline onclick attributes)
+    document.getElementById('refreshDbStatsBtn').addEventListener('click', loadDatabaseStats);
+    document.getElementById('refreshUsersBtn').addEventListener('click', loadAdminUsers);
+    document.getElementById('uploadCsvBtn').addEventListener('click', uploadCSV);
+    document.getElementById('downloadExampleCsvBtn').addEventListener('click', downloadExampleCSV);
+    document.getElementById('importEnrichmentBtn').addEventListener('click', importStudentEnrichment);
 
-            // Auto-refresh database stats every 3 minutes
-            dbStatsRefreshInterval = setInterval(loadDatabaseStats, 180000);
-        });
+    async function loadAdminUsers() {
+        try {
+            document.getElementById('adminUsersLoading').style.display = 'block';
+            document.getElementById('adminUsersTable').style.display = 'none';
+            document.getElementById('adminUsersError').style.display = 'none';
 
-        async function loadAdminUsers() {
-            try {
-                document.getElementById('adminUsersLoading').style.display = 'block';
-                document.getElementById('adminUsersTable').style.display = 'none';
-                document.getElementById('adminUsersError').style.display = 'none';
+            const response = await fetch('/api/admin/users');
+            if (!response.ok) throw new Error(`Failed to load users: ${response.status}`);
 
-                const response = await fetch('/api/admin/users');
-                if (!response.ok) throw new Error(`Failed to load users: ${response.status}`);
-
-                adminUsers = await response.json();
-                displayAdminUsers();
-            } catch (error) {
-                console.error('Error loading admin users:', error);
-                document.getElementById('adminUsersLoading').style.display = 'none';
-                document.getElementById('adminUsersError').style.display = 'block';
-            }
-        }
-
-        function displayAdminUsers() {
+            adminUsers = await response.json();
+            displayAdminUsers();
+        } catch (error) {
+            console.error('Error loading admin users:', error);
             document.getElementById('adminUsersLoading').style.display = 'none';
-            document.getElementById('adminUsersTable').style.display = 'block';
-
-            const tableBody = document.getElementById('adminUsersTableBody');
-            tableBody.innerHTML = adminUsers.map(user => `
-                <tr>
-                    <td><strong>${escapeHtml(user.username)}</strong></td>
-                    <td><span class="badge ${user.role === 'admin' ? 'bg-primary' : 'bg-secondary'}">${escapeHtml(user.role).toUpperCase()}</span></td>
-                    <td><small class="text-muted">${escapeHtml(new Date(user.created_at).toLocaleDateString())}</small></td>
-                    <td>
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-warning" data-action="edit" data-username="${escapeHtml(user.username)}" data-role="${escapeHtml(user.role)}" title="Edit User"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-outline-danger" data-action="delete" data-username="${escapeHtml(user.username)}" title="Delete User"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-            tableBody.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => editUser(btn.dataset.username, btn.dataset.role)));
-            tableBody.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteUser(btn.dataset.username)));
+            document.getElementById('adminUsersError').style.display = 'block';
         }
+    }
 
-        async function loadDatabaseStats() {
-            try {
-                document.getElementById('dbStatsLoading').style.display = 'block';
-                document.getElementById('dbStatsContent').style.display = 'none';
-                document.getElementById('dbStatsError').style.display = 'none';
+    function displayAdminUsers() {
+        document.getElementById('adminUsersLoading').style.display = 'none';
+        document.getElementById('adminUsersTable').style.display = 'block';
 
-                const response = await fetch('/api/admin/db-stats');
-                if (!response.ok) throw new Error(`Failed to load database stats: ${response.status}`);
+        const tableBody = document.getElementById('adminUsersTableBody');
+        tableBody.innerHTML = adminUsers.map(user => `
+            <tr>
+                <td><strong>${escapeHtml(user.username)}</strong></td>
+                <td><span class="badge ${user.role === 'admin' ? 'bg-primary' : 'bg-secondary'}">${escapeHtml(user.role).toUpperCase()}</span></td>
+                <td><small class="text-muted">${escapeHtml(new Date(user.created_at).toLocaleDateString())}</small></td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-warning" data-action="edit" data-username="${escapeHtml(user.username)}" data-role="${escapeHtml(user.role)}" title="Edit User"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-outline-danger" data-action="delete" data-username="${escapeHtml(user.username)}" title="Delete User"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+        tableBody.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => editUser(btn.dataset.username, btn.dataset.role)));
+        tableBody.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteUser(btn.dataset.username)));
+    }
 
-                const stats = await response.json();
-                displayDatabaseStats(stats);
-            } catch (error) {
-                console.error('Error loading database stats:', error);
-                document.getElementById('dbStatsLoading').style.display = 'none';
-                document.getElementById('dbStatsError').style.display = 'block';
-            }
-        }
+    async function loadDatabaseStats() {
+        try {
+            document.getElementById('dbStatsLoading').style.display = 'block';
+            document.getElementById('dbStatsContent').style.display = 'none';
+            document.getElementById('dbStatsError').style.display = 'none';
 
-        function displayDatabaseStats(stats) {
+            const response = await fetch('/api/admin/db-stats');
+            if (!response.ok) throw new Error(`Failed to load database stats: ${response.status}`);
+
+            const stats = await response.json();
+            displayDatabaseStats(stats);
+        } catch (error) {
+            console.error('Error loading database stats:', error);
             document.getElementById('dbStatsLoading').style.display = 'none';
-            document.getElementById('dbStatsContent').style.display = 'block';
+            document.getElementById('dbStatsError').style.display = 'block';
+        }
+    }
 
-            // Database size with progress bar
-            const dbSizeBytes = stats.database.total_bytes || 0;
-            const dbSizeGB = dbSizeBytes / (1024 * 1024 * 1024);
-            const maxSizeGB = 20; // Assume 20GB max for progress bar
-            const sizePercent = Math.min((dbSizeGB / maxSizeGB) * 100, 100);
+    function displayDatabaseStats(stats) {
+        document.getElementById('dbStatsLoading').style.display = 'none';
+        document.getElementById('dbStatsContent').style.display = 'block';
 
-            document.getElementById('dbSize').textContent = stats.database.total_size || '-';
-            document.getElementById('dbSizePercent').textContent = `${sizePercent.toFixed(1)}%`;
+        const dbSizeBytes = stats.database.total_bytes || 0;
+        const dbSizeGB = dbSizeBytes / (1024 * 1024 * 1024);
+        const maxSizeGB = 20;
+        const sizePercent = Math.min((dbSizeGB / maxSizeGB) * 100, 100);
 
-            const progressBar = document.getElementById('dbSizeBar');
-            progressBar.style.width = `${sizePercent}%`;
-            progressBar.className = 'progress-bar';
-            if (sizePercent < 50) {
-                progressBar.classList.add('bg-success');
-            } else if (sizePercent < 75) {
-                progressBar.classList.add('bg-warning');
-            } else {
-                progressBar.classList.add('bg-danger');
-            }
+        document.getElementById('dbSize').textContent = stats.database.total_size || '-';
+        document.getElementById('dbSizePercent').textContent = `${sizePercent.toFixed(1)}%`;
 
-            // Record counts
-            document.getElementById('activeVisits').textContent = formatNumber(stats.records.visits || 0);
-            document.getElementById('archivedVisits').textContent = formatNumber(stats.records.visits_archive || 0);
-            document.getElementById('totalRecords').textContent = formatNumber(stats.records.total_visits || 0);
-            document.getElementById('totalUsers').textContent = formatNumber(stats.records.users || 0);
-
-            // Date range
-            if (stats.activity.oldest_visit) {
-                document.getElementById('oldestVisit').textContent = new Date(stats.activity.oldest_visit).toLocaleDateString();
-            } else {
-                document.getElementById('oldestVisit').textContent = 'N/A';
-            }
-            if (stats.activity.newest_visit) {
-                document.getElementById('newestVisit').textContent = new Date(stats.activity.newest_visit).toLocaleDateString();
-            } else {
-                document.getElementById('newestVisit').textContent = 'N/A';
-            }
-
-            // Activity metrics
-            document.getElementById('visits24h').textContent = formatNumber(stats.activity.visits_last_24h || 0);
-            document.getElementById('activeUsers24h').textContent = formatNumber(stats.activity.active_users_24h || 0);
-
-            // Last updated timestamp
-            if (stats.timestamp) {
-                const lastUpdate = new Date(stats.timestamp);
-                document.getElementById('lastUpdated').textContent = lastUpdate.toLocaleString();
-            } else {
-                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
-            }
+        const progressBar = document.getElementById('dbSizeBar');
+        progressBar.style.width = `${sizePercent}%`;
+        progressBar.className = 'progress-bar';
+        if (sizePercent < 50) {
+            progressBar.classList.add('bg-success');
+        } else if (sizePercent < 75) {
+            progressBar.classList.add('bg-warning');
+        } else {
+            progressBar.classList.add('bg-danger');
         }
 
-        function formatNumber(num) {
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(1) + 'M';
-            } else if (num >= 1000) {
-                return (num / 1000).toFixed(1) + 'K';
+        document.getElementById('activeVisits').textContent = formatNumber(stats.records.visits || 0);
+        document.getElementById('archivedVisits').textContent = formatNumber(stats.records.visits_archive || 0);
+        document.getElementById('totalRecords').textContent = formatNumber(stats.records.total_visits || 0);
+        document.getElementById('totalUsers').textContent = formatNumber(stats.records.users || 0);
+
+        document.getElementById('oldestVisit').textContent = stats.activity.oldest_visit
+            ? new Date(stats.activity.oldest_visit).toLocaleDateString() : 'N/A';
+        document.getElementById('newestVisit').textContent = stats.activity.newest_visit
+            ? new Date(stats.activity.newest_visit).toLocaleDateString() : 'N/A';
+
+        document.getElementById('visits24h').textContent = formatNumber(stats.activity.visits_last_24h || 0);
+        document.getElementById('activeUsers24h').textContent = formatNumber(stats.activity.active_users_24h || 0);
+
+        document.getElementById('lastUpdated').textContent = stats.timestamp
+            ? new Date(stats.timestamp).toLocaleString()
+            : new Date().toLocaleString();
+    }
+
+    function formatNumber(num) {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toLocaleString();
+    }
+
+    document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = {
+            username: document.getElementById('newUsername').value,
+            password: document.getElementById('newPassword').value,
+            role: document.getElementById('newRole').value
+        };
+        try {
+            const response = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to create user');
             }
-            return num.toLocaleString();
+            document.getElementById('createUserForm').reset();
+            loadAdminUsers();
+            showAdminMessage('User created successfully!', 'success');
+        } catch (error) {
+            console.error('Error creating user:', error);
+            showAdminMessage(error.message, 'danger');
         }
+    });
 
-        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = {
-                username: document.getElementById('newUsername').value,
-                password: document.getElementById('newPassword').value,
-                role: document.getElementById('newRole').value
-            };
-            try {
-                const response = await fetch('/api/admin/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to create user');
-                }
-                document.getElementById('createUserForm').reset();
-                loadAdminUsers();
-                showAdminMessage('User created successfully!', 'success');
-            } catch (error) {
-                console.error('Error creating user:', error);
-                showAdminMessage(error.message, 'danger');
+    function editUser(username, role) {
+        editingUser = username;
+        document.getElementById('editUserUsername').textContent = username;
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editRole').value = role;
+        const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+        modal.show();
+    }
+
+    document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = {};
+        const password = document.getElementById('editPassword').value;
+        const role = document.getElementById('editRole').value;
+        if (password) formData.password = password;
+        if (role) formData.role = role;
+        try {
+            const response = await fetch(`/api/admin/users/${editingUser}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to update user');
             }
-        });
-
-        function editUser(username, role) {
-            editingUser = username;
-            document.getElementById('editUserUsername').textContent = username;
-            document.getElementById('editPassword').value = '';
-            document.getElementById('editRole').value = role;
-            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
-            modal.show();
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            loadAdminUsers();
+            showAdminMessage('User updated successfully!', 'success');
+        } catch (error) {
+            console.error('Error updating user:', error);
+            showAdminMessage(error.message, 'danger');
         }
+    });
 
-        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = {};
-            const password = document.getElementById('editPassword').value;
-            const role = document.getElementById('editRole').value;
-            if (password) formData.password = password;
-            if (role) formData.role = role;
-            try {
-                const response = await fetch(`/api/admin/users/${editingUser}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to update user');
-                }
-                bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
-                loadAdminUsers();
-                showAdminMessage('User updated successfully!', 'success');
-            } catch (error) {
-                console.error('Error updating user:', error);
-                showAdminMessage(error.message, 'danger');
+    async function deleteUser(username) {
+        if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) return;
+        try {
+            const response = await fetch(`/api/admin/users/${username}`, { method: 'DELETE' });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to delete user');
             }
-        });
+            loadAdminUsers();
+            showAdminMessage('User deleted successfully!', 'success');
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            showAdminMessage(error.message, 'danger');
+        }
+    }
 
-        async function deleteUser(username) {
-            if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) return;
-            try {
-                const response = await fetch(`/api/admin/users/${username}`, { method: 'DELETE' });
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to delete user');
-                }
-                loadAdminUsers();
-                showAdminMessage('User deleted successfully!', 'success');
-            } catch (error) {
-                console.error('Error deleting user:', error);
-                showAdminMessage(error.message, 'danger');
+    async function downloadExampleCSV() {
+        try {
+            const response = await fetch('/api/admin/users/example-csv');
+            if (!response.ok) throw new Error('Failed to get example CSV');
+            const csvContent = await response.text();
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'users_import_example.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            showAdminMessage('Example CSV downloaded successfully!', 'success');
+        } catch (error) {
+            console.error('Error downloading example CSV:', error);
+            showAdminMessage('Failed to download example CSV', 'danger');
+        }
+    }
+
+    async function uploadCSV() {
+        const fileInput = document.getElementById('csvFile');
+        const file = fileInput.files[0];
+        if (!file) return showAdminMessage('Please select a CSV file to upload', 'warning');
+        if (!file.name.endsWith('.csv')) return showAdminMessage('Please select a CSV file', 'warning');
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadBtn = document.getElementById('uploadCsvBtn');
+        const originalText = uploadBtn.innerHTML;
+        try {
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
+            uploadBtn.disabled = true;
+            const response = await fetch('/api/admin/users/bulk-import', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'Upload failed');
+            let message = result.message;
+            if (result.errors && result.errors.length > 0) {
+                message += `<br><br><strong>Errors:</strong><ul>` + result.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('') + '</ul>';
             }
-        }
-
-        async function downloadExampleCSV() {
-            try {
-                const response = await fetch('/api/admin/users/example-csv');
-                if (!response.ok) throw new Error('Failed to get example CSV');
-                const csvContent = await response.text();
-                const blob = new Blob([csvContent], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'users_import_example.csv';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                showAdminMessage('Example CSV downloaded successfully!', 'success');
-            } catch (error) {
-                console.error('Error downloading example CSV:', error);
-                showAdminMessage('Failed to download example CSV', 'danger');
+            if (result.created_users && result.created_users.length > 0) {
+                message += `<br><br><strong>Created Users:</strong><ul>` + result.created_users.map(u => `<li>${escapeHtml(u.username)} (${escapeHtml(u.role)})</li>`).join('') + '</ul>';
             }
+            showAdminMessage(message, result.errors.length === 0 ? 'success' : 'warning', true);
+            fileInput.value = '';
+            loadAdminUsers();
+        } catch (error) {
+            console.error('Error uploading CSV:', error);
+            showAdminMessage(error.message, 'danger');
+        } finally {
+            uploadBtn.innerHTML = originalText;
+            uploadBtn.disabled = false;
         }
+    }
 
-        async function uploadCSV() {
-            const fileInput = document.getElementById('csvFile');
-            const file = fileInput.files[0];
-            if (!file) return showAdminMessage('Please select a CSV file to upload', 'warning');
-            if (!file.name.endsWith('.csv')) return showAdminMessage('Please select a CSV file', 'warning');
-            const formData = new FormData();
-            formData.append('file', file);
-            const uploadBtn = document.querySelector('button[onclick="uploadCSV()"]');
-            const originalText = uploadBtn.innerHTML;
-            try {
-                uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
-                uploadBtn.disabled = true;
-                const response = await fetch('/api/admin/users/bulk-import', { method: 'POST', body: formData });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.detail || 'Upload failed');
-                let message = result.message;
-                if (result.errors && result.errors.length > 0) {
-                    message += `<br><br><strong>Errors:</strong><ul>` + result.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('') + '</ul>';
-                }
-                if (result.created_users && result.created_users.length > 0) {
-                    message += `<br><br><strong>Created Users:</strong><ul>` + result.created_users.map(u => `<li>${escapeHtml(u.username)} (${escapeHtml(u.role)})</li>`).join('') + '</ul>';
-                }
-                showAdminMessage(message, result.errors.length === 0 ? 'success' : 'warning', true);
-                fileInput.value = '';
-                loadAdminUsers();
-            } catch (error) {
-                console.error('Error uploading CSV:', error);
-                showAdminMessage(error.message, 'danger');
-            } finally {
-                uploadBtn.innerHTML = originalText;
-                uploadBtn.disabled = false;
-            }
+    async function importStudentEnrichment() {
+        const fileInput = document.getElementById('enrichmentFile');
+        const file = fileInput.files[0];
+        if (!file) return showAdminMessage('Please select a CSV file to upload', 'warning');
+        if (!file.name.endsWith('.csv')) return showAdminMessage('Please select a CSV file', 'warning');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const btn = document.getElementById('importEnrichmentBtn');
+        const originalText = btn.innerHTML;
+        const resultDiv = document.getElementById('enrichmentResult');
+        resultDiv.style.display = 'none';
+
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
+            btn.disabled = true;
+
+            const response = await fetch('/api/admin/enrich-students', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'Import failed');
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="alert alert-success mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Import complete</strong><br>
+                    <small>
+                        ${result.imported.toLocaleString()} records imported &bull;
+                        ${result.users_updated.toLocaleString()} existing users enriched
+                        ${result.skipped > 0 ? ` &bull; ${result.skipped} rows skipped` : ''}
+                    </small>
+                </div>`;
+            fileInput.value = '';
+        } catch (error) {
+            console.error('Error importing enrichment data:', error);
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(error.message)}</div>`;
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
+    }
 
-        async function importStudentEnrichment() {
-            const fileInput = document.getElementById('enrichmentFile');
-            const file = fileInput.files[0];
-            if (!file) return showAdminMessage('Please select a CSV file to upload', 'warning');
-            if (!file.name.endsWith('.csv')) return showAdminMessage('Please select a CSV file', 'warning');
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const btn = document.querySelector('button[onclick="importStudentEnrichment()"]');
-            const originalText = btn.innerHTML;
-            const resultDiv = document.getElementById('enrichmentResult');
-            resultDiv.style.display = 'none';
-
-            try {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
-                btn.disabled = true;
-
-                const response = await fetch('/api/admin/enrich-students', { method: 'POST', body: formData });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.detail || 'Import failed');
-
-                resultDiv.style.display = 'block';
-                resultDiv.innerHTML = `
-                    <div class="alert alert-success mb-0">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <strong>Import complete</strong><br>
-                        <small>
-                            ${result.imported.toLocaleString()} records imported &bull;
-                            ${result.users_updated.toLocaleString()} existing users enriched
-                            ${result.skipped > 0 ? ` &bull; ${result.skipped} rows skipped` : ''}
-                        </small>
-                    </div>`;
-                fileInput.value = '';
-            } catch (error) {
-                console.error('Error importing enrichment data:', error);
-                resultDiv.style.display = 'block';
-                resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(error.message)}</div>`;
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        function showAdminMessage(message, type, allowHtml = false) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${escapeHtml(type)} alert-dismissible fade show`;
-            const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
-            const safeMessage = allowHtml ? message : escapeHtml(message);
-            alertDiv.innerHTML = `
-                <i class="fas fa-${icon} me-2"></i>
-                ${safeMessage}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            const container = document.querySelector('.card-body');
-            container.insertBefore(alertDiv, container.firstChild);
-            setTimeout(() => { if (alertDiv.parentNode) alertDiv.remove(); }, 5000);
-        }
-    </script>
-</body>
-</html>
+    function showAdminMessage(message, type, allowHtml = false) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${escapeHtml(type)} alert-dismissible fade show`;
+        const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
+        const safeMessage = allowHtml ? message : escapeHtml(message);
+        alertDiv.innerHTML = `
+            <i class="fas fa-${icon} me-2"></i>
+            ${safeMessage}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        const container = document.querySelector('.card-body');
+        container.insertBefore(alertDiv, container.firstChild);
+        setTimeout(() => { if (alertDiv.parentNode) alertDiv.remove(); }, 5000);
+    }
+</script>
+{% endblock %}

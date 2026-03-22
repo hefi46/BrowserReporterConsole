@@ -1,5 +1,14 @@
-from passlib.context import CryptContext
+import base64
+import hashlib
+import json
+import logging
+import os
+import time
 from typing import cast, Any
+
+from passlib.context import CryptContext
+
+logger = logging.getLogger("browser_reporter")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -10,7 +19,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         safe_password = plain_password[:72]
         return pwd_context.verify(safe_password, hashed_password)
     except Exception as e:
-        print(f"Password verification error: {e}")
+        logger.error("Password verification error: %s", e)
         return False
 
 
@@ -20,17 +29,12 @@ def get_password_hash(password: str) -> str:
         safe_password = password[:72]
         return pwd_context.hash(safe_password)
     except Exception as e:
-        print(f"Password hashing error: {e}")
+        logger.error("Password hashing error: %s", e)
         return ""
 
 # ---------------------------------------------------------------------------
 # Secure Config Encryption Helper
 # ---------------------------------------------------------------------------
-import json
-import base64
-import hashlib
-import os
-import time
 
 try:
     # Prefer PyCryptodome (installed as dependency)
@@ -40,7 +44,7 @@ except ImportError as e:  # pragma: no cover
     AES = None  # type: ignore
     pad = None  # type: ignore
     unpad = None  # type: ignore
-    print("⚠️  PyCryptodome not installed. Secure config encryption will fail.")
+    logger.warning("PyCryptodome not installed. Secure config encryption will fail.")
 
 # Master key – loaded from environment variable for security.
 # The Windows collector must use the same key.

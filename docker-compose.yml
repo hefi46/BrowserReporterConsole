@@ -9,7 +9,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     command: >
       postgres
       -c max_connections=100
@@ -42,7 +42,7 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:-changeme-session-secret}
       DATABASE_URL: postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
 
 volumes:
   db_data: 

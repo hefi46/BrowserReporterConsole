@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class VisitIn(BaseModel):
@@ -26,8 +26,9 @@ class ReportIn(BaseModel):
     Visits: List[VisitIn]
     UserInfo: UserInfoIn
 
-    @validator("Visits")
-    def validate_visits_not_empty(cls, v):
+    @field_validator("Visits")
+    @classmethod
+    def validate_visits_not_empty(cls, v: list[VisitIn]) -> list[VisitIn]:
         if len(v) == 0:
             raise ValueError("Visits list cannot be empty")
         return v
@@ -52,5 +53,4 @@ class DashboardUserResponse(BaseModel):
     role: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True 
+    model_config = {"from_attributes": True}

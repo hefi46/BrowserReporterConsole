@@ -66,12 +66,13 @@ class DataRetentionManager:
 
     async def get_table_stats(self):
         """Get current statistics about data distribution"""
+        cutoff = datetime.now() - timedelta(days=ACTIVE_RETENTION_DAYS)
         query = """
             SELECT
                 'visits' as table_name,
                 COUNT(*) as total_records,
-                COUNT(*) FILTER (WHERE visit_time > NOW() - INTERVAL '$1 days') as active_records,
-                COUNT(*) FILTER (WHERE visit_time <= NOW() - INTERVAL '$1 days') as old_records,
+                COUNT(*) FILTER (WHERE visit_time > $1) as active_records,
+                COUNT(*) FILTER (WHERE visit_time <= $1) as old_records,
                 MIN(visit_time) as oldest_record,
                 MAX(visit_time) as newest_record,
                 pg_size_pretty(pg_total_relation_size('visits')) as table_size
@@ -88,9 +89,7 @@ class DataRetentionManager:
             FROM visits_archive;
         """
 
-        stats = await self.conn.fetch(
-            query.replace('$1', str(ACTIVE_RETENTION_DAYS))
-        )
+        stats = await self.conn.fetch(query, cutoff)
         return stats
 
     async def archive_old_visits(self):
@@ -187,7 +186,7 @@ class DataRetentionManager:
 
             # Export to CSV using COPY command (much faster than Python)
             async with self.conn.transaction():
-                copy_query = f"""
+                copy_query = """
                     COPY (
                         SELECT
                             id,
@@ -199,14 +198,14 @@ class DataRetentionManager:
                             inserted_at,
                             archived_at
                         FROM visits_archive
-                        WHERE visit_time < '{cutoff_date.isoformat()}'
+                        WHERE visit_time < $1
                         ORDER BY visit_time
                     ) TO STDOUT WITH CSV HEADER;
                 """
 
-                # Execute COPY command
+                # Execute COPY command with parameterised cutoff date
                 with open(export_file, 'w') as f:
-                    await self.conn.copy_from_query(copy_query, output=f)
+                    await self.conn.copy_from_query(copy_query, cutoff_date, output=f)
 
             # Get file size
             file_size = export_file.stat().st_size

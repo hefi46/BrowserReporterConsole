@@ -6,13 +6,10 @@ from typing import Sequence, Optional, List
 from sqlalchemy import insert, select, update, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from passlib.context import CryptContext
 
 from .models import User, Visit, DashboardUser, DashboardRoleEnum, StudentEnrichment
-from .schemas import ReportIn, UserInfoIn, VisitIn
-
-# Import password functions from utils to avoid duplication
-from .utils import get_password_hash, verify_password
+from .schemas import UserInfoIn, VisitIn
+from .utils import get_password_hash
 
 async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
     """Upsert user and return id."""
@@ -60,9 +57,16 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
     return user_id
 
 
+_MIN_TIMESTAMP_MS = 0                    # 1970-01-01
+_MAX_TIMESTAMP_MS = 4_102_444_800_000     # 2100-01-01
+
+
 async def bulk_insert_visits(db: AsyncSession, user_id: int, visits: Sequence[VisitIn]):
     rows = []
     for v in visits:
+        # Guard against out-of-range timestamps that would crash fromtimestamp()
+        if not (_MIN_TIMESTAMP_MS <= v.VisitTime <= _MAX_TIMESTAMP_MS):
+            continue
         rows.append(
             dict(
                 user_id=user_id,
