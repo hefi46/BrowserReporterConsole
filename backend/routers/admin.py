@@ -7,8 +7,6 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from typing import List
-
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -77,7 +75,7 @@ async def _read_csv_upload(
 def _validate_bulk_import_rows(csv_reader: csv.DictReader) -> tuple[list[tuple], list[str]]:
     """Validate rows from a bulk-user-import CSV; return (valid_rows, errors)."""
     errors: list[str] = []
-    usernames_seen: list[str] = []
+    usernames_seen: set[str] = set()
     valid_rows: list[tuple] = []
     for row_num, row in enumerate(csv_reader, start=2):
         username = row.get("username", "").strip()
@@ -98,7 +96,7 @@ def _validate_bulk_import_rows(csv_reader: csv.DictReader) -> tuple[list[tuple],
         if username in usernames_seen:
             errors.append(f"Row {row_num}: Duplicate username '{username}' in CSV")
             continue
-        usernames_seen.append(username)
+        usernames_seen.add(username)
         valid_rows.append((row_num, username, password, role))
     return valid_rows, errors
 
@@ -122,7 +120,7 @@ async def create_admin_emergency(request: Request, db: AsyncSession = Depends(ge
     return {"message": "Admin created successfully"}
 
 
-@router.get("/api/admin/users", response_model=List[DashboardUserResponse])
+@router.get("/api/admin/users", response_model=list[DashboardUserResponse])
 async def admin_get_users(request: Request, db: AsyncSession = Depends(get_db)):
     """Get all dashboard users (admin only)."""
     await require_admin(request, db)
@@ -339,94 +337,120 @@ async def admin_get_current_config(request: Request, db: AsyncSession = Depends(
 
 # ── Database stats ───────────────────────────────────────────────────────
 
+async def _fetch_table_stats(db: AsyncSession) -> list[dict]:
+    """Fetch per-table size statistics from PostgreSQL."""
+    rows = await db.execute(text("""
+        SELECT schemaname, tablename,
+               pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+               pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+               pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)
+                             - pg_relation_size(schemaname||'.'||tablename)) as index_size,
+               pg_total_relation_size(schemaname||'.'||tablename) as total_bytes
+        FROM pg_tables WHERE schemaname = 'public'
+        ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+    """))
+    return [dict(row._mapping) for row in rows]
+
+
+async def _fetch_record_counts(db: AsyncSession) -> dict:
+    """Fetch record counts for users, visits, and archive."""
+    visits_total = await db.scalar(select(func.count()).select_from(Visit))
+    users_total = await db.scalar(select(func.count()).select_from(User))
+
+    archive_exists = await db.scalar(text(
+        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'visits_archive');"
+    ))
+    visits_archive_total = 0
+    if archive_exists:
+        visits_archive_total = await db.scalar(text("SELECT COUNT(*) FROM visits_archive"))
+
+    return {
+        "users": users_total,
+        "visits": visits_total,
+        "visits_archive": visits_archive_total,
+        "total_visits": visits_total + visits_archive_total,
+    }
+
+
+async def _fetch_activity_stats(db: AsyncSession) -> dict:
+    """Fetch visit activity metrics (time range, recent counts)."""
+    oldest_visit = await db.scalar(select(func.min(Visit.visit_time)))
+    newest_visit = await db.scalar(select(func.max(Visit.visit_time)))
+
+    last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+    last_7d = datetime.now(timezone.utc) - timedelta(days=7)
+    visits_24h = await db.scalar(select(func.count()).select_from(Visit).where(Visit.visit_time >= last_24h))
+    visits_7d = await db.scalar(select(func.count()).select_from(Visit).where(Visit.visit_time >= last_7d))
+    active_users_24h = await db.scalar(
+        select(func.count(func.distinct(Visit.user_id))).select_from(Visit).where(Visit.visit_time >= last_24h)
+    )
+
+    return {
+        "oldest_visit": oldest_visit.isoformat() if oldest_visit else None,
+        "newest_visit": newest_visit.isoformat() if newest_visit else None,
+        "visits_last_24h": visits_24h,
+        "visits_last_7d": visits_7d,
+        "active_users_24h": active_users_24h,
+    }
+
+
+async def _fetch_db_meta(db: AsyncSession) -> tuple[dict, list[dict], dict, list[dict]]:
+    """Fetch database size, index stats, connection info, and slow queries."""
+    db_size_row = (await db.execute(text(
+        "SELECT pg_size_pretty(pg_database_size(current_database())) as db_size, "
+        "pg_database_size(current_database()) as db_bytes;"
+    ))).fetchone()
+    db_size = dict(db_size_row._mapping) if db_size_row else {"db_size": "Unknown", "db_bytes": 0}
+
+    index_stats = [
+        dict(row._mapping)
+        for row in await db.execute(text("""
+            SELECT schemaname, relname as tablename, indexrelname as indexname,
+                   idx_scan as times_used, pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+            FROM pg_stat_user_indexes WHERE schemaname = 'public' AND indexrelname LIKE 'idx_%'
+            ORDER BY idx_scan DESC LIMIT 20;
+        """))
+    ]
+
+    conn_row = (await db.execute(text("""
+        SELECT count(*) as total_connections,
+               count(*) FILTER (WHERE state = 'active') as active_connections,
+               count(*) FILTER (WHERE state = 'idle') as idle_connections
+        FROM pg_stat_activity WHERE datname = current_database();
+    """))).fetchone()
+    connection_stats = dict(conn_row._mapping) if conn_row else {}
+
+    try:
+        slow_queries = [
+            dict(row._mapping)
+            for row in await db.execute(text("""
+                SELECT substring(query, 1, 100) as query_preview, calls, mean_exec_time, total_exec_time
+                FROM pg_stat_statements WHERE mean_exec_time > 100
+                ORDER BY mean_exec_time DESC LIMIT 10;
+            """))
+        ]
+    except Exception:
+        slow_queries = []
+
+    return db_size, index_stats, connection_stats, slow_queries
+
+
 @router.get("/api/admin/db-stats")
 async def admin_get_database_stats(request: Request, db: AsyncSession = Depends(get_db)):
     """Get comprehensive database statistics and health metrics. Admin only."""
     await require_admin(request, db)
 
     try:
-        # Table sizes
-        table_stats = [
-            dict(row._mapping)
-            for row in await db.execute(text("""
-                SELECT schemaname, tablename,
-                       pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
-                       pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
-                       pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)
-                                     - pg_relation_size(schemaname||'.'||tablename)) as index_size,
-                       pg_total_relation_size(schemaname||'.'||tablename) as total_bytes
-                FROM pg_tables WHERE schemaname = 'public'
-                ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
-            """))
-        ]
-
-        visits_total = await db.scalar(select(func.count()).select_from(Visit))
-        users_total = await db.scalar(select(func.count()).select_from(User))
-
-        archive_exists = await db.scalar(text(
-            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'visits_archive');"
-        ))
-        visits_archive_total = 0
-        if archive_exists:
-            visits_archive_total = await db.scalar(text("SELECT COUNT(*) FROM visits_archive"))
-
-        oldest_visit = await db.scalar(select(func.min(Visit.visit_time)))
-        newest_visit = await db.scalar(select(func.max(Visit.visit_time)))
-
-        last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
-        last_7d = datetime.now(timezone.utc) - timedelta(days=7)
-        visits_24h = await db.scalar(select(func.count()).select_from(Visit).where(Visit.visit_time >= last_24h))
-        visits_7d = await db.scalar(select(func.count()).select_from(Visit).where(Visit.visit_time >= last_7d))
-        active_users_24h = await db.scalar(
-            select(func.count(func.distinct(Visit.user_id))).select_from(Visit).where(Visit.visit_time >= last_24h)
-        )
-
-        db_size_row = (await db.execute(text(
-            "SELECT pg_size_pretty(pg_database_size(current_database())) as db_size, pg_database_size(current_database()) as db_bytes;"
-        ))).fetchone()
-        db_size = dict(db_size_row._mapping) if db_size_row else {"db_size": "Unknown", "db_bytes": 0}
-
-        index_stats = [
-            dict(row._mapping)
-            for row in await db.execute(text("""
-                SELECT schemaname, relname as tablename, indexrelname as indexname,
-                       idx_scan as times_used, pg_size_pretty(pg_relation_size(indexrelid)) as index_size
-                FROM pg_stat_user_indexes WHERE schemaname = 'public' AND indexrelname LIKE 'idx_%'
-                ORDER BY idx_scan DESC LIMIT 20;
-            """))
-        ]
-
-        conn_row = (await db.execute(text("""
-            SELECT count(*) as total_connections,
-                   count(*) FILTER (WHERE state = 'active') as active_connections,
-                   count(*) FILTER (WHERE state = 'idle') as idle_connections
-            FROM pg_stat_activity WHERE datname = current_database();
-        """))).fetchone()
-        connection_stats = dict(conn_row._mapping) if conn_row else {}
-
-        try:
-            slow_queries = [
-                dict(row._mapping)
-                for row in await db.execute(text("""
-                    SELECT substring(query, 1, 100) as query_preview, calls, mean_exec_time, total_exec_time
-                    FROM pg_stat_statements WHERE mean_exec_time > 100
-                    ORDER BY mean_exec_time DESC LIMIT 10;
-                """))
-            ]
-        except Exception:
-            slow_queries = []
+        table_stats = await _fetch_table_stats(db)
+        records = await _fetch_record_counts(db)
+        activity = await _fetch_activity_stats(db)
+        db_size, index_stats, connection_stats, slow_queries = await _fetch_db_meta(db)
 
         return {
             "database": {"total_size": db_size["db_size"], "total_bytes": db_size["db_bytes"], "connection_info": connection_stats},
             "tables": table_stats,
-            "records": {"users": users_total, "visits": visits_total, "visits_archive": visits_archive_total, "total_visits": visits_total + visits_archive_total},
-            "activity": {
-                "oldest_visit": oldest_visit.isoformat() if oldest_visit else None,
-                "newest_visit": newest_visit.isoformat() if newest_visit else None,
-                "visits_last_24h": visits_24h,
-                "visits_last_7d": visits_7d,
-                "active_users_24h": active_users_24h,
-            },
+            "records": records,
+            "activity": activity,
             "indexes": index_stats,
             "slow_queries": slow_queries,
             "timestamp": datetime.now(timezone.utc).isoformat(),

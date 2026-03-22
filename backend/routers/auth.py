@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -45,7 +44,7 @@ async def login(
         result = await db.execute(
             select(DashboardUser).where(DashboardUser.username == username)
         )
-        user: Optional[DashboardUser] = result.scalar_one_or_none()
+        user: DashboardUser | None = result.scalar_one_or_none()
         if not user or not verify_password(password, user.password_hash):
             return templates.TemplateResponse(
                 "login.html", {"request": request, "error": "Invalid credentials"}
