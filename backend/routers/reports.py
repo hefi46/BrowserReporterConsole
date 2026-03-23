@@ -120,6 +120,7 @@ async def reports_all(
     # Base columns
     # Use column.distinct() rather than func.distinct(column) so that
     # both PostgreSQL and SQLite render "COUNT(DISTINCT col)" correctly.
+    # Inner join ensures users with no visits are excluded from the list.
     selectable = (
         select(
             User.username,
@@ -132,7 +133,7 @@ async def reports_all(
             _string_agg_distinct(Visit.computer_name, text("', '")).label("computers"),
         )
         .select_from(User)
-        .outerjoin(Visit, Visit.user_id == User.id)
+        .join(Visit, Visit.user_id == User.id)
     )
 
     # Filters
@@ -145,7 +146,7 @@ async def reports_all(
     count_q = (
         select(func.count(User.id.distinct()))
         .select_from(User)
-        .outerjoin(Visit, Visit.user_id == User.id)
+        .join(Visit, Visit.user_id == User.id)
     )
     count_q = _apply_homegroup_cutoff(count_q, homegroup, cutoff)
     count_q = _apply_user_search(count_q, search)
