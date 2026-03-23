@@ -14,7 +14,7 @@ from .utils import get_password_hash
 async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
     """Upsert user and return id."""
     values = dict(
-        username=info.Username,
+        username=info.Username.upper() if info.Username else info.Username,
         display_name=info.DisplayName or info.Username,
         first_name=info.FirstName,
         last_name=info.LastName,
@@ -143,13 +143,25 @@ async def upsert_student_enrichments(db: AsyncSession, rows: list) -> int:
 # Database Purge Operations
 
 async def purge_visits(db: AsyncSession, retain_days: int = 0) -> int:
-    """Delete visit records. If retain_days > 0, keep visits from the last N days."""
+    """Delete visit records. If retain_days > 0, keep visits from the last N days.
+
+    Also removes User rows that have no remaining visits after the purge.
+    """
     if retain_days > 0:
         cutoff = datetime.now(timezone.utc) - timedelta(days=retain_days)
         result = await db.execute(delete(Visit).where(Visit.visit_time < cutoff))
     else:
         result = await db.execute(delete(Visit))
-    return result.rowcount
+    deleted_visits = result.rowcount
+
+    # Remove users that now have no visits
+    await db.execute(
+        delete(User).where(
+            ~User.id.in_(select(Visit.user_id).distinct())
+        )
+    )
+
+    return deleted_visits
 
 
 async def purge_all_data(db: AsyncSession) -> dict:
