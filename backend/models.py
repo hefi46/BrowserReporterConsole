@@ -69,6 +69,14 @@ class PurgeSchedule(Base):
     updated_by = Column(String)
 
 
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(Text, nullable=False, default="{}")
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
 class DashboardUser(Base):
     __tablename__ = "dashboard_users"
 
@@ -76,4 +84,5 @@ class DashboardUser(Base):
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(Enum(DashboardRoleEnum), default=DashboardRoleEnum.user, nullable=False)
+    auth_source = Column(String, default="local", nullable=False, server_default="local")  # "local" or "ldap"
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)) 

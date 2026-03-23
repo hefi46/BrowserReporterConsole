@@ -80,6 +80,7 @@ async def ensure_schema_columns(conn: asyncpg.Connection) -> None:
     """
     required_columns = [
         ("visits", "search_vector", "TSVECTOR"),
+        ("dashboard_users", "auth_source", "VARCHAR DEFAULT 'local' NOT NULL"),
     ]
 
     for table, column, col_type in required_columns:

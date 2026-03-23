@@ -256,6 +256,7 @@
                                             <tr>
                                                 <th>Username</th>
                                                 <th>Role</th>
+                                                <th>Source</th>
                                                 <th>Created</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -268,6 +269,92 @@
                                 <i class="fas fa-exclamation-triangle me-2"></i>
                                 Failed to load users.
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card section-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-building me-2"></i>LDAP / Active Directory Authentication</h6>
+                            <div>
+                                <span id="ldapStatusBadge" class="badge bg-secondary me-2">Loading...</span>
+                                <button class="btn btn-outline-secondary btn-sm" id="refreshLdapBtn">
+                                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="ldapMessage"></div>
+                            <form id="ldapConfigForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3 form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="ldapEnabled">
+                                            <label class="form-check-label" for="ldapEnabled">
+                                                <strong>Enable LDAP Authentication</strong>
+                                            </label>
+                                            <div class="form-text">When enabled, users can log in with their domain credentials. Local accounts still work as a fallback.</div>
+                                        </div>
+
+                                        <div id="ldapFields">
+                                            <div class="mb-3">
+                                                <label for="ldapServer" class="form-label">LDAP Server URL</label>
+                                                <input type="text" class="form-control" id="ldapServer" placeholder="ldap://dc01.school.local or ldaps://dc01.school.local">
+                                                <div class="form-text">Use <code>ldaps://</code> for SSL/TLS connections</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="ldapBaseDn" class="form-label">Base DN</label>
+                                                <input type="text" class="form-control" id="ldapBaseDn" placeholder="DC=school,DC=local">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="ldapBindDn" class="form-label">Bind DN (Service Account)</label>
+                                                <input type="text" class="form-control" id="ldapBindDn" placeholder="CN=svc-ldap,OU=ServiceAccounts,DC=school,DC=local">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="ldapBindPassword" class="form-label">Bind Password</label>
+                                                <input type="password" class="form-control" id="ldapBindPassword" placeholder="Leave empty to keep current password">
+                                                <div class="form-text" id="ldapPasswordHint"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="ldapFieldsRight">
+                                            <div class="mb-3">
+                                                <label for="ldapSearchFilter" class="form-label">User Search Filter</label>
+                                                <input type="text" class="form-control" id="ldapSearchFilter" placeholder="(&amp;(objectClass=user)(sAMAccountName={username}))">
+                                                <div class="form-text"><code>{username}</code> is replaced with the login username</div>
+                                            </div>
+                                            <div class="mb-3 form-check">
+                                                <input class="form-check-input" type="checkbox" id="ldapUseSsl">
+                                                <label class="form-check-label" for="ldapUseSsl">Use SSL/TLS</label>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="ldapAdminGroupDn" class="form-label">Admin Group DN <small class="text-muted">(optional)</small></label>
+                                                <input type="text" class="form-control" id="ldapAdminGroupDn" placeholder="CN=BrowserReporter-Admins,OU=Groups,DC=school,DC=local">
+                                                <div class="form-text">Members of this AD group get the <strong>admin</strong> role automatically</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="ldapDefaultRole" class="form-label">Default Role for LDAP Users</label>
+                                                <select class="form-select" id="ldapDefaultRole">
+                                                    <option value="user">User</option>
+                                                    <option value="admin">Admin</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save LDAP Configuration
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" id="testLdapBtn">
+                                        <i class="fas fa-plug me-2"></i>Test Connection
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="ldapTestResult" class="mt-3" style="display: none;"></div>
                         </div>
                     </div>
                 </div>
@@ -314,6 +401,7 @@
         loadAdminUsers();
         loadDatabaseStats();
         loadPurgeSchedule();
+        loadLdapConfig();
 
         // Auto-refresh database stats every 3 minutes
         dbStatsRefreshInterval = setInterval(loadDatabaseStats, 180000);
@@ -366,6 +454,7 @@
             <tr>
                 <td><strong>${escapeHtml(user.username)}</strong></td>
                 <td><span class="badge ${user.role === 'admin' ? 'bg-primary' : 'bg-secondary'}">${escapeHtml(user.role).toUpperCase()}</span></td>
+                <td><span class="badge ${(user.auth_source || 'local') === 'ldap' ? 'bg-info' : 'bg-dark'}">${escapeHtml((user.auth_source || 'local').toUpperCase())}</span></td>
                 <td><small class="text-muted">${escapeHtml(new Date(user.created_at).toLocaleDateString())}</small></td>
                 <td>
                     <div class="btn-group btn-group-sm">
@@ -681,6 +770,125 @@
         } catch (error) {
             console.error('Error saving schedule:', error);
             showAdminMessage(error.message, 'danger');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // ── LDAP Configuration ──────────────────────────────────────────────
+
+    document.getElementById('refreshLdapBtn').addEventListener('click', loadLdapConfig);
+    document.getElementById('testLdapBtn').addEventListener('click', testLdapConnection);
+    document.getElementById('ldapEnabled').addEventListener('change', toggleLdapFields);
+
+    function toggleLdapFields() {
+        const enabled = document.getElementById('ldapEnabled').checked;
+        const fields = document.querySelectorAll('#ldapFields input, #ldapFieldsRight input, #ldapFieldsRight select');
+        fields.forEach(f => f.disabled = !enabled);
+    }
+
+    async function loadLdapConfig() {
+        try {
+            const response = await fetch('/api/admin/ldap-config');
+            if (!response.ok) throw new Error('Failed to load LDAP config');
+            const config = await response.json();
+
+            document.getElementById('ldapEnabled').checked = config.enabled || false;
+            document.getElementById('ldapServer').value = config.server || '';
+            document.getElementById('ldapBaseDn').value = config.base_dn || '';
+            document.getElementById('ldapBindDn').value = config.bind_dn || '';
+            document.getElementById('ldapBindPassword').value = '';
+            document.getElementById('ldapSearchFilter').value = config.user_search_filter || '(&(objectClass=user)(sAMAccountName={username}))';
+            document.getElementById('ldapUseSsl').checked = config.use_ssl || false;
+            document.getElementById('ldapAdminGroupDn').value = config.admin_group_dn || '';
+            document.getElementById('ldapDefaultRole').value = config.default_role || 'user';
+
+            const hint = document.getElementById('ldapPasswordHint');
+            if (config.bind_password_set) {
+                hint.textContent = 'A password is currently set. Leave empty to keep it.';
+                hint.className = 'form-text text-success';
+            } else {
+                hint.textContent = 'No password set yet.';
+                hint.className = 'form-text text-warning';
+            }
+
+            const badge = document.getElementById('ldapStatusBadge');
+            if (config.enabled) {
+                badge.textContent = 'Enabled';
+                badge.className = 'badge bg-success me-2';
+            } else {
+                badge.textContent = 'Disabled';
+                badge.className = 'badge bg-secondary me-2';
+            }
+
+            toggleLdapFields();
+        } catch (error) {
+            console.error('Error loading LDAP config:', error);
+            document.getElementById('ldapStatusBadge').textContent = 'Error';
+            document.getElementById('ldapStatusBadge').className = 'badge bg-danger me-2';
+        }
+    }
+
+    document.getElementById('ldapConfigForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            const body = {
+                enabled: document.getElementById('ldapEnabled').checked,
+                server: document.getElementById('ldapServer').value,
+                base_dn: document.getElementById('ldapBaseDn').value,
+                bind_dn: document.getElementById('ldapBindDn').value,
+                bind_password: document.getElementById('ldapBindPassword').value,
+                user_search_filter: document.getElementById('ldapSearchFilter').value,
+                use_ssl: document.getElementById('ldapUseSsl').checked,
+                admin_group_dn: document.getElementById('ldapAdminGroupDn').value,
+                default_role: document.getElementById('ldapDefaultRole').value,
+            };
+            const response = await fetch('/api/admin/ldap-config', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'Failed to save');
+            showAdminMessage('LDAP configuration saved successfully!', 'success');
+            loadLdapConfig();
+        } catch (error) {
+            console.error('Error saving LDAP config:', error);
+            showAdminMessage(error.message, 'danger');
+        }
+    });
+
+    async function testLdapConnection() {
+        const btn = document.getElementById('testLdapBtn');
+        const resultDiv = document.getElementById('ldapTestResult');
+        const originalText = btn.innerHTML;
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
+            btn.disabled = true;
+
+            const body = {
+                server: document.getElementById('ldapServer').value,
+                base_dn: document.getElementById('ldapBaseDn').value,
+                bind_dn: document.getElementById('ldapBindDn').value,
+                bind_password: document.getElementById('ldapBindPassword').value,
+                use_ssl: document.getElementById('ldapUseSsl').checked,
+            };
+            const response = await fetch('/api/admin/ldap-test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const result = await response.json();
+            resultDiv.style.display = 'block';
+            if (result.success) {
+                resultDiv.innerHTML = `<div class="alert alert-success mb-0"><i class="fas fa-check-circle me-2"></i>${escapeHtml(result.message)}</div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-times-circle me-2"></i>${escapeHtml(result.message)}</div>`;
+            }
+        } catch (error) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-times-circle me-2"></i>${escapeHtml(error.message)}</div>`;
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;

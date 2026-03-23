@@ -41,6 +41,16 @@ services:
     environment:
       SESSION_SECRET: ${SESSION_SECRET:-changeme-session-secret}
       DATABASE_URL: postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
+      # LDAP / Active Directory (optional — leave LDAP_ENABLED unset to disable)
+      LDAP_ENABLED: ${LDAP_ENABLED:-false}
+      LDAP_SERVER: ${LDAP_SERVER:-}
+      LDAP_BASE_DN: ${LDAP_BASE_DN:-}
+      LDAP_BIND_DN: ${LDAP_BIND_DN:-}
+      LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD:-}
+      LDAP_USER_SEARCH_FILTER: ${LDAP_USER_SEARCH_FILTER:-(&(objectClass=user)(sAMAccountName={username}))}
+      LDAP_USE_SSL: ${LDAP_USE_SSL:-false}
+      LDAP_ADMIN_GROUP_DN: ${LDAP_ADMIN_GROUP_DN:-}
+      LDAP_DEFAULT_ROLE: ${LDAP_DEFAULT_ROLE:-user}
     ports:
       - "0.0.0.0:8000:8000"
 

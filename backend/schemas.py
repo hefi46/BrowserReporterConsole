@@ -51,6 +51,7 @@ class DashboardUserResponse(BaseModel):
     id: int
     username: str
     role: str
+    auth_source: str = "local"
     created_at: datetime
 
     model_config = {"from_attributes": True}

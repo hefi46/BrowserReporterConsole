@@ -30,6 +30,12 @@ from ..crud import (
     get_purge_schedule,
     upsert_purge_schedule,
 )
+from ..ldap_auth import (
+    get_effective_ldap_config,
+    get_default_config as get_default_ldap_config,
+    save_ldap_config_to_db,
+    test_ldap_connection,
+)
 from ..utils import encrypt_secure_config, decrypt_secure_config, get_password_hash
 from .deps import require_login, require_admin
 
@@ -584,6 +590,88 @@ async def admin_set_purge_schedule(
         "retain_days": retain_days,
         "next_purge_at": next_purge.isoformat() if next_purge else None,
     }
+
+
+# ── LDAP configuration ───────────────────────────────────────────────────
+
+@router.get("/api/admin/ldap-config")
+async def admin_get_ldap_config(request: Request, db: AsyncSession = Depends(get_db)):
+    """Get current LDAP configuration. Admin only.
+
+    Returns the config with the bind password masked for safety.
+    """
+    await require_admin(request, db)
+    config = await get_effective_ldap_config(db)
+    # Mask the password in the response
+    if config.get("bind_password"):
+        config["bind_password_set"] = True
+        config["bind_password"] = ""
+    else:
+        config["bind_password_set"] = False
+    return config
+
+
+@router.put("/api/admin/ldap-config")
+async def admin_save_ldap_config(
+    request: Request,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Save LDAP configuration. Admin only."""
+    await require_admin(request, db)
+
+    # Build a clean config dict from the request body
+    config = {
+        "enabled": bool(body.get("enabled", False)),
+        "server": str(body.get("server", "")).strip(),
+        "base_dn": str(body.get("base_dn", "")).strip(),
+        "bind_dn": str(body.get("bind_dn", "")).strip(),
+        "user_search_filter": str(
+            body.get("user_search_filter", "(&(objectClass=user)(sAMAccountName={username}))")
+        ).strip(),
+        "use_ssl": bool(body.get("use_ssl", False)),
+        "admin_group_dn": str(body.get("admin_group_dn", "")).strip(),
+        "default_role": str(body.get("default_role", "user")).strip(),
+    }
+
+    # If password field is empty, preserve the existing one
+    new_password = str(body.get("bind_password", "")).strip()
+    if new_password:
+        config["bind_password"] = new_password
+    else:
+        existing = await get_effective_ldap_config(db)
+        config["bind_password"] = existing.get("bind_password", "")
+
+    await save_ldap_config_to_db(db, config)
+    await db.commit()
+
+    logger.info("LDAP config updated (enabled=%s, server=%s)", config["enabled"], config["server"])
+    return {"success": True, "message": "LDAP configuration saved"}
+
+
+@router.post("/api/admin/ldap-test")
+async def admin_test_ldap(
+    request: Request,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Test LDAP connection with the provided (or saved) configuration. Admin only."""
+    await require_admin(request, db)
+
+    # Use provided config, falling back to saved values for missing fields
+    saved = await get_effective_ldap_config(db)
+    config = {
+        "server": str(body.get("server", saved.get("server", ""))).strip(),
+        "base_dn": str(body.get("base_dn", saved.get("base_dn", ""))).strip(),
+        "bind_dn": str(body.get("bind_dn", saved.get("bind_dn", ""))).strip(),
+        "use_ssl": bool(body.get("use_ssl", saved.get("use_ssl", False))),
+    }
+    # Use new password if provided, else saved
+    pwd = str(body.get("bind_password", "")).strip()
+    config["bind_password"] = pwd if pwd else saved.get("bind_password", "")
+
+    result = test_ldap_connection(config)
+    return result
 
 
 # ── Template pages ───────────────────────────────────────────────────────
