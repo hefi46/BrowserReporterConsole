@@ -38,7 +38,7 @@
 
 2. **Start the application:**
    ```bash
-   sudo docker-compose up -d
+   sudo docker compose up -d
    ```
 
 3. **Access the dashboard:**
