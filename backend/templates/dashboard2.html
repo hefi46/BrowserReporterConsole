@@ -112,7 +112,7 @@
                 <td><span class="badge bg-primary">${u.totalVisits || 0}</span></td>
                 <td><span class="badge bg-info">${u.uniqueUrls || 0}</span></td>
                 <td><small class="text-muted">${u.lastActivity ? new Date(u.lastActivity).toLocaleDateString() : 'Never'}</small></td>
-                <td><a class="btn btn-sm btn-outline-primary" href="/user/${encodeURIComponent(u.username)}"><i class="fas fa-eye"></i></a></td>
+                <td><a class="btn btn-sm btn-outline-primary" href="/user/${encodeURIComponent(u.urlUsername || u.username)}"><i class="fas fa-eye"></i></a></td>
             </tr>
         `).join('');
     }

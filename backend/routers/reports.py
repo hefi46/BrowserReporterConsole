@@ -4,9 +4,9 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import expression
 from sqlalchemy.ext.compiler import compiles
@@ -23,6 +23,11 @@ from .deps import (
 )
 
 logger = logging.getLogger("browser_reporter")
+
+
+def _url_username(username: str) -> str:
+    """Return username with @domain stripped, for use in page URLs."""
+    return username.split('@')[0] if '@' in username else username
 
 
 # ── Cross-database DISTINCT string aggregation ────────────────────────────
@@ -159,6 +164,7 @@ async def reports_all(
         "data": [
             {
                 "username": r.username,
+                "urlUsername": _url_username(r.username),
                 "displayName": r.display_name,
                 "email": r.email,
                 "department": r.department,
@@ -300,7 +306,11 @@ async def reports_user(
     page, page_size = validate_pagination(page, page_size)
     cutoff = parse_days_cutoff(days)
 
-    result = await db.execute(select(User.id).where(User.username == username))
+    result = await db.execute(
+        select(User.id).where(
+            or_(User.username == username, User.username.ilike(f"{username}@%"))
+        )
+    )
     user_id = result.scalar_one_or_none()
     if user_id is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -340,6 +350,39 @@ async def reports_user(
 # ── Template pages ──────────────────────────────────────────────────────
 
 @router.get("/user/{username}", response_class=HTMLResponse)
-async def user_page(request: Request, username: str = Path(..., min_length=1, max_length=255)):
+async def user_page(
+    request: Request,
+    username: str = Path(..., min_length=1, max_length=255),
+    db: AsyncSession = Depends(get_db),
+):
     require_login(request)
-    return templates.TemplateResponse("user.html", {"request": request, "username": username})
+    result = await db.execute(
+        select(User).where(
+            or_(User.username == username, User.username.ilike(f"{username}@%"))
+        )
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    clean = _url_username(user.username)
+    if username != clean:
+        return RedirectResponse(url=f"/user/{clean}", status_code=301)
+
+    # Build display heading
+    if user.first_name and user.last_name:
+        heading = f"{user.first_name} {user.last_name}"
+        if user.homegroup:
+            heading += f" | {user.homegroup}"
+    elif user.first_name:
+        heading = user.first_name
+        if user.homegroup:
+            heading += f" | {user.homegroup}"
+    else:
+        heading = user.email or user.username
+
+    return templates.TemplateResponse("user.html", {
+        "request": request,
+        "username": clean,
+        "heading": heading,
+    })
