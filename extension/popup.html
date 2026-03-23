@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrowserReporter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      width: 320px;
+      background: #f8f9fa;
+      color: #212529;
+    }
+
+    .header {
+      background: #0d3a6e;
+      color: #fff;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header svg { flex-shrink: 0; opacity: 0.9; }
+    .header-title { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
+    .header-sub   { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+
+    .notice {
+      margin: 14px 14px 0;
+      padding: 12px 14px;
+      background: #e8eef6;
+      border-left: 4px solid #0d3a6e;
+      border-radius: 0 6px 6px 0;
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: #1a2e45;
+    }
+    .notice strong { color: #0d3a6e; }
+
+    .footer {
+      padding: 14px 14px 16px;
+      font-size: 11px;
+      color: #868e96;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L4 5v6c0 5.25 3.4 10.14 8 11.36C16.6 21.14 20 16.25 20 11V5l-8-3z"
+            fill="rgba(255,255,255,0.9)"/>
+      <path d="M9 12l2 2 4-4" stroke="#0d3a6e" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <div class="header-title">Network Monitoring</div>
+      <div class="header-sub">School managed device</div>
+    </div>
+  </div>
+
+  <div class="notice">
+    <strong>Internet activity is monitored</strong> on this school-owned device.
+    All websites visited are logged in accordance with school policy.
+  </div>
+
+  <div class="footer">
+    For help, contact your school IT department.
+  </div>
+
+</body>
+</html>

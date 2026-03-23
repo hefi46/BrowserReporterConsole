@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "username": {
+      "type": "string",
+      "description": "The signed-in user's email address. Set to ${USER_EMAIL} in Google Admin Console."
+    },
+    "display_name": {
+      "type": "string",
+      "description": "The signed-in user's full name. Set to ${USER_FULL_NAME} in Google Admin Console."
+    }
+  }
+}
