@@ -145,7 +145,7 @@ def _build_popup_html(config: dict) -> str:
 
 def _build_background_js(config: dict) -> str:
     """Generate background.js with server URL and time restrictions."""
-    server_url = config.get("server_url", "https://browserreporter").rstrip("/")
+    server_url = config.get("server_url", "http://browserreporter:8000").rstrip("/")
     start_time = config.get("reporting_start_time", "00:00")
     end_time = config.get("reporting_end_time", "23:59")
     active_days = config.get("reporting_days", [0, 1, 2, 3, 4, 5, 6])
@@ -560,7 +560,7 @@ def build_extension(config: dict, pem_key: str,
         (crx_bytes, extension_id, update_xml)
     """
     version = config.get("version", "1.0.0")
-    server_url = config.get("server_url", "https://browserreporter").rstrip("/")
+    server_url = config.get("server_url", "http://browserreporter:8000").rstrip("/")
 
     # Generate extension files
     manifest = MANIFEST_TEMPLATE.format(

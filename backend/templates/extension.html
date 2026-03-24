@@ -276,11 +276,19 @@
                     <h6 class="mb-0"><i class="fas fa-book me-2"></i>Google Admin Console Setup</h6>
                 </div>
                 <div class="card-body">
+                    <!-- HTTP vs HTTPS note -->
+                    <div class="alert alert-info py-2 mb-3" style="font-size: 12px;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>HTTP vs HTTPS:</strong> HTTP works for initial deployment but Chrome won't auto-update
+                        extensions over HTTP. If you update the extension, you'll need to rebuild and redeploy
+                        with a new Extension ID in GAC. Use HTTPS (with CA cert trusted in GAC) for auto-updates.
+                    </div>
                     <div id="gccInstructions">
                         <ol class="mb-0" style="font-size: 13px; padding-left: 1.2em;">
                             <li class="mb-2">
-                                Download the <strong>CA Certificate</strong> above and upload it in Google Admin Console:<br>
-                                <code>Devices &rarr; Networks &rarr; Certificates</code>
+                                <strong>(HTTPS only)</strong> Download the <strong>CA Certificate</strong> above and upload it in Google Admin Console:<br>
+                                <code>Devices &rarr; Networks &rarr; Certificates</code><br>
+                                <small class="text-muted">Skip this step if using HTTP.</small>
                             </li>
                             <li class="mb-2">
                                 Build the extension using the button above.
@@ -303,6 +311,11 @@
                             <li class="mb-2">
                                 Set <strong>Update URL</strong> to:<br>
                                 <code id="updateUrlDisplay" class="user-select-all">Build extension first</code>
+                            </li>
+                            <li class="mb-2">
+                                Under <strong>Extension Settings</strong> (JSON), ensure:<br>
+                                <pre class="bg-light p-2 rounded mb-0" style="font-size: 11px;">{ "override_update_url": true }</pre>
+                                <small class="text-muted">Required for self-hosted extensions.</small>
                             </li>
                             <li>
                                 Save. Chrome will push the extension to managed Chromebooks within 24 hours.

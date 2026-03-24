@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
     "notice_text": "Internet activity is monitored on this school-owned device. "
                    "All websites visited are logged in accordance with school policy.",
     "header_color": "#0d3a6e",
-    "server_url": "https://browserreporter",
+    "server_url": "http://browserreporter:8000",
     "reporting_start_time": "00:00",
     "reporting_end_time": "23:59",
     "reporting_days": [0, 1, 2, 3, 4, 5, 6],
