@@ -19,6 +19,7 @@ COPY . .
 
 # Create non-root user and set ownership
 RUN groupadd -r appuser && useradd -r -g appuser appuser && \
+    mkdir -p /app/data /app/backend/static/extension && \
     chown -R appuser:appuser /app
 USER appuser
 

@@ -1,0 +1,610 @@
+{% extends "base.html" %}
+
+{% block title %}Chrome Extension - Browser Reporter{% endblock %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-light btn-sm" href="/"><i class="fas fa-users me-1"></i>User Search</a>
+            <a class="btn btn-outline-light btn-sm" href="/keyword-search"><i class="fas fa-search me-1"></i>Keyword Search</a>
+        </div>
+        <div class="navbar-nav ms-auto d-flex align-items-center">
+            <a class="nav-link" href="/admin">Admin</a>
+            <a class="nav-link" href="/client-config">Windows Client</a>
+            <a class="nav-link active" href="/chrome-extension">Chrome Extension</a>
+            <a class="nav-link" href="/logout">Logout</a>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block body %}
+<div class="container my-4">
+
+    <!-- Extension Builder -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header page-header">
+            <h5 class="mb-0"><i class="fab fa-chrome me-2"></i>Extension Builder</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Left: Config Form -->
+                <div class="col-lg-7">
+                    <h6 class="text-muted mb-3"><i class="fas fa-palette me-2"></i>Branding</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="schoolName" class="form-label">School Name</label>
+                            <input type="text" class="form-control" id="schoolName" placeholder="e.g. Sunbury College" maxlength="100">
+                            <div class="form-text">Shown in the extension popup header</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="accentColor" class="form-label">Accent Colour</label>
+                            <div class="input-group">
+                                <input type="color" class="form-control form-control-color" id="accentColorPicker" value="#0d3a6e">
+                                <input type="text" class="form-control" id="accentColor" value="#0d3a6e" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" style="font-family: monospace;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="logoUpload" class="form-label">School Logo</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="file" class="form-control" id="logoUpload" accept="image/png,image/jpeg,image/gif,image/webp">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="uploadLogoBtn" style="white-space: nowrap;">
+                                <i class="fas fa-upload me-1"></i>Upload
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm d-none" id="removeLogoBtn" style="white-space: nowrap;">
+                                <i class="fas fa-trash me-1"></i>Remove
+                            </button>
+                        </div>
+                        <div class="form-text">Used as extension icon (16/48/128px) and in popup header. PNG or JPG, max 5MB.</div>
+                        <div id="logoStatus" class="mt-1"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="noticeText" class="form-label">Notice Text</label>
+                        <textarea class="form-control" id="noticeText" rows="2" maxlength="500"
+                            placeholder="Internet activity is monitored on this school-owned device. All websites visited are logged in accordance with school policy."></textarea>
+                        <div class="form-text">The monitoring notice shown to students. Leave empty for default text.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contactInfo" class="form-label">Contact Info</label>
+                        <input type="text" class="form-control" id="contactInfo" maxlength="200"
+                            placeholder="e.g. For help, contact it@school.edu.au">
+                        <div class="form-text">Footer text in the popup. Leave empty for default.</div>
+                    </div>
+
+                    <hr class="my-3">
+                    <h6 class="text-muted mb-3"><i class="fas fa-server me-2"></i>Server & Tracking</h6>
+
+                    <div class="mb-3">
+                        <label for="serverUrl" class="form-label">Server URL</label>
+                        <input type="url" class="form-control" id="serverUrl" placeholder="http://browserreporter:8000">
+                        <div class="form-text">The URL this extension sends data to. Auto-detected from current server.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tracking Hours</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="trackingAllDay" checked>
+                            <label class="form-check-label" for="trackingAllDay">Track 24/7 (all day)</label>
+                        </div>
+                        <div class="row" id="trackingHoursRow">
+                            <div class="col-md-6">
+                                <label for="trackingStart" class="form-label">Start Time</label>
+                                <input type="time" class="form-control" id="trackingStart" value="08:30" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="trackingEnd" class="form-label">End Time</label>
+                                <input type="time" class="form-control" id="trackingEnd" value="15:30" disabled>
+                            </div>
+                        </div>
+                        <div class="form-text">Only record visits during these hours. Outside this window, browsing is not logged.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="monitoredEmails" class="form-label">Monitored Users <span class="badge bg-secondary">Optional</span></label>
+                        <textarea class="form-control" id="monitoredEmails" rows="3"
+                            placeholder="student1@school.edu.au&#10;student2@school.edu.au"></textarea>
+                        <div class="form-text">One email per line. Leave empty to track <strong>all</strong> users. If set, only these users' browsing is recorded.</div>
+                    </div>
+                </div>
+
+                <!-- Right: Live Preview -->
+                <div class="col-lg-5">
+                    <h6 class="text-muted mb-3"><i class="fas fa-eye me-2"></i>Popup Preview</h6>
+                    <div class="border rounded shadow-sm" style="width: 320px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <div id="previewHeader" style="background: #0d3a6e; color: #fff; padding: 14px 18px; display: flex; align-items: center; gap: 12px;">
+                            <div id="previewIcon">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2L4 5v6c0 5.25 3.4 10.14 8 11.36C16.6 21.14 20 16.25 20 11V5l-8-3z" fill="rgba(255,255,255,0.9)"/>
+                                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <div id="previewTitle" style="font-size: 14px; font-weight: 600; letter-spacing: 0.02em;">Network Monitoring</div>
+                                <div id="previewSub" style="font-size: 11px; opacity: 0.75; margin-top: 2px;">School managed device</div>
+                            </div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 0 0 0 0;">
+                            <div id="previewNotice" style="margin: 14px; padding: 12px 14px; border-left: 4px solid; border-radius: 0 6px 6px 0; font-size: 12.5px; line-height: 1.55;"></div>
+                            <div id="previewFooter" style="padding: 14px; font-size: 11px; color: #868e96; text-align: center;"></div>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-muted" style="font-size: 11px;"><i class="fas fa-info-circle me-1"></i>This preview updates as you type</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            <button class="btn btn-outline-secondary" id="saveConfigBtn">
+                <i class="fas fa-save me-2"></i>Save Settings
+            </button>
+            <button class="btn btn-primary" id="buildBtn">
+                <i class="fas fa-hammer me-2"></i>Build Extension
+            </button>
+        </div>
+    </div>
+
+    <!-- Deployment Info -->
+    <div class="card shadow-sm mb-4 d-none" id="deploymentCard">
+        <div class="card-header page-header">
+            <h5 class="mb-0"><i class="fas fa-rocket me-2"></i>Deployment</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Extension ID</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="deployExtId" readonly>
+                            <button class="btn btn-outline-secondary" onclick="copyField('deployExtId')" title="Copy"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Update URL <span class="badge bg-info">for Google Admin Console</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="deployUpdateUrl" readonly style="font-size: 0.85em;">
+                            <button class="btn btn-outline-secondary" onclick="copyField('deployUpdateUrl')" title="Copy"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-success fs-6" id="deployVersion"></span>
+                        <span class="text-muted" id="deployBuiltAt" style="font-size: 0.85em;"></span>
+                    </div>
+                    <div class="mt-3">
+                        <a href="/api/admin/extension-download" class="btn btn-outline-primary">
+                            <i class="fas fa-download me-2"></i>Download .crx
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card section-card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Google Admin Console Setup</h6>
+                        </div>
+                        <div class="card-body" style="font-size: 0.9em;">
+                            <ol class="mb-3 ps-3">
+                                <li class="mb-2">Go to <a href="https://admin.google.com" target="_blank">admin.google.com</a></li>
+                                <li class="mb-2">Navigate to <strong>Devices &gt; Chrome &gt; Apps & extensions</strong></li>
+                                <li class="mb-2">Select the relevant <strong>Organisational Unit</strong></li>
+                                <li class="mb-2">Click <strong>+</strong> &gt; <strong>Add Chrome app or extension by ID</strong></li>
+                                <li class="mb-2">Paste the <strong>Extension ID</strong> above</li>
+                                <li class="mb-2">Set <strong>Installation policy</strong> to <strong>Force install</strong></li>
+                                <li class="mb-2">Set <strong>Update URL</strong> to the URL above</li>
+                                <li>Paste the <strong>managed policy</strong> below into the <strong>Policy for extensions</strong> field</li>
+                            </ol>
+                            <label class="form-label fw-bold">Managed Policy JSON</label>
+                            <div class="position-relative">
+                                <pre class="bg-light p-3 rounded border" id="deployPolicy" style="font-size: 0.85em; white-space: pre-wrap;"></pre>
+                                <button class="btn btn-sm btn-outline-secondary position-absolute" style="top: 8px; right: 8px;" onclick="copyText(document.getElementById('deployPolicy').textContent)" title="Copy">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Data Enrichment (moved from Client Config) -->
+    <div class="card shadow-sm">
+        <div class="card-header page-header">
+            <h5 class="mb-0"><i class="fas fa-user-graduate me-2"></i>Student Data Enrichment</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted mb-3">
+                        Import student data from your school's STMC export to automatically enrich Chromebook extension user records
+                        with display names, homegroups, and class information.
+                    </p>
+                    <div class="mb-3">
+                        <label for="enrichmentFile" class="form-label">School Export CSV</label>
+                        <input type="file" class="form-control" id="enrichmentFile" accept=".csv" required>
+                    </div>
+                    <button type="button" class="btn btn-primary w-100" id="importEnrichmentBtn">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>Import &amp; Enrich
+                    </button>
+                    <div id="enrichmentResult" class="mt-3" style="display: none;"></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card section-card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>How to Export from STMC</h6>
+                        </div>
+                        <div class="card-body">
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-2">Log in to <a href="https://stmc.education.vic.gov.au/" target="_blank" rel="noopener">STMC</a></li>
+                                <li class="mb-2">Select <strong>Access Management &gt; Student Passwords</strong></li>
+                                <li class="mb-2">Select your school</li>
+                                <li>Click <strong>Export</strong> to download the CSV</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ── State ────────────────────────────────────────────────────────────
+    let currentConfig = {};
+
+    // ── Initialisation ───────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadConfig();
+        wireEvents();
+        updatePreview();
+    });
+
+    async function loadConfig() {
+        try {
+            const resp = await fetch('/api/admin/extension-config');
+            if (resp.ok) {
+                currentConfig = await resp.json();
+                populateForm(currentConfig);
+                if (currentConfig.extension_id && currentConfig.last_built_at) {
+                    showDeployment(currentConfig);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load extension config:', e);
+        }
+    }
+
+    function populateForm(c) {
+        document.getElementById('schoolName').value = c.school_name || '';
+        document.getElementById('accentColor').value = c.accent_color || '#0d3a6e';
+        document.getElementById('accentColorPicker').value = c.accent_color || '#0d3a6e';
+        document.getElementById('noticeText').value = c.notice_text || '';
+        document.getElementById('contactInfo').value = c.contact_info || '';
+        document.getElementById('serverUrl').value = c.server_url || window.location.origin;
+        document.getElementById('trackingAllDay').checked = c.tracking_all_day !== false;
+        document.getElementById('trackingStart').value = c.tracking_start_time || '08:30';
+        document.getElementById('trackingEnd').value = c.tracking_end_time || '15:30';
+        document.getElementById('trackingStart').disabled = c.tracking_all_day !== false;
+        document.getElementById('trackingEnd').disabled = c.tracking_all_day !== false;
+        document.getElementById('monitoredEmails').value = (c.monitored_emails || []).join('\n');
+
+        // Logo state
+        if (c.logo_filename) {
+            document.getElementById('logoStatus').innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Logo uploaded</span>';
+            document.getElementById('removeLogoBtn').classList.remove('d-none');
+        }
+    }
+
+    function wireEvents() {
+        // Live preview updates
+        const previewInputs = ['schoolName', 'accentColor', 'noticeText', 'contactInfo'];
+        previewInputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', updatePreview);
+        });
+
+        // Colour picker sync
+        document.getElementById('accentColorPicker').addEventListener('input', (e) => {
+            document.getElementById('accentColor').value = e.target.value;
+            updatePreview();
+        });
+        document.getElementById('accentColor').addEventListener('input', (e) => {
+            if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                document.getElementById('accentColorPicker').value = e.target.value;
+            }
+            updatePreview();
+        });
+
+        // Tracking hours toggle
+        document.getElementById('trackingAllDay').addEventListener('change', (e) => {
+            document.getElementById('trackingStart').disabled = e.target.checked;
+            document.getElementById('trackingEnd').disabled = e.target.checked;
+        });
+
+        // Buttons
+        document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
+        document.getElementById('buildBtn').addEventListener('click', buildExtension);
+        document.getElementById('uploadLogoBtn').addEventListener('click', uploadLogo);
+        document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
+        document.getElementById('importEnrichmentBtn').addEventListener('click', importStudentEnrichment);
+
+        // Auto-populate server URL
+        if (!document.getElementById('serverUrl').value) {
+            document.getElementById('serverUrl').value = window.location.origin;
+        }
+    }
+
+    // ── Live preview ─────────────────────────────────────────────────────
+
+    function updatePreview() {
+        const color = document.getElementById('accentColor').value || '#0d3a6e';
+        const schoolName = document.getElementById('schoolName').value;
+        const noticeText = document.getElementById('noticeText').value;
+        const contactInfo = document.getElementById('contactInfo').value;
+
+        // Header
+        document.getElementById('previewHeader').style.background = color;
+        document.getElementById('previewTitle').textContent = schoolName || 'Network Monitoring';
+        document.getElementById('previewSub').textContent = schoolName ? 'Managed device' : 'School managed device';
+
+        // Notice
+        const notice = document.getElementById('previewNotice');
+        notice.style.background = color + '18';
+        notice.style.borderColor = color;
+        notice.style.color = '#1a2e45';
+        if (noticeText) {
+            notice.innerHTML = '<strong>' + escapeHtml(noticeText) + '</strong>';
+        } else {
+            notice.innerHTML = '<strong>Internet activity is monitored</strong> on this school-owned device. All websites visited are logged in accordance with school policy.';
+        }
+
+        // Footer
+        document.getElementById('previewFooter').textContent = contactInfo || 'For help, contact your school IT department.';
+    }
+
+    // ── Config save ──────────────────────────────────────────────────────
+
+    async function saveConfig() {
+        const btn = document.getElementById('saveConfigBtn');
+        const original = btn.innerHTML;
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            btn.disabled = true;
+
+            const body = getFormData();
+            const resp = await fetch('/api/admin/extension-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || 'Save failed');
+            }
+
+            btn.innerHTML = '<i class="fas fa-check me-2"></i>Saved!';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
+        } catch (e) {
+            showError('Failed to save: ' + e.message);
+            btn.innerHTML = original;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function getFormData() {
+        const emailsText = document.getElementById('monitoredEmails').value;
+        const emails = emailsText ? emailsText.split('\n').map(e => e.trim()).filter(e => e) : [];
+        return {
+            school_name: document.getElementById('schoolName').value,
+            accent_color: document.getElementById('accentColor').value || '#0d3a6e',
+            notice_text: document.getElementById('noticeText').value,
+            contact_info: document.getElementById('contactInfo').value,
+            server_url: document.getElementById('serverUrl').value || window.location.origin,
+            tracking_start_time: document.getElementById('trackingStart').value || '08:30',
+            tracking_end_time: document.getElementById('trackingEnd').value || '15:30',
+            tracking_all_day: document.getElementById('trackingAllDay').checked,
+            monitored_emails: emails,
+        };
+    }
+
+    // ── Logo upload ──────────────────────────────────────────────────────
+
+    async function uploadLogo() {
+        const fileInput = document.getElementById('logoUpload');
+        const file = fileInput.files[0];
+        if (!file) return showError('Please select an image file first');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const btn = document.getElementById('uploadLogoBtn');
+        const original = btn.innerHTML;
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>';
+            btn.disabled = true;
+
+            const resp = await fetch('/api/admin/extension-logo', { method: 'POST', body: formData });
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || 'Upload failed');
+            }
+
+            document.getElementById('logoStatus').innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Logo uploaded</span>';
+            document.getElementById('removeLogoBtn').classList.remove('d-none');
+            fileInput.value = '';
+        } catch (e) {
+            showError('Logo upload failed: ' + e.message);
+        } finally {
+            btn.innerHTML = original;
+            btn.disabled = false;
+        }
+    }
+
+    async function removeLogo() {
+        try {
+            const resp = await fetch('/api/admin/extension-logo', { method: 'DELETE' });
+            if (!resp.ok) throw new Error('Failed to remove logo');
+            document.getElementById('logoStatus').innerHTML = '';
+            document.getElementById('removeLogoBtn').classList.add('d-none');
+        } catch (e) {
+            showError('Failed to remove logo: ' + e.message);
+        }
+    }
+
+    // ── Build ────────────────────────────────────────────────────────────
+
+    async function buildExtension() {
+        const btn = document.getElementById('buildBtn');
+        const original = btn.innerHTML;
+        try {
+            // Save config first
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving config...';
+            btn.disabled = true;
+
+            const body = getFormData();
+            const saveResp = await fetch('/api/admin/extension-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!saveResp.ok) {
+                const err = await saveResp.json();
+                throw new Error('Config save failed: ' + (err.detail || 'Unknown error'));
+            }
+
+            // Build
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Building extension...';
+
+            const resp = await fetch('/api/admin/extension-build', { method: 'POST' });
+            const result = await resp.json();
+            if (!resp.ok) throw new Error(result.detail || 'Build failed');
+
+            showDeployment(result);
+
+            btn.innerHTML = '<i class="fas fa-check me-2"></i>Built!';
+            btn.classList.replace('btn-primary', 'btn-success');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.replace('btn-success', 'btn-primary');
+            }, 3000);
+        } catch (e) {
+            showError('Build failed: ' + e.message);
+            btn.innerHTML = original;
+            btn.classList.replace('btn-success', 'btn-primary');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ── Deployment info ──────────────────────────────────────────────────
+
+    function showDeployment(data) {
+        document.getElementById('deploymentCard').classList.remove('d-none');
+        document.getElementById('deployExtId').value = data.extension_id || '';
+        document.getElementById('deployUpdateUrl').value = data.update_url || '';
+        document.getElementById('deployVersion').textContent = 'v' + (data.version || data.current_version || '?');
+
+        if (data.last_built_at) {
+            const d = new Date(data.last_built_at);
+            document.getElementById('deployBuiltAt').textContent = 'Built ' + d.toLocaleString();
+        }
+
+        // Generate managed policy JSON
+        const serverUrl = document.getElementById('serverUrl').value || window.location.origin;
+        const policy = {
+            username: "${USER_EMAIL}",
+            display_name: "${USER_FULL_NAME}"
+        };
+        document.getElementById('deployPolicy').textContent = JSON.stringify(policy, null, 2);
+    }
+
+    // ── Student enrichment (moved from Client Config) ────────────────────
+
+    async function importStudentEnrichment() {
+        const fileInput = document.getElementById('enrichmentFile');
+        const file = fileInput.files[0];
+        if (!file) return showError('Please select a CSV file to upload');
+        if (!file.name.endsWith('.csv')) return showError('Please select a CSV file');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const btn = document.getElementById('importEnrichmentBtn');
+        const originalText = btn.innerHTML;
+        const resultDiv = document.getElementById('enrichmentResult');
+        resultDiv.style.display = 'none';
+
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
+            btn.disabled = true;
+
+            const response = await fetch('/api/admin/enrich-students', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'Import failed');
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="alert alert-success mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Import complete</strong><br>
+                    <small>
+                        ${result.imported.toLocaleString()} records imported &bull;
+                        ${result.users_updated.toLocaleString()} existing users enriched
+                        ${result.skipped > 0 ? ` &bull; ${result.skipped} rows skipped` : ''}
+                    </small>
+                </div>`;
+            fileInput.value = '';
+        } catch (error) {
+            console.error('Error importing enrichment data:', error);
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(error.message)}</div>`;
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+
+    function copyField(id) {
+        const el = document.getElementById(id);
+        navigator.clipboard.writeText(el.value).then(() => {
+            const btn = el.nextElementSibling;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => btn.innerHTML = orig, 1500);
+        });
+    }
+
+    function copyText(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showSuccess('Copied to clipboard');
+        });
+    }
+
+    function showError(msg) {
+        // Use the common.js showAlert if available, otherwise basic alert
+        if (typeof showAlert === 'function') {
+            showAlert(msg, 'danger');
+        } else {
+            alert(msg);
+        }
+    }
+
+    function showSuccess(msg) {
+        if (typeof showAlert === 'function') {
+            showAlert(msg, 'success');
+        }
+    }
+</script>
+{% endblock %}

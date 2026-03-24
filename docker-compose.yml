@@ -53,6 +53,9 @@ services:
       LDAP_DEFAULT_ROLE: ${LDAP_DEFAULT_ROLE:-user}
     ports:
       - "0.0.0.0:8000:8000"
+    volumes:
+      - extension_data:/app/data
 
 volumes:
-  db_data: 
+  db_data:
+  extension_data: 
