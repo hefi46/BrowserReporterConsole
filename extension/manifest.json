@@ -34,9 +34,5 @@
 
   "host_permissions": [
     "http://browserreporter:8000/*"
-  ],
-
-  "storage": {
-    "managed_schema": "managed_schema.json"
-  }
+  ]
 }

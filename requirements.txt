@@ -10,3 +10,4 @@ itsdangerous==2.1.2
 python-multipart==0.0.9
 pycryptodome==3.20.0
 ldap3==2.9.1
+Pillow==10.3.0

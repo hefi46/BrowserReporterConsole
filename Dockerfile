@@ -2,7 +2,8 @@ FROM python:3.12-slim
 
 # Install system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential libpq-dev curl && \
+    apt-get install -y --no-install-recommends build-essential libpq-dev curl \
+        libjpeg-dev zlib1g-dev libpng-dev && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -18,7 +19,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Create non-root user and set ownership
-RUN groupadd -r appuser && useradd -r -g appuser appuser && \
+RUN mkdir -p /app/backend/static/extension && \
+    groupadd -r appuser && useradd -r -g appuser appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
