@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
     "notice_text": "Internet activity is monitored on this school-owned device. "
                    "All websites visited are logged in accordance with school policy.",
     "header_color": "#0d3a6e",
-    "server_url": "http://browserreporter:8000",
+    "server_url": "https://browserreporter",
     "reporting_start_time": "00:00",
     "reporting_end_time": "23:59",
     "reporting_days": [0, 1, 2, 3, 4, 5, 6],
@@ -358,3 +358,49 @@ async def preview_icon(request: Request, db: AsyncSession = Depends(get_db)):
 
     icon_data = base64.b64decode(icon_b64)
     return Response(content=icon_data, media_type="image/png")
+
+
+# ── HTTPS / CA certificate endpoints ────────────────────────────────────
+
+CA_CERT_PATH = "/certs/ca.crt"
+
+
+@router.get("/api/admin/extension/ca-cert")
+async def download_ca_cert(request: Request, db: AsyncSession = Depends(get_db)):
+    """Download the CA certificate for upload to Google Admin Console."""
+    await require_admin(request, db)
+    if not os.path.exists(CA_CERT_PATH):
+        raise HTTPException(404, "CA certificate not found. Ensure the cert-init container has run.")
+    return FileResponse(
+        CA_CERT_PATH,
+        media_type="application/x-pem-file",
+        filename="BrowserReporter-CA.crt",
+    )
+
+
+@router.get("/api/admin/extension/ca-cert/status")
+async def ca_cert_status(request: Request, db: AsyncSession = Depends(get_db)):
+    """Check if the CA certificate exists."""
+    await require_admin(request, db)
+    exists = os.path.exists(CA_CERT_PATH)
+    info = {}
+    if exists:
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["openssl", "x509", "-in", CA_CERT_PATH, "-noout",
+                 "-subject", "-enddate", "-fingerprint", "-sha256"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                for line in result.stdout.strip().split("\n"):
+                    if line.startswith("subject="):
+                        info["subject"] = line.split("=", 1)[1].strip()
+                    elif line.startswith("notAfter="):
+                        info["expires"] = line.split("=", 1)[1].strip()
+                    elif "Fingerprint" in line:
+                        info["fingerprint"] = line.split("=", 1)[1].strip()
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            # openssl not available in container — just report existence
+            pass
+    return {"exists": exists, **info}

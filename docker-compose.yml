@@ -33,11 +33,40 @@ services:
       -c log_line_prefix='%t [%p]: '
       -c log_timezone=UTC
 
+  # One-shot container: generates CA + server certs on first run, then exits
+  cert-init:
+    image: alpine/openssl:latest
+    volumes:
+      - certs:/certs
+      - ./caddy/generate-certs.sh:/generate-certs.sh:ro
+    environment:
+      SERVER_HOSTNAME: ${SERVER_HOSTNAME:-browserreporter}
+    entrypoint: ["/bin/sh", "/generate-certs.sh"]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - certs:/certs:ro
+      - caddy_data:/data
+    ports:
+      - "0.0.0.0:443:443"
+      - "0.0.0.0:80:80"
+
   backend:
     build: .
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_started
+      cert-init:
+        condition: service_completed_successfully
+    volumes:
+      - certs:/certs:ro
     environment:
       SESSION_SECRET: ${SESSION_SECRET:-changeme-session-secret}
       DATABASE_URL: postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
@@ -51,8 +80,11 @@ services:
       LDAP_USE_SSL: ${LDAP_USE_SSL:-false}
       LDAP_ADMIN_GROUP_DN: ${LDAP_ADMIN_GROUP_DN:-}
       LDAP_DEFAULT_ROLE: ${LDAP_DEFAULT_ROLE:-user}
+    # Port 8000 exposed for direct HTTP access; Caddy handles HTTPS on 443
     ports:
       - "0.0.0.0:8000:8000"
 
 volumes:
-  db_data: 
+  db_data:
+  certs:
+  caddy_data:

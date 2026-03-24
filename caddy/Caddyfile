@@ -1,0 +1,16 @@
+{
+	# Disable automatic HTTPS — we use our own CA-signed certs
+	auto_https off
+}
+
+# HTTPS — used by Chromebooks for extension updates (GAC requires HTTPS)
+:443 {
+	tls /certs/server.crt /certs/server.key
+
+	reverse_proxy backend:8000
+}
+
+# HTTP — convenient for admin dashboard access (no cert warnings)
+:80 {
+	reverse_proxy backend:8000
+}
