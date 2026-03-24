@@ -282,6 +282,46 @@ async def build_extension_endpoint(
     }
 
 
+@router.post("/api/admin/extension/reset")
+async def reset_extension(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset version to 1.0.0 and generate a new signing key (new extension ID)."""
+    await require_admin(request, db)
+
+    # Generate new signing key → new extension ID
+    new_pem = generate_rsa_key()
+    await _set_setting(db, SIGNING_KEY_KEY, new_pem)
+
+    # Reset version
+    config = await _get_config(db)
+    config["version"] = "1.0.0"
+    await _set_setting(db, CONFIG_KEY, json.dumps(config))
+
+    # Clear old build status
+    await _set_setting(db, BUILD_STATUS_KEY, "")
+
+    # Remove old .crx and update.xml
+    for fname in ("extension.crx", "update.xml"):
+        fpath = os.path.join(STATIC_EXT_DIR, fname)
+        if os.path.exists(fpath):
+            os.remove(fpath)
+
+    await db.commit()
+
+    # Compute new extension ID for response
+    key = RSA.import_key(new_pem)
+    new_ext_id = compute_extension_id(key.publickey().export_key("DER"))
+
+    logger.info("Extension reset: new signing key generated, new id=%s", new_ext_id)
+    return {
+        "success": True,
+        "new_extension_id": new_ext_id,
+        "version": "1.0.0",
+    }
+
+
 @router.get("/api/admin/extension/status")
 async def get_extension_status(request: Request, db: AsyncSession = Depends(get_db)):
     """Get current build status and extension ID."""

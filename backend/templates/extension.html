@@ -228,8 +228,11 @@
                         <div class="text-muted">Loading build status...</div>
                     </div>
 
-                    <button type="button" class="btn btn-success w-100 mb-3" id="buildBtn">
+                    <button type="button" class="btn btn-success w-100 mb-2" id="buildBtn">
                         <i class="fas fa-hammer me-2"></i>Build Extension
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm w-100 mb-3" id="resetBtn">
+                        <i class="fas fa-sync-alt me-1"></i>Reset Version &amp; Generate New Extension ID
                     </button>
 
                     <div id="buildResult" class="d-none">
@@ -524,6 +527,39 @@
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-hammer me-2"></i>Build Extension';
+        }
+    });
+
+    // ── Reset version & generate new ID ──
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+        if (!confirm('This will reset the version to 1.0.0 and generate a new Extension ID.\n\nYou will need to update the Extension ID and Update URL in Google Admin Console after rebuilding.\n\nContinue?')) return;
+
+        const btn = document.getElementById('resetBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Resetting...';
+
+        try {
+            const resp = await fetch('/api/admin/extension/reset', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || 'Reset failed');
+            }
+
+            const result = await resp.json();
+            showAlert('success',
+                `Reset complete! New Extension ID: ${result.new_extension_id}. Version reset to ${result.version}. Click Build to generate the new .crx file.`);
+
+            document.getElementById('buildResult').classList.add('d-none');
+            await loadBuildStatus();
+        } catch (err) {
+            showAlert('danger', 'Reset failed: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Reset Version & Generate New Extension ID';
         }
     });
 
