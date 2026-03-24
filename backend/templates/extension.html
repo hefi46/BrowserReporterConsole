@@ -446,39 +446,43 @@
         }
     }
 
-    // ── Save config ──
-    document.getElementById('saveConfigBtn').addEventListener('click', async () => {
-        const btn = document.getElementById('saveConfigBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
-
+    // ── Save config (reusable) ──
+    async function saveConfig() {
         const activeDays = [];
         document.querySelectorAll('.day-check:checked').forEach(cb => {
             activeDays.push(parseInt(cb.value));
         });
 
+        const resp = await fetch('/api/admin/extension/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                school_name: schoolName.value,
+                school_subtitle: schoolSubtitle.value,
+                notice_text: noticeText.value,
+                it_contact: itContact.value,
+                header_color: headerColor.value,
+                server_url: serverUrl.value,
+                reporting_start_time: reportStartTime.value,
+                reporting_end_time: reportEndTime.value,
+                reporting_days: activeDays,
+            }),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || 'Save failed');
+        }
+        return await resp.json();
+    }
+
+    document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('saveConfigBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+
         try {
-            const resp = await fetch('/api/admin/extension/config', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    school_name: schoolName.value,
-                    school_subtitle: schoolSubtitle.value,
-                    notice_text: noticeText.value,
-                    it_contact: itContact.value,
-                    header_color: headerColor.value,
-                    server_url: serverUrl.value,
-                    reporting_start_time: reportStartTime.value,
-                    reporting_end_time: reportEndTime.value,
-                    reporting_days: activeDays,
-                }),
-            });
-
-            if (!resp.ok) {
-                const err = await resp.json();
-                throw new Error(err.detail || 'Save failed');
-            }
-
+            await saveConfig();
             showAlert('success', 'Configuration saved successfully.');
         } catch (err) {
             showAlert('danger', 'Save failed: ' + err.message);
@@ -488,13 +492,18 @@
         }
     });
 
-    // ── Build extension ──
+    // ── Build extension (saves config first, then builds) ──
     document.getElementById('buildBtn').addEventListener('click', async () => {
         const btn = document.getElementById('buildBtn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Building...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving config...';
 
         try {
+            // Save current form values first
+            await saveConfig();
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Building...';
+
             const resp = await fetch('/api/admin/extension/build', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
