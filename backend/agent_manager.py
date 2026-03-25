@@ -166,17 +166,6 @@ def _prepare_build_source(
         encoding="utf-8",
     )
 
-    # Create flat entry-point for PyInstaller (no relative imports)
-    (src_path / "entry_point.py").write_text(
-        '"""PyInstaller entry point."""\n'
-        "import sys, os\n"
-        "sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\n"
-        "from agent import main\n"
-        "if __name__ == '__main__':\n"
-        "    main()\n",
-        encoding="utf-8",
-    )
-
     # Rewrite relative imports to absolute for flat build
     _rewrite_imports = {
         "agent.py": [
@@ -199,16 +188,29 @@ def _prepare_build_source(
                 txt = txt.replace(old, new)
             fp.write_text(txt, encoding="utf-8")
 
-    # Write PyInstaller spec
+    # Append __main__ block to agent.py so PyInstaller can use it directly
+    agent_file = src_path / "agent.py"
+    agent_text = agent_file.read_text(encoding="utf-8")
+    if "if __name__" not in agent_text:
+        agent_text += "\n\nif __name__ == '__main__':\n    main()\n"
+        agent_file.write_text(agent_text, encoding="utf-8")
+
+    # Remove package files that confuse PyInstaller flat builds
+    for name in ("__init__.py", "__main__.py"):
+        p = src_path / name
+        if p.exists():
+            p.unlink()
+
+    # Write PyInstaller spec — uses agent.py directly as the entry point
     (src_path / "agent_build.spec").write_text(
         "# Auto-generated PyInstaller spec for Docker build\n"
         "a = Analysis(\n"
-        "    ['entry_point.py'],\n"
-        "    pathex=['/src'],\n"
+        "    ['agent.py'],\n"
+        "    pathex=['.'],\n"
         "    binaries=[],\n"
         "    datas=[],\n"
         "    hiddenimports=[\n"
-        "        'config', 'version', 'state', 'browsers', 'reporter', 'agent',\n"
+        "        'config', 'version', 'state', 'browsers', 'reporter',\n"
         "        'Crypto.Cipher.AES', 'Crypto.Util.Padding',\n"
         "    ],\n"
         "    hookspath=[], hooksconfig={}, runtime_hooks=[], excludes=[], noarchive=False,\n"
