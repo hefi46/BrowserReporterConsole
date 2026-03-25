@@ -10,11 +10,18 @@ import sys
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
-from .config import load_config
-from .version import __version__
-from .state import get_last_sent, set_last_sent
-from .browsers import collect_visits
-from .reporter import check_version, send_visits
+try:
+    from .config import load_config
+    from .version import __version__
+    from .state import get_last_sent, set_last_sent
+    from .browsers import collect_visits
+    from .reporter import check_version, send_visits
+except ImportError:
+    from config import load_config
+    from version import __version__
+    from state import get_last_sent, set_last_sent
+    from browsers import collect_visits
+    from reporter import check_version, send_visits
 
 _LOG_DIR = os.path.join(
     os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
@@ -103,7 +110,7 @@ def main() -> None:
         browsers_to_check.append("edge")
 
     all_visits = []
-    max_webkit_by_browser: dict[str, int] = {}
+    max_webkit_by_browser = {}  # type: Dict[str, int]
 
     for browser in browsers_to_check:
         since = get_last_sent(browser)

@@ -10,7 +10,7 @@ import shutil
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta, timezone
-from typing import NamedTuple
+from typing import List, NamedTuple
 
 logger = logging.getLogger("browser_reporter_agent")
 
@@ -42,7 +42,7 @@ def _max_history_webkit(max_days: int) -> int:
     return int((epoch_s + _WEBKIT_EPOCH_DIFF) * 1_000_000)
 
 
-def _find_history_paths(browser_data_dir: str) -> list[str]:
+def _find_history_paths(browser_data_dir: str) -> List[str]:
     """Find all History database files across browser profiles."""
     paths = []
     if not os.path.isdir(browser_data_dir):
@@ -63,9 +63,9 @@ def _find_history_paths(browser_data_dir: str) -> list[str]:
     return paths
 
 
-def _query_history(db_path: str, since_webkit: int) -> list[Visit]:
+def _query_history(db_path: str, since_webkit: int) -> List[Visit]:
     """Copy the History DB to temp and query visits since the given timestamp."""
-    visits: list[Visit] = []
+    visits: List[Visit] = []
     tmp_path = None
     try:
         # Copy to temp — browser locks the original
@@ -110,7 +110,7 @@ def collect_visits(
     browser: str,
     since_webkit: int,
     max_history_days: int,
-) -> list[Visit]:
+) -> List[Visit]:
     """Collect visits from a browser since the given WebKit timestamp.
 
     Args:
@@ -140,7 +140,7 @@ def collect_visits(
         logger.info("No %s history databases found", browser)
         return []
 
-    all_visits: list[Visit] = []
+    all_visits: List[Visit] = []
     for path in history_paths:
         logger.info("Reading %s history: %s", browser, path)
         all_visits.extend(_query_history(path, effective_since))

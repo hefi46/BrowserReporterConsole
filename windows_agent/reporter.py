@@ -1,12 +1,16 @@
 """HTTP reporter — sends collected visits to the BrowserReporterConsole API."""
 
 import logging
-from typing import Optional
+from typing import List, Optional
 
 import requests
 
-from .browsers import Visit
-from .version import __version__
+try:
+    from .browsers import Visit
+    from .version import __version__
+except ImportError:
+    from browsers import Visit
+    from version import __version__
 
 logger = logging.getLogger("browser_reporter_agent")
 
@@ -31,7 +35,7 @@ def send_visits(
     server_url: str,
     username: str,
     computer_name: str,
-    visits: list[Visit],
+    visits: List[Visit],
 ) -> bool:
     """POST visits to /api/reports/data.
 
