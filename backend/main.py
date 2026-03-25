@@ -31,7 +31,7 @@ from .models import DashboardUser, DashboardRoleEnum
 from .crud import get_purge_schedule, purge_visits, purge_all_data
 from .utils import get_password_hash
 from .migrations.runner import get_db_config, ensure_schema_columns, apply_migrations
-from .routers import auth, reports, admin
+from .routers import auth, reports, admin, extension, agent
 from .routers.deps import require_login
 
 # ── Logging ──────────────────────────────────────────────────────────────
@@ -223,10 +223,14 @@ templates.env.globals["is_admin"] = _is_admin_user
 auth.configure(templates)
 reports.configure(templates)
 admin.configure(templates, SECURECONFIG_PATH)
+extension.configure(templates)
+agent.configure(templates, SECURECONFIG_PATH)
 
 app.include_router(auth.router)
 app.include_router(reports.router)
 app.include_router(admin.router)
+app.include_router(extension.router)
+app.include_router(agent.router)
 
 
 # ── Global exception handler ────────────────────────────────────────────

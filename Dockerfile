@@ -17,11 +17,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application source
 COPY . .
 
-# Create non-root user and set ownership
-RUN groupadd -r appuser && useradd -r -g appuser appuser && \
-    mkdir -p /app/data /app/backend/static/extension && \
-    chown -R appuser:appuser /app
-USER appuser
+# Create directories for extension and agent data
+# Note: runs as root to allow Docker socket access for agent builds
+RUN mkdir -p /app/data /app/backend/static/extension /app/backend/static/agent /app/agent_build
 
 # Default environment values (can be overridden in compose or with -e)
 ENV SESSION_SECRET=changeme-session-secret \

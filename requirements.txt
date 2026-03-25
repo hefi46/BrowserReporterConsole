@@ -11,4 +11,5 @@ python-multipart==0.0.9
 pycryptodome==3.20.0
 ldap3==2.9.1
 Pillow>=10.0.0
-crx3>=1.0.0
+crx3>=0.0.4
+docker>=7.0.0

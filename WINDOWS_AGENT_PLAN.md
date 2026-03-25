@@ -11,9 +11,12 @@ The server already handles AD attribute enrichment via its existing LDAP integra
 - **Language**: Python, compiled to .exe with PyInstaller
 - **History collection**: Read Chrome/Edge SQLite History databases directly (copy to temp first since browsers lock the file)
 - **AD attributes**: Server-side LDAP lookup — agent sends domain username, server enriches
-- **Deployment**: Scheduled task on login → runs .exe from network share
-- **Version checking**: Agent checks server for latest version; if newer available, logs and exits (next login runs updated .exe from share)
-- **Console integration**: Admin management page (upload .exe, download package with config), NOT a builder (PyInstaller can't cross-compile Linux→Windows in Docker)
+- **Deployment**: GPO scheduled task on login → runs PowerShell bootstrap from `\\dc\netlogon\` → pulls .exe + config from console over HTTP → runs agent locally
+- **Version checking**: Bootstrap script checks `GET /api/agent/version` before downloading (~50 bytes per login). Only pulls .exe when version changes
+- **Console integration**: Admin management page with Docker-based build (using `cdrx/pyinstaller-windows`), manual upload fallback, download package, and bootstrap .ps1
+- **Server-side build**: Separate Docker container (`cdrx/pyinstaller-windows:python3`) cross-compiles Python → Windows .exe via Docker socket. Backend triggers one-shot builds on demand
+- **No SMB share needed**: Console serves .exe and config over HTTP from Docker container. Only file on domain infrastructure is one .ps1 in netlogon
+- **No LDAP on client**: Agent only sends `USERNAME` and `COMPUTERNAME`. Server-side LDAP (service account, already built) handles all AD attribute lookups (department → homegroup, display name, groups). Keeps agent tiny with minimal dependencies
 
 ---
 
@@ -156,7 +159,8 @@ Produces `dist/BrowserReporter.exe`.
 | POST | `/api/admin/agent-upload` | admin | Upload pre-built .exe |
 | GET | `/api/admin/agent-download` | admin | Download .exe + secureconfig.json as zip |
 | GET | `/api/agent/version` | public | Returns `{"version": "1.0.0"}` for agent version check |
-| GET | `/api/agent/exe` | public | Download latest .exe (for network share refresh) |
+| GET | `/api/agent/exe` | public | Download latest .exe (bootstrap pulls this) |
+| GET | `/api/agent/config` | public | Download current secureconfig.json (bootstrap pulls this) |
 
 ### `backend/agent_manager.py` — Business Logic
 
@@ -193,18 +197,58 @@ Admin page with:
 
 ---
 
-## Phase 4: Build & Test
+## Phase 4: Deployment (HTTP Pull via PowerShell Bootstrap)
 
+### `windows_agent/bootstrap.ps1` — Drop in `\\dc\netlogon\`
+```powershell
+# BrowserReporter Bootstrap — GPO Logon Script
+$server  = "http://browserreporter.yourdomain.local:8000"
+$dir     = "$env:LOCALAPPDATA\BrowserReporter"
+$exe     = "$dir\BrowserReporter.exe"
+$verFile = "$dir\version.txt"
+
+New-Item -ItemType Directory -Path $dir -Force | Out-Null
+
+try {
+    $remote = (Invoke-RestMethod "$server/api/agent/version").version
+    $local  = if (Test-Path $verFile) { (Get-Content $verFile -Raw).Trim() } else { "" }
+
+    if ($remote -ne $local) {
+        Invoke-WebRequest "$server/api/agent/exe" -OutFile $exe
+        Invoke-WebRequest "$server/api/agent/config" -OutFile "$dir\secureconfig.json"
+        $remote | Set-Content $verFile
+    }
+} catch { }
+
+if (Test-Path $exe) {
+    Start-Process $exe -WindowStyle Hidden
+}
+```
+
+### Traffic per login
+| Action | Size |
+|--------|------|
+| Version check (`/api/agent/version`) | ~50 bytes |
+| No update needed | **done** |
+| Update available (one-time) | ~8-10MB |
+
+### GPO Setup
+1. Place `bootstrap.ps1` in `\\dc\netlogon\`
+2. Group Policy → Computer Config → Preferences → Scheduled Tasks
+3. Trigger: At log on
+4. Action: `powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserReporter.ps1`
+
+### Build & Test
 1. Build .exe on a Windows machine: `cd windows_agent && pip install -r requirements.txt && pyinstaller agent.spec`
 2. Upload to console via `/windows-agent` page
-3. Download package, place on network share
-4. Create test GPO scheduled task pointing to share
-5. Login on a domain-joined Windows PC, verify:
+3. Deploy `bootstrap.ps1` to netlogon
+4. Login on a domain-joined Windows PC, verify:
+   - Bootstrap pulls .exe and config from console
    - Agent runs and exits cleanly
    - Browsing data appears in console
-   - Username is enriched via server LDAP (department → homegroup)
+   - Username is enriched via server-side LDAP (department → homegroup)
    - Logs written to `%LOCALAPPDATA%\BrowserReporter\agent.log`
-   - Version check works against `/api/agent/version`
+   - Subsequent logins skip download (version matches)
 
 ---
 

@@ -55,7 +55,10 @@ services:
       - "0.0.0.0:8000:8000"
     volumes:
       - extension_data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - agent_build:/app/agent_build
 
 volumes:
   db_data:
-  extension_data: 
+  extension_data:
+  agent_build:

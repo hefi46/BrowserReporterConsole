@@ -42,8 +42,8 @@ def configure(t: Jinja2Templates) -> None:
 
 
 @router.get("/chrome-extension", response_class=HTMLResponse)
-async def extension_page(request: Request):
-    require_admin(request)
+async def extension_page(request: Request, db: AsyncSession = Depends(get_db)):
+    await require_admin(request, db)
     return templates.TemplateResponse("extension.html", {"request": request})
 
 
@@ -52,7 +52,7 @@ async def extension_page(request: Request):
 
 @router.get("/api/admin/extension-config")
 async def get_extension_config(request: Request, db: AsyncSession = Depends(get_db)):
-    require_admin(request)
+    await require_admin(request, db)
     config = await load_extension_config(db)
     return config
 
@@ -63,7 +63,7 @@ async def update_extension_config(
     body: ExtensionConfigIn,
     db: AsyncSession = Depends(get_db),
 ):
-    require_admin(request)
+    await require_admin(request, db)
     config = await load_extension_config(db)
 
     # Merge form fields into existing config (preserving version, extension_id, etc.)
@@ -90,7 +90,7 @@ async def upload_extension_logo(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
-    require_admin(request)
+    await require_admin(request, db)
 
     # Validate file type
     if not file.content_type or not file.content_type.startswith("image/"):
@@ -134,7 +134,7 @@ async def remove_extension_logo(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    require_admin(request)
+    await require_admin(request, db)
 
     config = await load_extension_config(db)
     logo_filename = config.get("logo_filename", "")
@@ -157,7 +157,7 @@ async def build_extension_endpoint(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    require_admin(request)
+    await require_admin(request, db)
 
     # Determine server URL from request if not configured
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
@@ -185,8 +185,8 @@ async def build_extension_endpoint(
 
 
 @router.get("/api/admin/extension-download")
-async def download_extension(request: Request):
-    require_admin(request)
+async def download_extension(request: Request, db: AsyncSession = Depends(get_db)):
+    await require_admin(request, db)
     crx_path = _STATIC_DIR / "extension" / "extension.crx"
     if not crx_path.exists():
         raise HTTPException(status_code=404, detail="Extension not built yet. Click 'Build Extension' first.")
