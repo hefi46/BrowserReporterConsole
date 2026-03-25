@@ -682,7 +682,8 @@ async def admin_page(request: Request, db: AsyncSession = Depends(get_db)):
     return templates.TemplateResponse("admin.html", {"request": request})
 
 
-@router.get("/client-config", response_class=HTMLResponse)
-async def client_config_page(request: Request, db: AsyncSession = Depends(get_db)):
-    await require_admin(request, db)
-    return templates.TemplateResponse("client_config.html", {"request": request})
+@router.get("/client-config")
+async def client_config_redirect():
+    """Redirect old client-config URL to windows-agent page."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/windows-agent", status_code=301)

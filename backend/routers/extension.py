@@ -28,7 +28,7 @@ templates: Jinja2Templates | None = None
 
 # Resolved paths
 _BASE_DIR = Path(__file__).resolve().parent.parent
-_TEMPLATE_DIR = _BASE_DIR.parent / "extension"
+_TEMPLATE_DIR = _BASE_DIR.parent / "chrome_extension"
 _STATIC_DIR = _BASE_DIR / "static"
 _DATA_DIR = Path(os.getenv("EXTENSION_DATA_DIR", "/app/data"))
 

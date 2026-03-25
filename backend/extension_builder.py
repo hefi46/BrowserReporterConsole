@@ -361,12 +361,11 @@ def increment_version(current: str) -> str:
 
 def build_crx(build_dir: str, pem_path: str, output_path: str) -> None:
     """Package the build directory into a signed .crx file."""
-    import crx3 as crx3_module
+    from crx3.creator import create_crx_file
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    # crx3.create(directory, output, key_file)
-    crx3_module.create(build_dir, output_path, pem_path)
+    create_crx_file(build_dir, pem_path, output_path)
     logger.info("Built CRX: %s", output_path)
 
 

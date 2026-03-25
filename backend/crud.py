@@ -68,6 +68,8 @@ async def bulk_insert_visits(db: AsyncSession, user_id: int, visits: Sequence[Vi
                 url=v.Url,
                 title=v.Title,
                 visit_time=datetime.fromtimestamp(v.VisitTime / 1000.0, tz=timezone.utc),
+                source=v.Source,
+                browser_profile=v.BrowserProfile,
             )
         )
     if rows:

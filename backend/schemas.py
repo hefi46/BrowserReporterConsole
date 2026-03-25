@@ -10,6 +10,8 @@ class VisitIn(BaseModel):
     Title: str
     VisitTime: int  # epoch milliseconds
     ComputerName: str
+    Source: Optional[str] = None  # "chrome_extension", "windows_agent", "windows_agent_edge"
+    BrowserProfile: Optional[str] = None  # "Default", "Profile 1", etc.
 
 
 class UserInfoIn(BaseModel):

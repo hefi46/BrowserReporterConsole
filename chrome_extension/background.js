@@ -88,6 +88,7 @@ async function recordVisit(url, title) {
     Title: title,
     VisitTime: Date.now(), // epoch milliseconds, as the server expects
     ComputerName: computerName,
+    Source: "chrome_extension",
   };
 
   // Append to the persisted queue
