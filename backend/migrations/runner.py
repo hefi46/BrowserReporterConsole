@@ -83,6 +83,7 @@ async def ensure_schema_columns(conn: asyncpg.Connection) -> None:
         ("dashboard_users", "auth_source", "VARCHAR DEFAULT 'local' NOT NULL"),
         ("visits", "source", "VARCHAR"),
         ("visits", "browser_profile", "VARCHAR"),
+        ("users", "ad_enriched_at", "TIMESTAMPTZ"),
     ]
 
     for table, column, col_type in required_columns:

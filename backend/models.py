@@ -20,6 +20,7 @@ class User(Base):
     homegroup = Column(String, index=True)  # mapped from Department
     email = Column(String)
     last_seen_at = Column(DateTime(timezone=True))
+    ad_enriched_at = Column(DateTime(timezone=True))  # last AD lookup attempt (success or miss)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     visits = relationship("Visit", back_populates="user", cascade="all, delete-orphan")

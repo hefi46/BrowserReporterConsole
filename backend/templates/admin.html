@@ -278,7 +278,7 @@
                 <div class="col-12">
                     <div class="card section-card">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0"><i class="fas fa-building me-2"></i>LDAP / Active Directory Authentication</h6>
+                            <h6 class="mb-0"><i class="fas fa-building me-2"></i>LDAP / Active Directory</h6>
                             <div>
                                 <span id="ldapStatusBadge" class="badge bg-secondary me-2">Loading...</span>
                                 <button class="btn btn-outline-secondary btn-sm" id="refreshLdapBtn">
@@ -297,6 +297,13 @@
                                                 <strong>Enable LDAP Authentication</strong>
                                             </label>
                                             <div class="form-text">When enabled, users can log in with their domain credentials. Local accounts still work as a fallback.</div>
+                                        </div>
+                                        <div class="mb-3 form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="ldapEnrichmentEnabled">
+                                            <label class="form-check-label" for="ldapEnrichmentEnabled">
+                                                <strong>Enable LDAP User Enrichment</strong>
+                                            </label>
+                                            <div class="form-text">Auto-populate user details (name, homegroup) from AD when browsing data arrives. Requires connection settings below.</div>
                                         </div>
 
                                         <div id="ldapFields">
@@ -327,16 +334,21 @@
                                                 <input type="text" class="form-control" id="ldapSearchFilter" placeholder="(&amp;(objectClass=user)(sAMAccountName={username}))">
                                                 <div class="form-text"><code>{username}</code> is replaced with the login username</div>
                                             </div>
+                                            <div class="mb-3">
+                                                <label for="ldapHomegroupAttribute" class="form-label">Homegroup AD Attribute</label>
+                                                <input type="text" class="form-control" id="ldapHomegroupAttribute" placeholder="department">
+                                                <div class="form-text">AD attribute to map to homegroup (e.g. <code>department</code>, <code>physicalDeliveryOfficeName</code>, <code>extensionAttribute1</code>)</div>
+                                            </div>
                                             <div class="mb-3 form-check">
                                                 <input class="form-check-input" type="checkbox" id="ldapUseSsl">
                                                 <label class="form-check-label" for="ldapUseSsl">Use SSL/TLS</label>
                                             </div>
-                                            <div class="mb-3">
+                                            <div class="mb-3 ldap-auth-only">
                                                 <label for="ldapAdminGroupDn" class="form-label">Admin Group DN <small class="text-muted">(optional)</small></label>
                                                 <input type="text" class="form-control" id="ldapAdminGroupDn" placeholder="CN=BrowserReporter-Admins,OU=Groups,DC=school,DC=local">
                                                 <div class="form-text">Members of this AD group get the <strong>admin</strong> role automatically</div>
                                             </div>
-                                            <div class="mb-3">
+                                            <div class="mb-3 ldap-auth-only">
                                                 <label for="ldapDefaultRole" class="form-label">Default Role for LDAP Users</label>
                                                 <select class="form-select" id="ldapDefaultRole">
                                                     <option value="user">User</option>
@@ -782,11 +794,20 @@
     document.getElementById('refreshLdapBtn').addEventListener('click', loadLdapConfig);
     document.getElementById('testLdapBtn').addEventListener('click', testLdapConnection);
     document.getElementById('ldapEnabled').addEventListener('change', toggleLdapFields);
+    document.getElementById('ldapEnrichmentEnabled').addEventListener('change', toggleLdapFields);
 
     function toggleLdapFields() {
-        const enabled = document.getElementById('ldapEnabled').checked;
-        const fields = document.querySelectorAll('#ldapFields input, #ldapFieldsRight input, #ldapFieldsRight select');
-        fields.forEach(f => f.disabled = !enabled);
+        const authOn = document.getElementById('ldapEnabled').checked;
+        const enrichOn = document.getElementById('ldapEnrichmentEnabled').checked;
+        const eitherOn = authOn || enrichOn;
+
+        // Connection fields: enabled when either toggle is on
+        document.querySelectorAll('#ldapFields input, #ldapFieldsRight input, #ldapFieldsRight select')
+            .forEach(f => { if (!f.closest('.ldap-auth-only')) f.disabled = !eitherOn; });
+
+        // Auth-only fields (admin group DN, default role): only when auth is on
+        document.querySelectorAll('.ldap-auth-only input, .ldap-auth-only select')
+            .forEach(f => f.disabled = !authOn);
     }
 
     async function loadLdapConfig() {
@@ -796,11 +817,13 @@
             const config = await response.json();
 
             document.getElementById('ldapEnabled').checked = config.enabled || false;
+            document.getElementById('ldapEnrichmentEnabled').checked = config.enrichment_enabled || false;
             document.getElementById('ldapServer').value = config.server || '';
             document.getElementById('ldapBaseDn').value = config.base_dn || '';
             document.getElementById('ldapBindDn').value = config.bind_dn || '';
             document.getElementById('ldapBindPassword').value = '';
             document.getElementById('ldapSearchFilter').value = config.user_search_filter || '(&(objectClass=user)(sAMAccountName={username}))';
+            document.getElementById('ldapHomegroupAttribute').value = config.homegroup_attribute || 'department';
             document.getElementById('ldapUseSsl').checked = config.use_ssl || false;
             document.getElementById('ldapAdminGroupDn').value = config.admin_group_dn || '';
             document.getElementById('ldapDefaultRole').value = config.default_role || 'user';
@@ -816,8 +839,11 @@
 
             const badge = document.getElementById('ldapStatusBadge');
             if (config.enabled) {
-                badge.textContent = 'Enabled';
+                badge.textContent = 'Auth Enabled';
                 badge.className = 'badge bg-success me-2';
+            } else if (config.enrichment_enabled) {
+                badge.textContent = 'Enrichment Only';
+                badge.className = 'badge bg-info me-2';
             } else {
                 badge.textContent = 'Disabled';
                 badge.className = 'badge bg-secondary me-2';
@@ -836,11 +862,13 @@
         try {
             const body = {
                 enabled: document.getElementById('ldapEnabled').checked,
+                enrichment_enabled: document.getElementById('ldapEnrichmentEnabled').checked,
                 server: document.getElementById('ldapServer').value,
                 base_dn: document.getElementById('ldapBaseDn').value,
                 bind_dn: document.getElementById('ldapBindDn').value,
                 bind_password: document.getElementById('ldapBindPassword').value,
                 user_search_filter: document.getElementById('ldapSearchFilter').value,
+                homegroup_attribute: document.getElementById('ldapHomegroupAttribute').value || 'department',
                 use_ssl: document.getElementById('ldapUseSsl').checked,
                 admin_group_dn: document.getElementById('ldapAdminGroupDn').value,
                 default_role: document.getElementById('ldapDefaultRole').value,

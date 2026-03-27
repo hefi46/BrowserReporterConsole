@@ -34,6 +34,8 @@ from .migrations.runner import get_db_config, ensure_schema_columns, apply_migra
 from .routers import auth, reports, admin, extension, agent
 from .routers.deps import require_login
 
+APP_VERSION = "1.0"
+
 # ── Logging ──────────────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -216,6 +218,7 @@ def _is_admin_user(request: Request) -> bool:
 
 
 templates.env.globals["is_admin"] = _is_admin_user
+templates.env.globals["app_version"] = APP_VERSION
 
 
 # ── Wire routers ─────────────────────────────────────────────────────────

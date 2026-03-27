@@ -632,6 +632,8 @@ async def admin_save_ldap_config(
         "use_ssl": bool(body.get("use_ssl", False)),
         "admin_group_dn": str(body.get("admin_group_dn", "")).strip(),
         "default_role": str(body.get("default_role", "user")).strip(),
+        "enrichment_enabled": bool(body.get("enrichment_enabled", False)),
+        "homegroup_attribute": str(body.get("homegroup_attribute", "department")).strip() or "department",
     }
 
     # If password field is empty, preserve the existing one
