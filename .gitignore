@@ -67,6 +67,10 @@ dist/
 build/
 *.egg-info/
 
+# Built extension files (generated at runtime)
+backend/static/extension/extension.crx
+backend/static/extension/update.xml
+
 # Temporary files
 *.tmp
 *.temp

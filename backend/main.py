@@ -226,7 +226,7 @@ templates.env.globals["app_version"] = APP_VERSION
 auth.configure(templates)
 reports.configure(templates)
 admin.configure(templates, SECURECONFIG_PATH)
-extension.configure(templates)
+extension.configure(templates, os.path.join(BASE_DIR, "static", "extension"))
 agent.configure(templates, SECURECONFIG_PATH)
 
 app.include_router(auth.router)

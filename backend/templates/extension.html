@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Chrome Extension - Browser Reporter{% endblock %}
+{% block title %}Extension Builder - Browser Reporter{% endblock %}
 
 {% block navbar %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -11,8 +11,8 @@
         </div>
         <div class="navbar-nav ms-auto d-flex align-items-center">
             <a class="nav-link" href="/admin">Admin</a>
-            <a class="nav-link active" href="/chrome-extension">Chrome Extension</a>
-            <a class="nav-link" href="/windows-agent">Windows Agent</a>
+            <a class="nav-link" href="/client-config">Client Config</a>
+            <a class="nav-link active" href="/extension">Extension</a>
             <a class="nav-link" href="/logout">Logout</a>
         </div>
     </div>
@@ -21,602 +21,635 @@
 
 {% block body %}
 <div class="container my-4">
-
-    <!-- Extension Builder -->
+    <!-- Page Header -->
     <div class="card shadow-sm mb-4">
         <div class="card-header page-header">
-            <h5 class="mb-0"><i class="fab fa-chrome me-2"></i>Extension Builder</h5>
+            <h5 class="mb-0">
+                <i class="fas fa-puzzle-piece me-2"></i>
+                Chrome Extension Builder
+            </h5>
         </div>
         <div class="card-body">
-            <div class="row">
-                <!-- Left: Config Form -->
-                <div class="col-lg-7">
-                    <h6 class="text-muted mb-3"><i class="fas fa-server me-2"></i>Server & Tracking</h6>
+            <p class="text-muted mb-0">
+                Customize, build, and host the Chrome extension for managed Chromebooks.
+                Configure branding, time restrictions, then build and deploy via Google Admin Console.
+            </p>
+        </div>
+    </div>
 
-                    <div class="mb-3">
-                        <label for="serverUrl" class="form-label">Server URL</label>
-                        <input type="url" class="form-control" id="serverUrl" placeholder="http://browserreporter:8000">
-                        <div class="form-text">The URL this extension sends data to. Auto-detected from current server.</div>
-                    </div>
+    <!-- Status Banner -->
+    <div id="buildStatus" class="alert d-none mb-4"></div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Tracking Hours</label>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="trackingAllDay" checked>
-                            <label class="form-check-label" for="trackingAllDay">Track 24/7 (all day)</label>
-                        </div>
-                        <div class="row" id="trackingHoursRow">
-                            <div class="col-md-6">
-                                <label for="trackingStart" class="form-label">Start Time</label>
-                                <input type="time" class="form-control" id="trackingStart" value="08:30" disabled>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="trackingEnd" class="form-label">End Time</label>
-                                <input type="time" class="form-control" id="trackingEnd" value="15:30" disabled>
-                            </div>
-                        </div>
-                        <div class="form-text">Only record visits during these hours. Outside this window, browsing is not logged.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="monitoredEmails" class="form-label">Monitored Users <span class="badge bg-secondary">Optional</span></label>
-                        <textarea class="form-control" id="monitoredEmails" rows="3"
-                            placeholder="student1@school.edu.au&#10;student2@school.edu.au"></textarea>
-                        <div class="form-text">One email per line. Leave empty to track <strong>all</strong> users. If set, only these users' browsing is recorded.</div>
-                    </div>
+    <div class="row">
+        <!-- Left Column: Configuration -->
+        <div class="col-lg-7">
+            <!-- Branding Section -->
+            <div class="card section-card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-paint-brush me-2"></i>Branding &amp; Appearance</h6>
                 </div>
-
-                <!-- Right: Live Preview + Branding -->
-                <div class="col-lg-5">
-                    <h6 class="text-muted mb-3"><i class="fas fa-eye me-2"></i>Popup Preview</h6>
-                    <div class="border rounded shadow-sm" style="width: 320px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                        <div id="previewHeader" style="background: #0d3a6e; color: #fff; padding: 14px 18px; display: flex; align-items: center; gap: 12px;">
-                            <div id="previewIcon">
-                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 2L4 5v6c0 5.25 3.4 10.14 8 11.36C16.6 21.14 20 16.25 20 11V5l-8-3z" fill="rgba(255,255,255,0.9)"/>
-                                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <div id="previewTitle" style="font-size: 14px; font-weight: 600; letter-spacing: 0.02em;">Network Monitoring</div>
-                                <div id="previewSub" style="font-size: 11px; opacity: 0.75; margin-top: 2px;">School managed device</div>
-                            </div>
-                        </div>
-                        <div style="background: #f8f9fa; padding: 0 0 0 0;">
-                            <div id="previewNotice" style="margin: 14px; padding: 12px 14px; border-left: 4px solid; border-radius: 0 6px 6px 0; font-size: 12.5px; line-height: 1.55;"></div>
-                            <div id="previewFooter" style="padding: 14px; font-size: 11px; color: #868e96; text-align: center;"></div>
-                        </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="schoolName" class="form-label">School / Organisation Name</label>
+                        <input type="text" class="form-control" id="schoolName" placeholder="e.g. Springfield Secondary College">
+                        <div class="form-text">Shown as the main heading in the extension popup.</div>
                     </div>
-                    <!-- Collapsible Branding -->
-                    <div class="mt-3">
-                        <a class="text-muted small" data-bs-toggle="collapse" href="#brandingSection" role="button" aria-expanded="false" id="brandingToggle">
-                            <i class="fas fa-palette me-1"></i>Edit Branding
-                        </a>
-                        <div class="collapse mt-3" id="brandingSection">
-                            <div class="row mb-3">
-                                <div class="col-8">
-                                    <label for="schoolName" class="form-label">School Name</label>
-                                    <input type="text" class="form-control" id="schoolName" placeholder="e.g. Sunbury College" maxlength="100">
-                                    <div class="form-text">Shown in the extension popup header</div>
-                                </div>
-                                <div class="col-4">
-                                    <label for="accentColor" class="form-label">Accent Colour</label>
-                                    <div class="input-group">
-                                        <input type="color" class="form-control form-control-color" id="accentColorPicker" value="#0d3a6e">
-                                        <input type="text" class="form-control" id="accentColor" value="#0d3a6e" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" style="font-family: monospace;">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="logoUpload" class="form-label">School Logo</label>
-                                <div class="d-flex align-items-center gap-3">
-                                    <input type="file" class="form-control" id="logoUpload" accept="image/png,image/jpeg,image/gif,image/webp">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="uploadLogoBtn" style="white-space: nowrap;">
-                                        <i class="fas fa-upload me-1"></i>Upload
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-sm d-none" id="removeLogoBtn" style="white-space: nowrap;">
-                                        <i class="fas fa-trash me-1"></i>Remove
-                                    </button>
-                                </div>
-                                <div class="form-text">Used as extension icon (16/48/128px) and in popup header. PNG or JPG, max 5MB.</div>
-                                <div id="logoStatus" class="mt-1"></div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="noticeText" class="form-label">Notice Text</label>
-                                <textarea class="form-control" id="noticeText" rows="2" maxlength="500"
-                                    placeholder="Internet activity is monitored on this school-owned device. All websites visited are logged in accordance with school policy."></textarea>
-                                <div class="form-text">The monitoring notice shown to students. Leave empty for default text.</div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="contactInfo" class="form-label">Contact Info</label>
-                                <input type="text" class="form-control" id="contactInfo" maxlength="200"
-                                    placeholder="e.g. For help, contact it@school.edu.au">
-                                <div class="form-text">Footer text in the popup. Leave empty for default.</div>
-                            </div>
+                    <div class="mb-3">
+                        <label for="schoolSubtitle" class="form-label">Subtitle</label>
+                        <input type="text" class="form-control" id="schoolSubtitle" placeholder="e.g. School managed device">
+                    </div>
+                    <div class="mb-3">
+                        <label for="noticeText" class="form-label">Monitoring Notice</label>
+                        <textarea class="form-control" id="noticeText" rows="2" placeholder="e.g. Internet activity is monitored on this school-owned device."></textarea>
+                        <div class="form-text">The main notice text shown to users.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="itContact" class="form-label">IT Contact Information</label>
+                        <input type="text" class="form-control" id="itContact" placeholder="e.g. For help, contact IT: it@school.edu.au">
+                        <div class="form-text">Shown in the footer of the popup.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="headerColor" class="form-label">Header Colour</label>
+                        <div class="input-group" style="max-width: 250px;">
+                            <input type="color" class="form-control form-control-color" id="headerColorPicker" value="#0d3a6e">
+                            <input type="text" class="form-control" id="headerColor" value="#0d3a6e" pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$">
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="card-footer d-flex gap-2">
-            <button class="btn btn-outline-secondary" id="saveConfigBtn">
-                <i class="fas fa-save me-2"></i>Save Settings
-            </button>
-            <button class="btn btn-primary" id="buildBtn">
-                <i class="fas fa-hammer me-2"></i>Build Extension
-            </button>
-        </div>
-    </div>
 
-    <!-- HTTP Notice -->
-    <div class="alert alert-warning shadow-sm mb-4" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        <strong>HTTP Deployment Notice:</strong>
-        Chrome requires an HTTPS update URL for automatic extension updates. While serving over HTTP, each new build generates a new Extension ID — Chromebooks will need to be re-configured in Google Admin Console after every rebuild.
-        Once a trusted root CA is deployed to the Chromebooks and the server is accessible over HTTPS, auto-updates will work seamlessly.
-    </div>
-
-    <!-- Deployment Info -->
-    <div class="card shadow-sm mb-4 d-none" id="deploymentCard">
-        <div class="card-header page-header">
-            <h5 class="mb-0"><i class="fas fa-rocket me-2"></i>Deployment</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Extension ID</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control font-monospace" id="deployExtId" readonly>
-                            <button class="btn btn-outline-secondary" onclick="copyField('deployExtId')" title="Copy"><i class="fas fa-copy"></i></button>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Update URL <span class="badge bg-info">for Google Admin Console</span></label>
-                        <div class="input-group">
-                            <input type="text" class="form-control font-monospace" id="deployUpdateUrl" readonly style="font-size: 0.85em;">
-                            <button class="btn btn-outline-secondary" onclick="copyField('deployUpdateUrl')" title="Copy"><i class="fas fa-copy"></i></button>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="badge bg-success fs-6" id="deployVersion"></span>
-                        <span class="text-muted" id="deployBuiltAt" style="font-size: 0.85em;"></span>
-                    </div>
-                    <div class="mt-3">
-                        <a href="/api/admin/extension-download" class="btn btn-outline-primary">
-                            <i class="fas fa-download me-2"></i>Download .crx
-                        </a>
-                    </div>
+            <!-- Icon Section -->
+            <div class="card section-card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-image me-2"></i>Extension Icon</h6>
                 </div>
-                <div class="col-md-6">
-                    <div class="card section-card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Google Admin Console Setup</h6>
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div>
+                            <img id="iconPreview" src="/api/admin/extension/icon/preview" alt="Extension icon"
+                                 style="width: 64px; height: 64px; border: 2px solid #dee2e6; border-radius: 8px; object-fit: contain; background: #f8f9fa;">
                         </div>
-                        <div class="card-body" style="font-size: 0.9em;">
-                            <ol class="mb-3 ps-3">
-                                <li class="mb-2">Go to <a href="https://admin.google.com" target="_blank">admin.google.com</a></li>
-                                <li class="mb-2">Navigate to <strong>Devices &gt; Chrome &gt; Apps & extensions</strong></li>
-                                <li class="mb-2">Select the relevant <strong>Organisational Unit</strong></li>
-                                <li class="mb-2">Click <strong>+</strong> &gt; <strong>Add Chrome app or extension by ID</strong></li>
-                                <li class="mb-2">Paste the <strong>Extension ID</strong> above</li>
-                                <li class="mb-2">Set <strong>Installation policy</strong> to <strong>Force install</strong></li>
-                                <li class="mb-2">Set <strong>Update URL</strong> to the URL above</li>
-                                <li>Paste the <strong>managed policy</strong> below into the <strong>Policy for extensions</strong> field</li>
-                            </ol>
-                            <label class="form-label fw-bold">Managed Policy JSON</label>
-                            <div class="position-relative">
-                                <pre class="bg-light p-3 rounded border" id="deployPolicy" style="font-size: 0.85em; white-space: pre-wrap;"></pre>
-                                <button class="btn btn-sm btn-outline-secondary position-absolute" style="top: 8px; right: 8px;" onclick="copyText(document.getElementById('deployPolicy').textContent)" title="Copy">
-                                    <i class="fas fa-copy"></i>
+                        <div class="flex-grow-1">
+                            <div class="mb-2">
+                                <label for="iconFile" class="form-label">Upload Custom Icon (PNG, min 128x128)</label>
+                                <input type="file" class="form-control form-control-sm" id="iconFile" accept="image/png">
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="uploadIconBtn">
+                                    <i class="fas fa-upload me-1"></i>Upload
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="removeIconBtn">
+                                    <i class="fas fa-undo me-1"></i>Reset to Default
                                 </button>
                             </div>
+                            <div class="form-text mt-1">Icon will be automatically resized to 16x16, 48x48, and 128x128.</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Student Data Enrichment (moved from Client Config) -->
-    <div class="card shadow-sm">
-        <div class="card-header page-header">
-            <h5 class="mb-0"><i class="fas fa-user-graduate me-2"></i>Student Data Enrichment</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p class="text-muted mb-3">
-                        Import student data from your school's STMC export to automatically enrich Chromebook extension user records
-                        with display names, homegroups, and class information.
-                    </p>
+            <!-- Server Configuration -->
+            <div class="card section-card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-server me-2"></i>Server Configuration</h6>
+                </div>
+                <div class="card-body">
                     <div class="mb-3">
-                        <label for="enrichmentFile" class="form-label">School Export CSV</label>
-                        <input type="file" class="form-control" id="enrichmentFile" accept=".csv" required>
+                        <label for="serverUrl" class="form-label">Reporting Server URL</label>
+                        <input type="url" class="form-control" id="serverUrl" placeholder="http://browserreporter:8000">
+                        <div class="form-text">
+                            The URL where the extension sends browsing data. This should be reachable from the managed Chromebooks.
+                            Use the hostname or IP address of this server.
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-primary w-100" id="importEnrichmentBtn">
-                        <i class="fas fa-cloud-upload-alt me-2"></i>Import &amp; Enrich
-                    </button>
-                    <div id="enrichmentResult" class="mt-3" style="display: none;"></div>
                 </div>
-                <div class="col-md-6">
-                    <div class="card section-card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>How to Export from STMC</h6>
+            </div>
+
+            <!-- Time Restrictions -->
+            <div class="card section-card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Reporting Time Restrictions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="reportStartTime" class="form-label">Start Time</label>
+                            <input type="time" class="form-control" id="reportStartTime" value="00:00">
                         </div>
-                        <div class="card-body">
-                            <ol class="mb-0 ps-3">
-                                <li class="mb-2">Log in to <a href="https://stmc.education.vic.gov.au/" target="_blank" rel="noopener">STMC</a></li>
-                                <li class="mb-2">Select <strong>Access Management &gt; Student Passwords</strong></li>
-                                <li class="mb-2">Select your school</li>
-                                <li>Click <strong>Export</strong> to download the CSV</li>
-                            </ol>
+                        <div class="col-md-6">
+                            <label for="reportEndTime" class="form-label">End Time</label>
+                            <input type="time" class="form-control" id="reportEndTime" value="23:59">
                         </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Active Days</label>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input day-check" type="checkbox" value="1" id="dayMon" checked>
+                            <label class="form-check-label" for="dayMon">Mon</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input day-check" type="checkbox" value="2" id="dayTue" checked>
+                            <label class="form-check-label" for="dayTue">Tue</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input day-check" type="checkbox" value="3" id="dayWed" checked>
+                            <label class="form-check-label" for="dayWed">Wed</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input day-check" type="checkbox" value="4" id="dayThu" checked>
+                            <label class="form-check-label" for="dayThu">Thu</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input day-check" type="checkbox" value="5" id="dayFri" checked>
+                            <label class="form-check-label" for="dayFri">Fri</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input day-check" type="checkbox" value="6" id="daySat">
+                            <label class="form-check-label" for="daySat">Sat</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input day-check" type="checkbox" value="0" id="daySun">
+                            <label class="form-check-label" for="daySun">Sun</label>
+                        </div>
+                    </div>
+                    <div class="form-text">
+                        Only record browsing activity during these hours and days.
+                        Set 00:00 - 23:59 with all days to report 24/7.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Config -->
+            <div class="d-grid mb-4">
+                <button type="button" class="btn btn-primary btn-lg" id="saveConfigBtn">
+                    <i class="fas fa-save me-2"></i>Save Configuration
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Column: Build & Deploy -->
+        <div class="col-lg-5">
+            <!-- Popup Preview -->
+            <div class="card section-card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Popup Preview</h6>
+                </div>
+                <div class="card-body p-2">
+                    <div id="popupPreview" style="width: 320px; margin: 0 auto; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
+                        <div id="previewHeader" style="background: #0d3a6e; color: #fff; padding: 14px 18px; display: flex; align-items: center; gap: 12px;">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2L4 5v6c0 5.25 3.4 10.14 8 11.36C16.6 21.14 20 16.25 20 11V5l-8-3z" fill="rgba(255,255,255,0.9)"/>
+                                <path id="previewCheckmark" d="M9 12l2 2 4-4" stroke="#0d3a6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <div>
+                                <div id="previewTitle" style="font-size: 14px; font-weight: 600;">Network Monitoring</div>
+                                <div id="previewSubtitle" style="font-size: 11px; opacity: 0.75; margin-top: 2px;">School managed device</div>
+                            </div>
+                        </div>
+                        <div id="previewNotice" style="margin: 14px; padding: 12px 14px; background: #e8eef6; border-left: 4px solid #0d3a6e; border-radius: 0 6px 6px 0; font-size: 12.5px; line-height: 1.55; color: #1a2e45;">
+                            <strong>Internet activity is monitored</strong> on this school-owned device.
+                        </div>
+                        <div id="previewFooter" style="padding: 10px 14px 14px; font-size: 11px; color: #868e96; text-align: center;">
+                            For help, contact your school IT department.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Build Section -->
+            <div class="card section-card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Build &amp; Deploy</h6>
+                </div>
+                <div class="card-body">
+                    <div id="currentBuildInfo" class="mb-3">
+                        <div class="text-muted">Loading build status...</div>
+                    </div>
+
+                    <button type="button" class="btn btn-success w-100 mb-2" id="buildBtn">
+                        <i class="fas fa-hammer me-2"></i>Build Extension
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm w-100 mb-3" id="resetBtn">
+                        <i class="fas fa-sync-alt me-1"></i>Reset Version &amp; Generate New Extension ID
+                    </button>
+
+                    <div id="buildResult" class="d-none">
+                        <div class="alert alert-success mb-3">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span id="buildResultMsg"></span>
+                        </div>
+
+                        <div class="d-grid gap-2 mb-3">
+                            <a href="/extension/extension.crx" class="btn btn-outline-primary btn-sm" download>
+                                <i class="fas fa-download me-2"></i>Download extension.crx
+                            </a>
+                            <a href="/extension/update.xml" class="btn btn-outline-secondary btn-sm" target="_blank">
+                                <i class="fas fa-code me-2"></i>View update.xml
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HTTPS Certificate -->
+            <div class="card section-card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lock me-2"></i>HTTPS Certificate</h6>
+                </div>
+                <div class="card-body">
+                    <div id="certStatus" class="mb-3">
+                        <div class="text-muted">Checking certificate status...</div>
+                    </div>
+                    <a href="/api/admin/extension/ca-cert" class="btn btn-outline-primary btn-sm w-100 mb-2" download>
+                        <i class="fas fa-certificate me-2"></i>Download CA Certificate
+                    </a>
+                    <div class="form-text">
+                        Upload this certificate to <strong>Google Admin Console</strong> &rarr;
+                        <code>Devices &rarr; Networks &rarr; Certificates</code>
+                        so Chromebooks trust this server's HTTPS connection.
+                    </div>
+                </div>
+            </div>
+
+            <!-- GCC Setup Instructions -->
+            <div class="card section-card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-book me-2"></i>Google Admin Console Setup</h6>
+                </div>
+                <div class="card-body">
+                    <!-- HTTP vs HTTPS note -->
+                    <div class="alert alert-info py-2 mb-3" style="font-size: 12px;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>HTTP vs HTTPS:</strong> HTTP works for initial deployment but Chrome won't auto-update
+                        extensions over HTTP. If you update the extension, you'll need to rebuild and redeploy
+                        with a new Extension ID in GAC. Use HTTPS (with CA cert trusted in GAC) for auto-updates.
+                    </div>
+                    <div id="gccInstructions">
+                        <ol class="mb-0" style="font-size: 13px; padding-left: 1.2em;">
+                            <li class="mb-2">
+                                <strong>(HTTPS only)</strong> Download the <strong>CA Certificate</strong> above and upload it in Google Admin Console:<br>
+                                <code>Devices &rarr; Networks &rarr; Certificates</code><br>
+                                <small class="text-muted">Skip this step if using HTTP.</small>
+                            </li>
+                            <li class="mb-2">
+                                Build the extension using the button above.
+                            </li>
+                            <li class="mb-2">
+                                In <strong>Google Admin Console</strong>, go to:<br>
+                                <code>Devices &rarr; Chrome &rarr; Apps &amp; extensions</code>
+                            </li>
+                            <li class="mb-2">
+                                Click <strong>+</strong> (Add) &rarr; <strong>Add Chrome app or extension by ID</strong>
+                            </li>
+                            <li class="mb-2">
+                                Enter the Extension ID:<br>
+                                <code id="extIdDisplay" class="user-select-all">Build extension first</code>
+                            </li>
+                            <li class="mb-2">
+                                Set <strong>Installation Policy</strong> to:<br>
+                                <code>Force install</code>
+                            </li>
+                            <li class="mb-2">
+                                Set <strong>Update URL</strong> to:<br>
+                                <code id="updateUrlDisplay" class="user-select-all">Build extension first</code>
+                            </li>
+                            <li class="mb-2">
+                                Under <strong>Extension Settings</strong> (JSON), ensure:<br>
+                                <pre class="bg-light p-2 rounded mb-0" style="font-size: 11px;">{ "override_update_url": true }</pre>
+                                <small class="text-muted">Required for self-hosted extensions.</small>
+                            </li>
+                            <li>
+                                Save. Chrome will push the extension to managed Chromebooks within 24 hours.
+                            </li>
+                        </ol>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // ── State ────────────────────────────────────────────────────────────
-    let currentConfig = {};
+(function() {
+    // ── Elements ──
+    const schoolName = document.getElementById('schoolName');
+    const schoolSubtitle = document.getElementById('schoolSubtitle');
+    const noticeText = document.getElementById('noticeText');
+    const itContact = document.getElementById('itContact');
+    const headerColor = document.getElementById('headerColor');
+    const headerColorPicker = document.getElementById('headerColorPicker');
+    const serverUrl = document.getElementById('serverUrl');
+    const reportStartTime = document.getElementById('reportStartTime');
+    const reportEndTime = document.getElementById('reportEndTime');
 
-    // ── Initialisation ───────────────────────────────────────────────────
+    // ── Preview sync ──
+    function updatePreview() {
+        const color = headerColor.value || '#0d3a6e';
+        document.getElementById('previewHeader').style.background = color;
+        document.getElementById('previewCheckmark').setAttribute('stroke', color);
+        document.getElementById('previewNotice').style.borderLeftColor = color;
+        document.getElementById('previewTitle').textContent = schoolName.value || 'Network Monitoring';
+        document.getElementById('previewSubtitle').textContent = schoolSubtitle.value || 'School managed device';
+        document.getElementById('previewNotice').innerHTML = '<strong>' + (noticeText.value || 'Internet activity is monitored') + '</strong>';
+        document.getElementById('previewFooter').textContent = itContact.value || 'For help, contact your school IT department.';
+    }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        await loadConfig();
-        wireEvents();
-        updatePreview();
+    [schoolName, schoolSubtitle, noticeText, itContact, headerColor].forEach(el => {
+        el.addEventListener('input', updatePreview);
     });
 
+    headerColorPicker.addEventListener('input', () => {
+        headerColor.value = headerColorPicker.value;
+        updatePreview();
+    });
+    headerColor.addEventListener('input', () => {
+        if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(headerColor.value)) {
+            headerColorPicker.value = headerColor.value.length === 4
+                ? '#' + headerColor.value[1].repeat(2) + headerColor.value[2].repeat(2) + headerColor.value[3].repeat(2)
+                : headerColor.value;
+        }
+    });
+
+    // ── Load config ──
     async function loadConfig() {
         try {
-            const resp = await fetch('/api/admin/extension-config');
-            if (resp.ok) {
-                currentConfig = await resp.json();
-                populateForm(currentConfig);
-                if (currentConfig.extension_id && currentConfig.last_built_at) {
-                    showDeployment(currentConfig);
-                }
-            }
-        } catch (e) {
-            console.error('Failed to load extension config:', e);
-        }
-    }
+            const resp = await fetch('/api/admin/extension/config');
+            if (!resp.ok) throw new Error('Failed to load config');
+            const config = await resp.json();
 
-    function populateForm(c) {
-        document.getElementById('schoolName').value = c.school_name || '';
-        document.getElementById('accentColor').value = c.accent_color || '#0d3a6e';
-        document.getElementById('accentColorPicker').value = c.accent_color || '#0d3a6e';
-        document.getElementById('noticeText').value = c.notice_text || '';
-        document.getElementById('contactInfo').value = c.contact_info || '';
-        document.getElementById('serverUrl').value = c.server_url || window.location.origin;
-        document.getElementById('trackingAllDay').checked = c.tracking_all_day !== false;
-        document.getElementById('trackingStart').value = c.tracking_start_time || '08:30';
-        document.getElementById('trackingEnd').value = c.tracking_end_time || '15:30';
-        document.getElementById('trackingStart').disabled = c.tracking_all_day !== false;
-        document.getElementById('trackingEnd').disabled = c.tracking_all_day !== false;
-        document.getElementById('monitoredEmails').value = (c.monitored_emails || []).join('\n');
+            schoolName.value = config.school_name || '';
+            schoolSubtitle.value = config.school_subtitle || '';
+            noticeText.value = config.notice_text || '';
+            itContact.value = config.it_contact || '';
+            headerColor.value = config.header_color || '#0d3a6e';
+            headerColorPicker.value = config.header_color || '#0d3a6e';
+            serverUrl.value = config.server_url || '';
+            reportStartTime.value = config.reporting_start_time || '00:00';
+            reportEndTime.value = config.reporting_end_time || '23:59';
 
-        // Logo state
-        if (c.logo_filename) {
-            document.getElementById('logoStatus').innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Logo uploaded</span>';
-            document.getElementById('removeLogoBtn').classList.remove('d-none');
-        }
-    }
-
-    function wireEvents() {
-        // Live preview updates
-        const previewInputs = ['schoolName', 'accentColor', 'noticeText', 'contactInfo'];
-        previewInputs.forEach(id => {
-            document.getElementById(id).addEventListener('input', updatePreview);
-        });
-
-        // Colour picker sync
-        document.getElementById('accentColorPicker').addEventListener('input', (e) => {
-            document.getElementById('accentColor').value = e.target.value;
-            updatePreview();
-        });
-        document.getElementById('accentColor').addEventListener('input', (e) => {
-            if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
-                document.getElementById('accentColorPicker').value = e.target.value;
-            }
-            updatePreview();
-        });
-
-        // Tracking hours toggle
-        document.getElementById('trackingAllDay').addEventListener('change', (e) => {
-            document.getElementById('trackingStart').disabled = e.target.checked;
-            document.getElementById('trackingEnd').disabled = e.target.checked;
-        });
-
-        // Buttons
-        document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
-        document.getElementById('buildBtn').addEventListener('click', buildExtension);
-        document.getElementById('uploadLogoBtn').addEventListener('click', uploadLogo);
-        document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
-        document.getElementById('importEnrichmentBtn').addEventListener('click', importStudentEnrichment);
-
-        // Auto-populate server URL
-        if (!document.getElementById('serverUrl').value) {
-            document.getElementById('serverUrl').value = window.location.origin;
-        }
-    }
-
-    // ── Live preview ─────────────────────────────────────────────────────
-
-    function updatePreview() {
-        const color = document.getElementById('accentColor').value || '#0d3a6e';
-        const schoolName = document.getElementById('schoolName').value;
-        const noticeText = document.getElementById('noticeText').value;
-        const contactInfo = document.getElementById('contactInfo').value;
-
-        // Header
-        document.getElementById('previewHeader').style.background = color;
-        document.getElementById('previewTitle').textContent = schoolName || 'Network Monitoring';
-        document.getElementById('previewSub').textContent = schoolName ? 'Managed device' : 'School managed device';
-
-        // Notice
-        const notice = document.getElementById('previewNotice');
-        notice.style.background = color + '18';
-        notice.style.borderColor = color;
-        notice.style.color = '#1a2e45';
-        if (noticeText) {
-            notice.innerHTML = '<strong>' + escapeHtml(noticeText) + '</strong>';
-        } else {
-            notice.innerHTML = '<strong>Internet activity is monitored</strong> on this school-owned device. All websites visited are logged in accordance with school policy.';
-        }
-
-        // Footer
-        document.getElementById('previewFooter').textContent = contactInfo || 'For help, contact your school IT department.';
-    }
-
-    // ── Config save ──────────────────────────────────────────────────────
-
-    async function saveConfig() {
-        const btn = document.getElementById('saveConfigBtn');
-        const original = btn.innerHTML;
-        try {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
-            btn.disabled = true;
-
-            const body = getFormData();
-            const resp = await fetch('/api/admin/extension-config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
+            // Set day checkboxes
+            const days = config.reporting_days || [0,1,2,3,4,5,6];
+            document.querySelectorAll('.day-check').forEach(cb => {
+                cb.checked = days.includes(parseInt(cb.value));
             });
-            if (!resp.ok) {
-                const err = await resp.json();
-                throw new Error(err.detail || 'Save failed');
-            }
 
-            btn.innerHTML = '<i class="fas fa-check me-2"></i>Saved!';
-            btn.classList.replace('btn-outline-secondary', 'btn-success');
-            setTimeout(() => {
-                btn.innerHTML = original;
-                btn.classList.replace('btn-success', 'btn-outline-secondary');
-            }, 2000);
-        } catch (e) {
-            showError('Failed to save: ' + e.message);
-            btn.innerHTML = original;
+            updatePreview();
+        } catch (err) {
+            console.error('Load config error:', err);
+        }
+    }
+
+    // ── Load build status ──
+    async function loadBuildStatus() {
+        try {
+            const resp = await fetch('/api/admin/extension/status');
+            if (!resp.ok) throw new Error('Failed to load status');
+            const status = await resp.json();
+
+            const infoEl = document.getElementById('currentBuildInfo');
+
+            if (status.built) {
+                const buildDate = status.last_build_at
+                    ? new Date(status.last_build_at).toLocaleString()
+                    : 'Unknown';
+                const sizeKb = status.crx_size_bytes
+                    ? (status.crx_size_bytes / 1024).toFixed(1) + ' KB'
+                    : 'Unknown';
+
+                infoEl.innerHTML = `
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><td class="text-muted" style="width:120px">Status</td><td><span class="badge bg-success">Built</span></td></tr>
+                        <tr><td class="text-muted">Version</td><td><code>${status.version || '-'}</code></td></tr>
+                        <tr><td class="text-muted">Extension ID</td><td><code class="user-select-all">${status.extension_id || '-'}</code></td></tr>
+                        <tr><td class="text-muted">Last Build</td><td>${buildDate}</td></tr>
+                        <tr><td class="text-muted">File Size</td><td>${sizeKb}</td></tr>
+                    </table>
+                `;
+
+                // Update GCC instructions
+                if (status.extension_id) {
+                    document.getElementById('extIdDisplay').textContent = status.extension_id;
+                    const baseUrl = serverUrl.value || window.location.origin;
+                    document.getElementById('updateUrlDisplay').textContent = baseUrl + '/extension/update.xml';
+                }
+
+                // Show download links
+                document.getElementById('buildResult').classList.remove('d-none');
+                document.getElementById('buildResultMsg').textContent =
+                    `Extension v${status.version} built successfully (${sizeKb})`;
+            } else {
+                infoEl.innerHTML = '<div class="text-muted"><i class="fas fa-info-circle me-1"></i>No extension built yet. Configure settings and click Build.</div>';
+            }
+        } catch (err) {
+            console.error('Load status error:', err);
+        }
+    }
+
+    // ── Save config (reusable) ──
+    async function saveConfig() {
+        const activeDays = [];
+        document.querySelectorAll('.day-check:checked').forEach(cb => {
+            activeDays.push(parseInt(cb.value));
+        });
+
+        const resp = await fetch('/api/admin/extension/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                school_name: schoolName.value,
+                school_subtitle: schoolSubtitle.value,
+                notice_text: noticeText.value,
+                it_contact: itContact.value,
+                header_color: headerColor.value,
+                server_url: serverUrl.value,
+                reporting_start_time: reportStartTime.value,
+                reporting_end_time: reportEndTime.value,
+                reporting_days: activeDays,
+            }),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || 'Save failed');
+        }
+        return await resp.json();
+    }
+
+    document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('saveConfigBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+
+        try {
+            await saveConfig();
+            showAlert('success', 'Configuration saved successfully.');
+        } catch (err) {
+            showAlert('danger', 'Save failed: ' + err.message);
         } finally {
             btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-2"></i>Save Configuration';
         }
-    }
+    });
 
-    function getFormData() {
-        const emailsText = document.getElementById('monitoredEmails').value;
-        const emails = emailsText ? emailsText.split('\n').map(e => e.trim()).filter(e => e) : [];
-        return {
-            school_name: document.getElementById('schoolName').value,
-            accent_color: document.getElementById('accentColor').value || '#0d3a6e',
-            notice_text: document.getElementById('noticeText').value,
-            contact_info: document.getElementById('contactInfo').value,
-            server_url: document.getElementById('serverUrl').value || window.location.origin,
-            tracking_start_time: document.getElementById('trackingStart').value || '08:30',
-            tracking_end_time: document.getElementById('trackingEnd').value || '15:30',
-            tracking_all_day: document.getElementById('trackingAllDay').checked,
-            monitored_emails: emails,
-        };
-    }
+    // ── Build extension (saves config first, then builds) ──
+    document.getElementById('buildBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('buildBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving config...';
 
-    // ── Logo upload ──────────────────────────────────────────────────────
+        try {
+            // Save current form values first
+            await saveConfig();
 
-    async function uploadLogo() {
-        const fileInput = document.getElementById('logoUpload');
-        const file = fileInput.files[0];
-        if (!file) return showError('Please select an image file first');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Building...';
+
+            const resp = await fetch('/api/admin/extension/build', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || 'Build failed');
+            }
+
+            const result = await resp.json();
+            showAlert('success',
+                `Extension built! ID: ${result.extension_id}, Version: ${result.version}`);
+
+            await loadBuildStatus();
+        } catch (err) {
+            showAlert('danger', 'Build failed: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-hammer me-2"></i>Build Extension';
+        }
+    });
+
+    // ── Reset version & generate new ID ──
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+        if (!confirm('This will reset the version to 1.0.0 and generate a new Extension ID.\n\nYou will need to update the Extension ID and Update URL in Google Admin Console after rebuilding.\n\nContinue?')) return;
+
+        const btn = document.getElementById('resetBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Resetting...';
+
+        try {
+            const resp = await fetch('/api/admin/extension/reset', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || 'Reset failed');
+            }
+
+            const result = await resp.json();
+            showAlert('success',
+                `Reset complete! New Extension ID: ${result.new_extension_id}. Version reset to ${result.version}. Click Build to generate the new .crx file.`);
+
+            document.getElementById('buildResult').classList.add('d-none');
+            await loadBuildStatus();
+        } catch (err) {
+            showAlert('danger', 'Reset failed: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Reset Version & Generate New Extension ID';
+        }
+    });
+
+    // ── Upload icon ──
+    document.getElementById('uploadIconBtn').addEventListener('click', async () => {
+        const fileInput = document.getElementById('iconFile');
+        if (!fileInput.files.length) {
+            showAlert('warning', 'Please select a PNG file first.');
+            return;
+        }
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', fileInput.files[0]);
 
-        const btn = document.getElementById('uploadLogoBtn');
-        const original = btn.innerHTML;
         try {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>';
-            btn.disabled = true;
+            const resp = await fetch('/api/admin/extension/icon', {
+                method: 'POST',
+                body: formData,
+            });
 
-            const resp = await fetch('/api/admin/extension-logo', { method: 'POST', body: formData });
             if (!resp.ok) {
                 const err = await resp.json();
                 throw new Error(err.detail || 'Upload failed');
             }
 
-            document.getElementById('logoStatus').innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Logo uploaded</span>';
-            document.getElementById('removeLogoBtn').classList.remove('d-none');
+            showAlert('success', 'Icon uploaded successfully.');
+            // Refresh preview
+            document.getElementById('iconPreview').src =
+                '/api/admin/extension/icon/preview?' + Date.now();
             fileInput.value = '';
-        } catch (e) {
-            showError('Logo upload failed: ' + e.message);
-        } finally {
-            btn.innerHTML = original;
-            btn.disabled = false;
+        } catch (err) {
+            showAlert('danger', 'Icon upload failed: ' + err.message);
         }
+    });
+
+    // ── Remove icon ──
+    document.getElementById('removeIconBtn').addEventListener('click', async () => {
+        try {
+            const resp = await fetch('/api/admin/extension/icon', { method: 'DELETE' });
+            if (!resp.ok) throw new Error('Failed to remove icon');
+            showAlert('success', 'Custom icon removed. Default icon will be used.');
+            document.getElementById('iconPreview').src =
+                '/api/admin/extension/icon/preview?' + Date.now();
+        } catch (err) {
+            showAlert('danger', 'Failed to remove icon: ' + err.message);
+        }
+    });
+
+    // ── Alert helper ──
+    function showAlert(type, message) {
+        const el = document.getElementById('buildStatus');
+        el.className = `alert alert-${type} mb-4`;
+        el.innerHTML = message;
+        el.classList.remove('d-none');
+        setTimeout(() => el.classList.add('d-none'), 8000);
     }
 
-    async function removeLogo() {
+    // ── Load cert status ──
+    async function loadCertStatus() {
         try {
-            const resp = await fetch('/api/admin/extension-logo', { method: 'DELETE' });
-            if (!resp.ok) throw new Error('Failed to remove logo');
-            document.getElementById('logoStatus').innerHTML = '';
-            document.getElementById('removeLogoBtn').classList.add('d-none');
-        } catch (e) {
-            showError('Failed to remove logo: ' + e.message);
-        }
-    }
+            const resp = await fetch('/api/admin/extension/ca-cert/status');
+            if (!resp.ok) throw new Error('Failed to load cert status');
+            const status = await resp.json();
+            const el = document.getElementById('certStatus');
 
-    // ── Build ────────────────────────────────────────────────────────────
-
-    async function buildExtension() {
-        const btn = document.getElementById('buildBtn');
-        const original = btn.innerHTML;
-        try {
-            // Save config first
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving config...';
-            btn.disabled = true;
-
-            const body = getFormData();
-            const saveResp = await fetch('/api/admin/extension-config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-            if (!saveResp.ok) {
-                const err = await saveResp.json();
-                throw new Error('Config save failed: ' + (err.detail || 'Unknown error'));
+            if (status.exists) {
+                let html = '<table class="table table-sm table-borderless mb-0">';
+                html += '<tr><td class="text-muted" style="width:100px">Status</td><td><span class="badge bg-success">Available</span></td></tr>';
+                if (status.subject) html += `<tr><td class="text-muted">Subject</td><td><small>${status.subject}</small></td></tr>`;
+                if (status.expires) html += `<tr><td class="text-muted">Expires</td><td><small>${status.expires}</small></td></tr>`;
+                if (status.fingerprint) html += `<tr><td class="text-muted">SHA-256</td><td><small class="text-break" style="font-size:10px">${status.fingerprint}</small></td></tr>`;
+                html += '</table>';
+                el.innerHTML = html;
+            } else {
+                el.innerHTML = '<div class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>CA certificate not found. Ensure the cert-init container has run.</div>';
             }
-
-            // Build
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Building extension...';
-
-            const resp = await fetch('/api/admin/extension-build', { method: 'POST' });
-            const result = await resp.json();
-            if (!resp.ok) throw new Error(result.detail || 'Build failed');
-
-            showDeployment(result);
-
-            btn.innerHTML = '<i class="fas fa-check me-2"></i>Built!';
-            btn.classList.replace('btn-primary', 'btn-success');
-            setTimeout(() => {
-                btn.innerHTML = original;
-                btn.classList.replace('btn-success', 'btn-primary');
-            }, 3000);
-        } catch (e) {
-            showError('Build failed: ' + e.message);
-            btn.innerHTML = original;
-            btn.classList.replace('btn-success', 'btn-primary');
-        } finally {
-            btn.disabled = false;
+        } catch (err) {
+            console.error('Cert status error:', err);
         }
     }
 
-    // ── Deployment info ──────────────────────────────────────────────────
-
-    function showDeployment(data) {
-        document.getElementById('deploymentCard').classList.remove('d-none');
-        document.getElementById('deployExtId').value = data.extension_id || '';
-        document.getElementById('deployUpdateUrl').value = data.update_url || '';
-        document.getElementById('deployVersion').textContent = 'v' + (data.version || data.current_version || '?');
-
-        if (data.last_built_at) {
-            const d = new Date(data.last_built_at);
-            document.getElementById('deployBuiltAt').textContent = 'Built ' + d.toLocaleString();
-        }
-
-        // Generate managed policy JSON
-        const serverUrl = document.getElementById('serverUrl').value || window.location.origin;
-        const policy = {
-            username: "${USER_EMAIL}",
-            display_name: "${USER_FULL_NAME}"
-        };
-        document.getElementById('deployPolicy').textContent = JSON.stringify(policy, null, 2);
+    // ── Auto-detect server URL ──
+    if (!serverUrl.value) {
+        serverUrl.value = window.location.origin;
     }
 
-    // ── Student enrichment (moved from Client Config) ────────────────────
-
-    async function importStudentEnrichment() {
-        const fileInput = document.getElementById('enrichmentFile');
-        const file = fileInput.files[0];
-        if (!file) return showError('Please select a CSV file to upload');
-        if (!file.name.endsWith('.csv')) return showError('Please select a CSV file');
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const btn = document.getElementById('importEnrichmentBtn');
-        const originalText = btn.innerHTML;
-        const resultDiv = document.getElementById('enrichmentResult');
-        resultDiv.style.display = 'none';
-
-        try {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
-            btn.disabled = true;
-
-            const response = await fetch('/api/admin/enrich-students', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.detail || 'Import failed');
-
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="alert alert-success mb-0">
-                    <i class="fas fa-check-circle me-2"></i>
-                    <strong>Import complete</strong><br>
-                    <small>
-                        ${result.imported.toLocaleString()} records imported &bull;
-                        ${result.users_updated.toLocaleString()} existing users enriched
-                        ${result.skipped > 0 ? ` &bull; ${result.skipped} rows skipped` : ''}
-                    </small>
-                </div>`;
-            fileInput.value = '';
-        } catch (error) {
-            console.error('Error importing enrichment data:', error);
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(error.message)}</div>`;
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
-
-    // ── Helpers ──────────────────────────────────────────────────────────
-
-    function copyField(id) {
-        const el = document.getElementById(id);
-        navigator.clipboard.writeText(el.value).then(() => {
-            const btn = el.nextElementSibling;
-            const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check"></i>';
-            setTimeout(() => btn.innerHTML = orig, 1500);
-        });
-    }
-
-    function copyText(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            showSuccess('Copied to clipboard');
-        });
-    }
-
-    function showError(msg) {
-        // Use the common.js showAlert if available, otherwise basic alert
-        if (typeof showAlert === 'function') {
-            showAlert(msg, 'danger');
-        } else {
-            alert(msg);
-        }
-    }
-
-    function showSuccess(msg) {
-        if (typeof showAlert === 'function') {
-            showAlert(msg, 'success');
-        }
-    }
+    // ── Init ──
+    loadConfig();
+    loadBuildStatus();
+    loadCertStatus();
+})();
 </script>
 {% endblock %}
