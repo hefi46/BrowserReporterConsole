@@ -20,6 +20,7 @@ class User(Base):
     homegroup = Column(String, index=True)  # mapped from Department
     email = Column(String)
     last_seen_at = Column(DateTime(timezone=True))
+    ad_enriched_at = Column(DateTime(timezone=True))  # last AD lookup attempt (success or miss)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     visits = relationship("Visit", back_populates="user", cascade="all, delete-orphan")
@@ -35,6 +36,8 @@ class Visit(Base):
     title = Column(Text)
     visit_time = Column(DateTime(timezone=True), nullable=False)  # actual visit time
     inserted_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    source = Column(String, nullable=True)  # "chrome_extension", "windows_agent", etc.
+    browser_profile = Column(String, nullable=True)  # "Default", "Profile 1", etc.
     search_vector = Column(TSVECTOR)
 
     user = relationship("User", back_populates="visits")

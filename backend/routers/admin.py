@@ -632,6 +632,8 @@ async def admin_save_ldap_config(
         "use_ssl": bool(body.get("use_ssl", False)),
         "admin_group_dn": str(body.get("admin_group_dn", "")).strip(),
         "default_role": str(body.get("default_role", "user")).strip(),
+        "enrichment_enabled": bool(body.get("enrichment_enabled", False)),
+        "homegroup_attribute": str(body.get("homegroup_attribute", "department")).strip() or "department",
     }
 
     # If password field is empty, preserve the existing one
@@ -682,7 +684,8 @@ async def admin_page(request: Request, db: AsyncSession = Depends(get_db)):
     return templates.TemplateResponse("admin.html", {"request": request})
 
 
-@router.get("/client-config", response_class=HTMLResponse)
-async def client_config_page(request: Request, db: AsyncSession = Depends(get_db)):
-    await require_admin(request, db)
-    return templates.TemplateResponse("client_config.html", {"request": request})
+@router.get("/client-config")
+async def client_config_redirect():
+    """Redirect old client-config URL to windows-agent page."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/windows-agent", status_code=301)

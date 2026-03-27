@@ -31,6 +31,7 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
     user_id = result.scalar_one()
 
     # Apply student enrichment if available (for Chrome extension users who only send email)
+    enriched = False
     email = info.Email or info.Username or ""
     if "@schools.vic.edu.au" in email:
         login = email.split("@")[0].upper()
@@ -46,6 +47,45 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
                     display_name=enrichment.display_name,
                     homegroup=enrichment.homegroup,
                 )
+            )
+            enriched = True
+
+    # Fallback: if no enrichment data and no details from the agent, try AD lookup
+    if not enriched and not info.FirstName and not info.LastName:
+        try:
+            from .ldap_auth import get_effective_ldap_config, lookup_user_details
+            ldap_config = await get_effective_ldap_config(db)
+            if ldap_config.get("enabled") or ldap_config.get("enrichment_enabled"):
+                # Check if we already attempted enrichment for this user
+                check_result = await db.execute(
+                    select(User.ad_enriched_at).where(User.id == user_id)
+                )
+                last_attempt = check_result.scalar_one_or_none()
+
+                if last_attempt is None:  # only attempt once per user
+                    lookup_name = email.split("@")[0].upper() if "@" in email else (info.Username or "").upper()
+                    if lookup_name:
+                        ad_info = lookup_user_details(lookup_name, ldap_config)
+                        update_vals = {"ad_enriched_at": datetime.now(timezone.utc)}
+                        if ad_info:
+                            if ad_info.get("first_name"):
+                                update_vals["first_name"] = ad_info["first_name"]
+                            if ad_info.get("last_name"):
+                                update_vals["last_name"] = ad_info["last_name"]
+                            if ad_info.get("department"):
+                                update_vals["homegroup"] = ad_info["department"]
+                            if ad_info.get("display_name"):
+                                update_vals["display_name"] = ad_info["display_name"]
+                            if ad_info.get("email"):
+                                update_vals["email"] = ad_info["email"]
+                        # Always set ad_enriched_at (even on miss) to prevent repeated lookups
+                        await db.execute(
+                            update(User).where(User.id == user_id).values(**update_vals)
+                        )
+        except Exception:
+            import logging
+            logging.getLogger("browser_reporter").debug(
+                "AD enrichment skipped for '%s'", info.Username, exc_info=True
             )
 
     return user_id
@@ -68,6 +108,8 @@ async def bulk_insert_visits(db: AsyncSession, user_id: int, visits: Sequence[Vi
                 url=v.Url,
                 title=v.Title,
                 visit_time=datetime.fromtimestamp(v.VisitTime / 1000.0, tz=timezone.utc),
+                source=v.Source,
+                browser_profile=v.BrowserProfile,
             )
         )
     if rows:

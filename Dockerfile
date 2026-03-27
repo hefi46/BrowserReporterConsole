@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Create non-root user and set ownership
-RUN mkdir -p /app/backend/static/extension && \
+RUN mkdir -p /app/backend/static/extension /app/backend/static/agent && \
     groupadd -r appuser && useradd -r -g appuser appuser && \
     chown -R appuser:appuser /app
 USER appuser

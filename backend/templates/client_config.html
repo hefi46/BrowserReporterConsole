@@ -13,6 +13,7 @@
             <a class="nav-link" href="/admin">Admin</a>
             <a class="nav-link active" href="/client-config">Client Config</a>
             <a class="nav-link" href="/extension">Extension</a>
+            <a class="nav-link" href="/windows-agent">Windows Agent</a>
             <a class="nav-link" href="/logout">Logout</a>
         </div>
     </div>
@@ -46,31 +47,22 @@
                         <input type="number" class="form-control" id="maxHistoryDays" value="30" min="1" max="365">
                         <div class="form-text">How many days of history to keep (1-365 days)</div>
                     </div>
-                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-users me-2"></i>User Monitoring</h6>
-                    <div class="mb-3">
-                        <label for="monitoredUsersGroup" class="form-label">Monitored Users Group</label>
-                        <input type="text" class="form-control" id="monitoredUsersGroup" value="">
-                        <div class="form-text">Active Directory group name to monitor (leave empty to monitor all users)</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="monitoredUsers" class="form-label">Individual Users to Monitor</label>
-                        <textarea class="form-control" id="monitoredUsers" rows="3" placeholder="user1&#10;user2&#10;user3"></textarea>
-                        <div class="form-text">One username per line. Leave empty to use group-based monitoring</div>
-                    </div>
                     <h6 class="text-muted mb-3 mt-4"><i class="fas fa-clock me-2"></i>Time-Based Monitoring</h6>
-                    <div class="row">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="monitorAllDay" checked>
+                        <label class="form-check-label" for="monitorAllDay">Monitor 24/7 (all day)</label>
+                    </div>
+                    <div class="row" id="monitorHoursRow">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="monitorStartTime" class="form-label">Start Time</label>
-                                <input type="time" class="form-control" id="monitorStartTime" value="00:00">
-                                <div class="form-text">When to start monitoring</div>
+                                <input type="time" class="form-control" id="monitorStartTime" value="08:00" disabled>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="monitorEndTime" class="form-label">End Time</label>
-                                <input type="time" class="form-control" id="monitorEndTime" value="23:59">
-                                <div class="form-text">When to stop monitoring</div>
+                                <input type="time" class="form-control" id="monitorEndTime" value="23:59" disabled>
                             </div>
                         </div>
                     </div>
@@ -104,17 +96,14 @@
                             </div>
                         </div>
                     </div>
-                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-lock me-2"></i>Application Security</h6>
-                    <div class="mb-3">
-                        <label for="exitPassword" class="form-label">Exit Password</label>
-                        <input type="password" class="form-control" id="exitPassword" value="" placeholder="Set an exit password">
-                        <div class="form-text">Password required to exit the application from system tray</div>
-                    </div>
-                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-code me-2"></i>Generated Configuration</h6>
-                    <div class="mb-3">
-                        <label for="plainConfigArea" class="form-label">JSON Configuration</label>
-                        <textarea id="plainConfigArea" class="form-control" rows="12" spellcheck="false" style="font-family: 'Courier New', monospace; font-size: 0.85em;"></textarea>
-                        <div class="form-text">This JSON will be encrypted and saved as secureconfig.json</div>
+                    <div class="mb-3 mt-4">
+                        <a class="text-muted small" data-bs-toggle="collapse" href="#jsonPreview" role="button">
+                            <i class="fas fa-code me-1"></i>Show generated JSON
+                        </a>
+                        <div class="collapse mt-2" id="jsonPreview">
+                            <textarea id="plainConfigArea" class="form-control" rows="10" spellcheck="false" style="font-family: 'Courier New', monospace; font-size: 0.85em;" readonly></textarea>
+                            <div class="form-text">This JSON will be encrypted and saved as secureconfig.json</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -122,70 +111,38 @@
         <div class="card-footer d-flex gap-2">
             <button class="btn btn-outline-secondary" id="loadConfigBtn"><i class="fas fa-download me-2"></i>Load Current Config</button>
             <button class="btn btn-outline-secondary" id="resetDefaultsBtn"><i class="fas fa-undo me-2"></i>Reset to Defaults</button>
-            <button class="btn btn-primary" id="submitConfigBtn"><i class="fas fa-save me-2"></i>Generate & Download secureconfig.json</button>
+            <button class="btn btn-primary" id="submitConfigBtn"><i class="fas fa-save me-2"></i>Save</button>
         </div>
     </div>
 
-    <!-- Chromebook Extension Data Enrichment -->
-    <div class="card shadow-sm">
-        <div class="card-header page-header">
-            <h5 class="mb-0"><i class="fab fa-chrome me-2"></i>Chromebook Extension - Data Enrichment</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p class="text-muted mb-3">
-                        Import student data from your school's STMC export to automatically enrich Chromebook extension user records
-                        with display names, homegroups, and class information.
-                    </p>
-                    <div class="mb-3">
-                        <label for="enrichmentFile" class="form-label">School Export CSV</label>
-                        <input type="file" class="form-control" id="enrichmentFile" accept=".csv" required>
-                    </div>
-                    <button type="button" class="btn btn-primary w-100" id="importEnrichmentBtn">
-                        <i class="fas fa-cloud-upload-alt me-2"></i>Import &amp; Enrich
-                    </button>
-                    <div id="enrichmentResult" class="mt-3" style="display: none;"></div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card section-card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>How to Export from STMC</h6>
-                        </div>
-                        <div class="card-body">
-                            <ol class="mb-0 ps-3">
-                                <li class="mb-2">Log in to <a href="https://stmc.education.vic.gov.au/" target="_blank" rel="noopener">STMC</a></li>
-                                <li class="mb-2">Select <strong>Access Management &gt; Student Passwords</strong></li>
-                                <li class="mb-2">Select your school</li>
-                                <li>Click <strong>Export</strong> to download the CSV</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     // Wire up all form inputs to auto-update config JSON
-    const configInputs = ['serverUrl', 'intervalMinutes', 'maxHistoryDays', 'monitoredUsersGroup',
-        'monitoredUsers', 'monitorStartTime', 'monitorEndTime', 'logMaxMb', 'logRollCount', 'exitPassword'];
+    const configInputs = ['serverUrl', 'intervalMinutes', 'maxHistoryDays',
+        'monitorStartTime', 'monitorEndTime', 'logMaxMb', 'logRollCount'];
     configInputs.forEach(id => {
         const el = document.getElementById(id);
         el.addEventListener('input', updateConfigJson);
     });
     document.getElementById('chromeEnabled').addEventListener('change', updateConfigJson);
     document.getElementById('edgeEnabled').addEventListener('change', updateConfigJson);
+    document.getElementById('monitorAllDay').addEventListener('change', (e) => {
+        document.getElementById('monitorStartTime').disabled = e.target.checked;
+        document.getElementById('monitorEndTime').disabled = e.target.checked;
+        if (e.target.checked) {
+            document.getElementById('monitorStartTime').value = '00:00';
+            document.getElementById('monitorEndTime').value = '23:59';
+        }
+        updateConfigJson();
+    });
 
     // Wire up buttons
     document.getElementById('loadConfigBtn').addEventListener('click', (e) => loadCurrentConfig(e));
     document.getElementById('resetDefaultsBtn').addEventListener('click', resetToDefaults);
     document.getElementById('submitConfigBtn').addEventListener('click', submitSecureConfig);
-    document.getElementById('importEnrichmentBtn').addEventListener('click', importStudentEnrichment);
-
     document.addEventListener('DOMContentLoaded', () => {
         loadCurrentConfig().catch(() => {
             resetToDefaults();
@@ -220,43 +177,44 @@
 
     function populateFormFromConfig(config) {
         document.getElementById('serverUrl').value = config.server_url || 'http://browserreporter:8000';
-        document.getElementById('intervalMinutes').value = config.sync_interval_minutes || 5;
-        document.getElementById('maxHistoryDays').value = Math.floor((config.max_history_age_hours || 24) / 24);
-        document.getElementById('monitoredUsersGroup').value = config.monitored_users_group || '';
-        document.getElementById('monitoredUsers').value = Array.isArray(config.monitored_users)
-            ? config.monitored_users.join('\n') : '';
-        if (config.monitored_hours) {
-            document.getElementById('monitorStartTime').value = config.monitored_hours.start || '00:00';
-            document.getElementById('monitorEndTime').value = config.monitored_hours.end || '23:59';
-        } else {
-            document.getElementById('monitorStartTime').value = '00:00';
-            document.getElementById('monitorEndTime').value = '23:59';
-        }
-        if (Array.isArray(config.browsers)) {
+        document.getElementById('intervalMinutes').value = config.collection_interval_minutes || config.sync_interval_minutes || 5;
+        document.getElementById('maxHistoryDays').value = config.max_history_days || Math.floor((config.max_history_age_hours || 720) / 24);
+
+        // Support both new flat keys and old nested monitored_hours format
+        const start = config.monitored_start_time || (config.monitored_hours && config.monitored_hours.start) || '00:00';
+        const end = config.monitored_end_time || (config.monitored_hours && config.monitored_hours.end) || '23:59';
+        const isAllDay = (start === '00:00' && end === '23:59');
+        document.getElementById('monitorAllDay').checked = isAllDay;
+        document.getElementById('monitorStartTime').value = start;
+        document.getElementById('monitorEndTime').value = end;
+        document.getElementById('monitorStartTime').disabled = isAllDay;
+        document.getElementById('monitorEndTime').disabled = isAllDay;
+
+        // Support both new boolean keys and old browsers array
+        if (config.enable_chrome !== undefined) {
+            document.getElementById('chromeEnabled').checked = config.enable_chrome;
+            document.getElementById('edgeEnabled').checked = config.enable_edge;
+        } else if (Array.isArray(config.browsers)) {
             document.getElementById('chromeEnabled').checked = config.browsers.includes('chrome');
             document.getElementById('edgeEnabled').checked = config.browsers.includes('edge');
-        } else {
-            document.getElementById('chromeEnabled').checked = true;
-            document.getElementById('edgeEnabled').checked = true;
         }
         document.getElementById('logMaxMb').value = config.log_max_mb || 5;
         document.getElementById('logRollCount').value = config.log_roll_count || 3;
-        document.getElementById('exitPassword').value = config.exit_password || '';
     }
 
     function resetToDefaults() {
         document.getElementById('serverUrl').value = 'http://browserreporter:8000';
         document.getElementById('intervalMinutes').value = '5';
         document.getElementById('maxHistoryDays').value = '30';
-        document.getElementById('monitoredUsersGroup').value = '';
-        document.getElementById('monitoredUsers').value = '';
+        document.getElementById('monitorAllDay').checked = true;
         document.getElementById('monitorStartTime').value = '00:00';
         document.getElementById('monitorEndTime').value = '23:59';
+        document.getElementById('monitorStartTime').disabled = true;
+        document.getElementById('monitorEndTime').disabled = true;
         document.getElementById('chromeEnabled').checked = true;
         document.getElementById('edgeEnabled').checked = true;
         document.getElementById('logMaxMb').value = '5';
         document.getElementById('logRollCount').value = '3';
-        document.getElementById('exitPassword').value = '';
         updateConfigJson();
     }
 
@@ -264,19 +222,16 @@
         const browsers = [];
         if (document.getElementById('chromeEnabled').checked) browsers.push('chrome');
         if (document.getElementById('edgeEnabled').checked) browsers.push('edge');
-        const monitoredUsersText = document.getElementById('monitoredUsers').value;
-        const monitoredUsers = monitoredUsersText ? monitoredUsersText.split('\n').map(u => u.trim()).filter(u => u) : [];
         const config = {
             server_url: document.getElementById('serverUrl').value,
-            sync_interval_minutes: parseInt(document.getElementById('intervalMinutes').value),
-            max_history_age_hours: parseInt(document.getElementById('maxHistoryDays').value) * 24,
-            monitored_users_group: document.getElementById('monitoredUsersGroup').value,
-            monitored_users: monitoredUsers,
-            monitored_hours: { start: document.getElementById('monitorStartTime').value, end: document.getElementById('monitorEndTime').value },
-            browsers: browsers,
+            collection_interval_minutes: parseInt(document.getElementById('intervalMinutes').value),
+            max_history_days: parseInt(document.getElementById('maxHistoryDays').value),
+            monitored_start_time: document.getElementById('monitorStartTime').value,
+            monitored_end_time: document.getElementById('monitorEndTime').value,
+            enable_chrome: document.getElementById('chromeEnabled').checked,
+            enable_edge: document.getElementById('edgeEnabled').checked,
             log_max_mb: parseInt(document.getElementById('logMaxMb').value),
             log_roll_count: parseInt(document.getElementById('logRollCount').value),
-            exit_password: document.getElementById('exitPassword').value
         };
         document.getElementById('plainConfigArea').value = JSON.stringify(config, null, 2);
     }
@@ -289,55 +244,12 @@
             try { plain = JSON.parse(rawText); } catch (e) { return showError('Invalid JSON configuration. Please check the format.'); }
             const resp = await fetch('/api/admin/secureconfig', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(plain) });
             if (!resp.ok) { const msg = await resp.text(); throw new Error(msg || 'Failed to generate secure config'); }
-            showSuccess('secureconfig.json generated successfully!');
+            showSuccess('Configuration saved successfully');
         } catch (err) {
             console.error('Secure config error', err);
             showError('Error: ' + err.message);
         }
     }
 
-    async function importStudentEnrichment() {
-        const fileInput = document.getElementById('enrichmentFile');
-        const file = fileInput.files[0];
-        if (!file) return showError('Please select a CSV file to upload');
-        if (!file.name.endsWith('.csv')) return showError('Please select a CSV file');
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const btn = document.getElementById('importEnrichmentBtn');
-        const originalText = btn.innerHTML;
-        const resultDiv = document.getElementById('enrichmentResult');
-        resultDiv.style.display = 'none';
-
-        try {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
-            btn.disabled = true;
-
-            const response = await fetch('/api/admin/enrich-students', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.detail || 'Import failed');
-
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="alert alert-success mb-0">
-                    <i class="fas fa-check-circle me-2"></i>
-                    <strong>Import complete</strong><br>
-                    <small>
-                        ${result.imported.toLocaleString()} records imported &bull;
-                        ${result.users_updated.toLocaleString()} existing users enriched
-                        ${result.skipped > 0 ? ` &bull; ${result.skipped} rows skipped` : ''}
-                    </small>
-                </div>`;
-            fileInput.value = '';
-        } catch (error) {
-            console.error('Error importing enrichment data:', error);
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(error.message)}</div>`;
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
 </script>
 {% endblock %}

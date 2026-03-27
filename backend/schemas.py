@@ -10,6 +10,8 @@ class VisitIn(BaseModel):
     Title: str
     VisitTime: int  # epoch milliseconds
     ComputerName: str
+    Source: Optional[str] = None  # "chrome_extension", "windows_agent", "windows_agent_edge"
+    BrowserProfile: Optional[str] = None  # "Default", "Profile 1", etc.
 
 
 class UserInfoIn(BaseModel):
@@ -55,3 +57,17 @@ class DashboardUserResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# Extension Builder Schemas
+
+class ExtensionConfigIn(BaseModel):
+    school_name: str = Field("", max_length=100)
+    accent_color: str = Field("#0d3a6e", pattern=r"^#[0-9a-fA-F]{6}$")
+    notice_text: str = Field("", max_length=500)
+    contact_info: str = Field("", max_length=200)
+    server_url: str = Field("")
+    tracking_start_time: str = Field("00:00", pattern=r"^\d{2}:\d{2}$")
+    tracking_end_time: str = Field("23:59", pattern=r"^\d{2}:\d{2}$")
+    tracking_all_day: bool = Field(True)
+    monitored_emails: list[str] = Field(default_factory=list)

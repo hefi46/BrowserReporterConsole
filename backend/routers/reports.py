@@ -340,6 +340,8 @@ async def reports_user(
                 "title": v.title,
                 "url": v.url,
                 "computerName": v.computer_name,
+                "source": v.source,
+                "browserProfile": v.browser_profile,
             }
             for v in visits
         ],

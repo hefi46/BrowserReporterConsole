@@ -38,6 +38,8 @@ _DEFAULT_LDAP_CONFIG = {
     "use_ssl": False,
     "admin_group_dn": "",
     "default_role": "user",
+    "enrichment_enabled": False,
+    "homegroup_attribute": "department",
 }
 
 
@@ -56,6 +58,8 @@ def get_env_ldap_config() -> dict:
         "use_ssl": os.getenv("LDAP_USE_SSL", "false").lower() == "true",
         "admin_group_dn": os.getenv("LDAP_ADMIN_GROUP_DN", ""),
         "default_role": os.getenv("LDAP_DEFAULT_ROLE", "user"),
+        "enrichment_enabled": os.getenv("LDAP_ENRICHMENT_ENABLED", "").lower() == "true",
+        "homegroup_attribute": os.getenv("LDAP_HOMEGROUP_ATTRIBUTE", "department"),
     }
 
 
@@ -206,6 +210,84 @@ def authenticate_ldap(username: str, password: str, config: dict | None = None) 
 
     except Exception:
         logger.info("LDAP: authentication failed for '%s'", username)
+        return None
+
+
+def lookup_user_details(username: str, config: dict) -> dict | None:
+    """Look up a user's details from AD using the service account.
+
+    Returns a dict with givenName, sn, department, displayName, mail,
+    sAMAccountName on success, ``None`` if not found or LDAP is disabled.
+    No password validation — this is a read-only directory lookup.
+    """
+    if not config.get("enabled") and not config.get("enrichment_enabled"):
+        return None
+
+    from ldap3 import Server, Connection, ALL, SUBTREE  # noqa: WPS433
+
+    server_url = config.get("server", "")
+    base_dn = config.get("base_dn", "")
+    if not server_url or not base_dn:
+        return None
+
+    homegroup_attr = config.get("homegroup_attribute", "department")
+
+    try:
+        server = Server(server_url, use_ssl=config.get("use_ssl", False), get_info=ALL)
+        svc_conn = Connection(
+            server,
+            user=config.get("bind_dn", ""),
+            password=config.get("bind_password", ""),
+            auto_bind=True,
+        )
+
+        search_filter = config.get(
+            "user_search_filter",
+            "(&(objectClass=user)(sAMAccountName={username}))",
+        ).replace("{username}", username)
+
+        # Build attribute list, including the configured homegroup attribute
+        search_attrs = ["sAMAccountName", "givenName", "sn", "displayName", "mail"]
+        if homegroup_attr not in search_attrs:
+            search_attrs.append(homegroup_attr)
+
+        svc_conn.search(
+            base_dn,
+            search_filter,
+            search_scope=SUBTREE,
+            attributes=search_attrs,
+        )
+
+        if not svc_conn.entries:
+            svc_conn.unbind()
+            return None
+
+        entry = svc_conn.entries[0]
+
+        # Read the configured homegroup attribute safely
+        homegroup_value = None
+        try:
+            attr_val = getattr(entry, homegroup_attr, None)
+            if attr_val:
+                homegroup_value = str(attr_val)
+        except Exception:
+            pass
+
+        result = {
+            "sAMAccountName": str(entry.sAMAccountName) if entry.sAMAccountName else username,
+            "first_name": str(entry.givenName) if entry.givenName else None,
+            "last_name": str(entry.sn) if entry.sn else None,
+            "department": homegroup_value,
+            "display_name": str(entry.displayName) if entry.displayName else None,
+            "email": str(entry.mail) if entry.mail else None,
+        }
+        svc_conn.unbind()
+
+        logger.info("LDAP: looked up details for '%s' — homegroup(%s)=%s", username, homegroup_attr, homegroup_value)
+        return result
+
+    except Exception:
+        logger.warning("LDAP: lookup failed for '%s'", username, exc_info=True)
         return None
 
 
