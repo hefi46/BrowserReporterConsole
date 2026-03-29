@@ -90,7 +90,7 @@ async def _get_or_create_signing_key(db: AsyncSession) -> str:
 
 # ── Admin API endpoints ──────────────────────────────────────────────────
 
-@router.get("/extension", response_class=HTMLResponse)
+@router.get("/chromebook-extension", response_class=HTMLResponse)
 async def extension_page(request: Request, db: AsyncSession = Depends(get_db)):
     await require_admin(request, db)
     return templates.TemplateResponse("extension.html", {"request": request})
@@ -358,7 +358,7 @@ async def get_extension_status(request: Request, db: AsyncSession = Depends(get_
 
 # ── Public endpoints (no auth — Chromebooks need these) ──────────────────
 
-@router.get("/extension/update.xml")
+@router.get("/chromebook-extension/update.xml")
 async def serve_update_xml():
     """Serve update.xml for Chrome extension auto-updates."""
     xml_path = os.path.join(STATIC_EXT_DIR, "update.xml")
@@ -367,7 +367,7 @@ async def serve_update_xml():
     return FileResponse(xml_path, media_type="application/xml")
 
 
-@router.get("/extension/extension.crx")
+@router.get("/chromebook-extension/extension.crx")
 async def serve_extension_crx():
     """Serve the packaged .crx extension file."""
     crx_path = os.path.join(STATIC_EXT_DIR, "extension.crx")

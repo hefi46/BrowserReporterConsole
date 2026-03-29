@@ -26,10 +26,9 @@
             </div>
             <div class="navbar-nav ms-auto d-flex align-items-center">
                 {% if is_admin(request) %}
-                <a class="nav-link" href="/admin">Admin</a>
-                <a class="nav-link" href="/client-config">Client Config</a>
-                <a class="nav-link" href="/extension">Extension</a>
-                <a class="nav-link" href="/windows-agent">Windows Agent</a>
+                <a class="nav-link{{ ' active' if request.url.path == '/admin' else '' }}" href="/admin">Admin</a>
+                <a class="nav-link{{ ' active' if request.url.path == '/chromebook-extension' else '' }}" href="/chromebook-extension">Chromebook Extension</a>
+                <a class="nav-link{{ ' active' if request.url.path == '/windows-agent' else '' }}" href="/windows-agent">Windows Agent</a>
                 {% endif %}
                 <a class="nav-link" href="/logout">Logout</a>
             </div>

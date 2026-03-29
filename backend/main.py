@@ -34,7 +34,7 @@ from .migrations.runner import get_db_config, ensure_schema_columns, apply_migra
 from .routers import auth, reports, admin, extension, agent
 from .routers.deps import require_login
 
-APP_VERSION = "1.0"
+APP_VERSION = "1.0.1"
 
 # ── Logging ──────────────────────────────────────────────────────────────
 

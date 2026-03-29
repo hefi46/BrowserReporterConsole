@@ -595,7 +595,7 @@ def build_extension(config: dict, pem_key: str,
     # Generate update.xml
     update_xml = generate_update_xml(
         ext_id, version,
-        f"{server_url}/extension/extension.crx",
+        f"{server_url}/chromebook-extension/extension.crx",
     )
 
     return crx_bytes, ext_id, update_xml
