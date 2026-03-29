@@ -390,7 +390,7 @@ async def preview_icon(request: Request, db: AsyncSession = Depends(get_db)):
         # Serve default icon
         default_icon = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "..", "extension", "icons", "icon128.png"
+            "..", "chrome_extension", "icons", "icon128.png"
         )
         if os.path.exists(default_icon):
             return FileResponse(default_icon, media_type="image/png")

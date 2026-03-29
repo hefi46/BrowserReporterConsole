@@ -2,6 +2,17 @@
 
 {% block title %}Extension Builder - Browser Reporter{% endblock %}
 
+{% block head %}
+<style>
+    .card-header[data-bs-toggle="collapse"] .fa-chevron-down {
+        transition: transform 0.2s;
+    }
+    .card-header[data-bs-toggle="collapse"][aria-expanded="true"] .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+</style>
+{% endblock %}
+
 {% block body %}
 <div class="container my-4">
     <!-- Page Header -->
@@ -236,32 +247,41 @@
                 </div>
             </div>
 
-            <!-- HTTPS Certificate -->
+            <!-- HTTPS Certificate (collapsible) -->
             <div class="card section-card mb-3">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-lock me-2"></i>HTTPS Certificate</h6>
+                <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#collapseCert" aria-expanded="false" aria-controls="collapseCert" style="cursor: pointer;">
+                    <h6 class="mb-0 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-lock me-2"></i>HTTPS Certificate</span>
+                        <i class="fas fa-chevron-down small"></i>
+                    </h6>
                 </div>
-                <div class="card-body">
-                    <div id="certStatus" class="mb-3">
-                        <div class="text-muted">Checking certificate status...</div>
-                    </div>
-                    <a href="/api/admin/extension/ca-cert" class="btn btn-outline-primary btn-sm w-100 mb-2" download>
-                        <i class="fas fa-certificate me-2"></i>Download CA Certificate
-                    </a>
-                    <div class="form-text">
-                        Upload this certificate to <strong>Google Admin Console</strong> &rarr;
-                        <code>Devices &rarr; Networks &rarr; Certificates</code>
-                        so Chromebooks trust this server's HTTPS connection.
+                <div class="collapse" id="collapseCert">
+                    <div class="card-body">
+                        <div id="certStatus" class="mb-3">
+                            <div class="text-muted">Checking certificate status...</div>
+                        </div>
+                        <a href="/api/admin/extension/ca-cert" class="btn btn-outline-primary btn-sm w-100 mb-2" download>
+                            <i class="fas fa-certificate me-2"></i>Download CA Certificate
+                        </a>
+                        <div class="form-text">
+                            Upload this certificate to <strong>Google Admin Console</strong> &rarr;
+                            <code>Devices &rarr; Networks &rarr; Certificates</code>
+                            so Chromebooks trust this server's HTTPS connection.
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- GCC Setup Instructions -->
+            <!-- GCC Setup Instructions (collapsible) -->
             <div class="card section-card mb-3">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-book me-2"></i>Google Admin Console Setup</h6>
+                <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#collapseGAC" aria-expanded="false" aria-controls="collapseGAC" style="cursor: pointer;">
+                    <h6 class="mb-0 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-book me-2"></i>Google Admin Console Setup</span>
+                        <i class="fas fa-chevron-down small"></i>
+                    </h6>
                 </div>
-                <div class="card-body">
+                <div class="collapse" id="collapseGAC">
+                    <div class="card-body">
                     <!-- HTTP vs HTTPS note -->
                     <div class="alert alert-info py-2 mb-3" style="font-size: 12px;">
                         <i class="fas fa-info-circle me-1"></i>
@@ -308,6 +328,7 @@
                             </li>
                         </ol>
                     </div>
+                </div>
                 </div>
             </div>
         </div>
