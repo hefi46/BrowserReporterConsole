@@ -1,6 +1,6 @@
 # Database Migrations
 
-This directory contains SQL migrations and management scripts for the BrowserReporterConsole database.
+This directory contains SQL migrations and management scripts for the BrowserGuardianConsole database.
 
 ## Quick Start
 
@@ -12,14 +12,14 @@ cd backend/migrations
 python3 apply_migration.py
 
 # Or from inside the backend container
-docker exec -it browserreporterconsole-backend-1 python migrations/apply_migration.py
+docker exec -it browserguardianconsole-backend-1 python migrations/apply_migration.py
 ```
 
 ### Check Migration Status
 
 ```bash
 # View applied migrations
-docker exec -it browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
+docker exec -it browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
   -c "SELECT * FROM schema_migrations ORDER BY applied_at;"
 ```
 
@@ -27,7 +27,7 @@ docker exec -it browserreporterconsole-db-1 psql -U browser_reporter -d browser_
 
 ```bash
 # Check if indexes were created successfully
-docker exec -it browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
+docker exec -it browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
   -c "SELECT tablename, indexname, indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname LIKE 'idx_%';"
 ```
 

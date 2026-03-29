@@ -1,4 +1,4 @@
-module browserreporter
+module browserguardian
 
 go 1.22
 

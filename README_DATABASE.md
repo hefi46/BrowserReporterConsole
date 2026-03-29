@@ -1,6 +1,6 @@
 # Database Management Guide
 
-Comprehensive guide for managing the BrowserReporterConsole PostgreSQL database at scale (800+ users, 2GB+ data).
+Comprehensive guide for managing the BrowserGuardianConsole PostgreSQL database at scale (800+ users, 2GB+ data).
 
 ## Table of Contents
 - [Overview](#overview)
@@ -84,7 +84,7 @@ docker compose down
 docker compose up -d
 
 # Verify settings
-docker exec browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
+docker exec browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
   -c "SHOW shared_buffers; SHOW max_connections;"
 ```
 
@@ -96,9 +96,9 @@ chmod +x backend/scripts/*.sh
 chmod +x backend/migrations/apply_migration.py
 
 # Install cron jobs
-cp backend/scripts/crontab.example ~/browser_reporter_cron
-# Edit paths in ~/browser_reporter_cron
-crontab ~/browser_reporter_cron
+cp backend/scripts/crontab.example ~/browser_guardian_cron
+# Edit paths in ~/browser_guardian_cron
+crontab ~/browser_guardian_cron
 ```
 
 ---
@@ -142,8 +142,8 @@ pool_recycle=3600        # Hourly recycle
 
 **Monitoring connections:**
 ```bash
-docker exec browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
-  -c "SELECT count(*), state FROM pg_stat_activity WHERE datname='browser_reporter' GROUP BY state;"
+docker exec browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
+  -c "SELECT count(*), state FROM pg_stat_activity WHERE datname='browser_guardian' GROUP BY state;"
 ```
 
 ---
@@ -186,7 +186,7 @@ python3 data_retention.py
 
 **Automated (monthly via cron):**
 ```cron
-0 1 1 * * cd /home/hefi/BrowserReporterConsole/backend/scripts && python3 data_retention.py >> /var/log/browser_reporter/retention.log 2>&1
+0 1 1 * * cd /home/hefi/BrowserGuardianConsole/backend/scripts && python3 data_retention.py >> /var/log/browser_guardian/retention.log 2>&1
 ```
 
 **What it does:**
@@ -235,7 +235,7 @@ python3 data_retention.py
 
 **Automated schedule (via cron):**
 ```cron
-0 2 * * * /home/hefi/BrowserReporterConsole/backend/scripts/backup_database.sh /backups/postgres 7 >> /var/log/browser_reporter/backup.log 2>&1
+0 2 * * * /home/hefi/BrowserGuardianConsole/backend/scripts/backup_database.sh /backups/postgres 7 >> /var/log/browser_guardian/backup.log 2>&1
 ```
 
 ### Restore from Backup
@@ -247,8 +247,8 @@ docker compose down
 
 # Restore database
 gunzip -c /backups/postgres/backup_20250117_020000.sql.gz | \
-  docker exec -i browserreporterconsole-db-1 \
-  psql -U browser_reporter -d browser_reporter
+  docker exec -i browserguardianconsole-db-1 \
+  psql -U browser_guardian -d browser_guardian
 
 # Restart application
 docker compose up -d
@@ -258,8 +258,8 @@ docker compose up -d
 ```bash
 # Extract specific table from backup
 gunzip -c backup.sql.gz | grep -A 1000000 "Table: visits" | \
-  docker exec -i browserreporterconsole-db-1 \
-  psql -U browser_reporter -d browser_reporter
+  docker exec -i browserguardianconsole-db-1 \
+  psql -U browser_guardian -d browser_guardian
 ```
 
 ### Disaster Recovery Checklist
@@ -267,7 +267,7 @@ gunzip -c backup.sql.gz | grep -A 1000000 "Table: visits" | \
 1. **Stop the application:** `docker compose down`
 2. **Verify backup exists:** `ls -lh /backups/postgres/`
 3. **Test backup integrity:** `gzip -t backup.sql.gz`
-4. **Clear database (if needed):** `docker volume rm browserreporterconsole_db_data`
+4. **Clear database (if needed):** `docker volume rm browserguardianconsole_db_data`
 5. **Restore from backup:** (see above)
 6. **Verify restoration:** Check record counts
 7. **Restart application:** `docker compose up -d`
@@ -325,7 +325,7 @@ curl -b cookies.txt http://localhost:8000/api/admin/db-stats | jq
 
 **Check database size:**
 ```sql
-SELECT pg_size_pretty(pg_database_size('browser_reporter')) as db_size;
+SELECT pg_size_pretty(pg_database_size('browser_guardian')) as db_size;
 ```
 
 **Check table sizes:**
@@ -473,11 +473,11 @@ ORDER BY n_dead_tup DESC;
 **Diagnosis:**
 ```bash
 # Check if indexes exist
-docker exec browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
+docker exec browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
   -c "SELECT indexname FROM pg_indexes WHERE tablename='visits' AND indexname LIKE 'idx_%';"
 
 # Check query plan
-docker exec browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
+docker exec browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
   -c "EXPLAIN ANALYZE SELECT * FROM visits WHERE user_id = 1 ORDER BY visit_time DESC LIMIT 50;"
 ```
 
@@ -512,7 +512,7 @@ WHERE tablename = 'visits';
 **Diagnosis:**
 ```sql
 SELECT count(*), state FROM pg_stat_activity
-WHERE datname='browser_reporter'
+WHERE datname='browser_guardian'
 GROUP BY state;
 ```
 
@@ -534,7 +534,7 @@ docker compose ps
 df -h /backups
 
 # Test manual backup
-docker exec browserreporterconsole-db-1 pg_dump -U browser_reporter browser_reporter > test.sql
+docker exec browserguardianconsole-db-1 pg_dump -U browser_guardian browser_guardian > test.sql
 ```
 
 **Solutions:**
@@ -634,15 +634,15 @@ docker compose logs -f backend
 docker compose logs -f db
 
 # Database shell
-docker exec -it browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter
+docker exec -it browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian
 
 # Check database size
-docker exec browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
-  -c "SELECT pg_size_pretty(pg_database_size('browser_reporter'));"
+docker exec browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
+  -c "SELECT pg_size_pretty(pg_database_size('browser_guardian'));"
 
 # Monitor connections
-docker exec browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
-  -c "SELECT count(*), state FROM pg_stat_activity WHERE datname='browser_reporter' GROUP BY state;"
+docker exec browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
+  -c "SELECT count(*), state FROM pg_stat_activity WHERE datname='browser_guardian' GROUP BY state;"
 ```
 
 ---

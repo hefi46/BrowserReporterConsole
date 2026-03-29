@@ -15,7 +15,7 @@ Environment variables (used as fallback):
     LDAP_BIND_PASSWORD       = <service-account-password>
     LDAP_USER_SEARCH_FILTER  = (&(objectClass=user)(sAMAccountName={username}))
     LDAP_USE_SSL             = false
-    LDAP_ADMIN_GROUP_DN      = CN=BrowserReporter-Admins,OU=Groups,DC=school,DC=local
+    LDAP_ADMIN_GROUP_DN      = CN=BrowserGuardian-Admins,OU=Groups,DC=school,DC=local
     LDAP_DEFAULT_ROLE        = user
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ import json
 import logging
 import os
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 # ── Default / empty config ───────────────────────────────────────────────
 

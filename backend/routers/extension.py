@@ -20,7 +20,7 @@ from .deps import require_admin
 
 from Crypto.PublicKey import RSA
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 router = APIRouter()
 
 templates: Jinja2Templates = None  # type: ignore[assignment]
@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
     "notice_text": "Internet activity is monitored on this school-owned device. "
                    "All websites visited are logged in accordance with school policy.",
     "header_color": "#0d3a6e",
-    "server_url": "http://browserreporter:8000",
+    "server_url": "http://browserguardian:8000",
     "reporting_start_time": "00:00",
     "reporting_end_time": "23:59",
     "reporting_days": [0, 1, 2, 3, 4, 5, 6],
@@ -414,7 +414,7 @@ async def download_ca_cert(request: Request, db: AsyncSession = Depends(get_db))
     return FileResponse(
         CA_CERT_PATH,
         media_type="application/x-pem-file",
-        filename="BrowserReporter-CA.crt",
+        filename="BrowserGuardian-CA.crt",
     )
 
 

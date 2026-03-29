@@ -1,4 +1,4 @@
-"""Shared fixtures for the BrowserReporterConsole test suite.
+"""Shared fixtures for the BrowserGuardianConsole test suite.
 
 Uses an in-process SQLite database (via aiosqlite) so tests can run
 without Docker or PostgreSQL.  The app's get_db dependency is overridden

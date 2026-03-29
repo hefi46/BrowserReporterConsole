@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Extension Builder - Browser Reporter{% endblock %}
+{% block title %}Extension Builder - Browser Guardian{% endblock %}
 
 {% block head %}
 <style>
@@ -110,7 +110,7 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label for="serverUrl" class="form-label">Reporting Server URL</label>
-                        <input type="url" class="form-control" id="serverUrl" placeholder="http://browserreporter:8000">
+                        <input type="url" class="form-control" id="serverUrl" placeholder="http://browserguardian:8000">
                         <div class="form-text">
                             The URL where the extension sends browsing data. This should be reachable from the managed Chromebooks.
                             Use the hostname or IP address of this server.

@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 
 def get_agent_dir(static_dir: str | Path) -> Path:
@@ -20,7 +20,7 @@ def get_agent_dir(static_dir: str | Path) -> Path:
 
 def get_exe_path(static_dir: str | Path) -> Optional[Path]:
     """Return the path to the agent .exe, or None if not present."""
-    p = get_agent_dir(static_dir) / "BrowserReporter.exe"
+    p = get_agent_dir(static_dir) / "BrowserGuardian.exe"
     return p if p.is_file() else None
 
 

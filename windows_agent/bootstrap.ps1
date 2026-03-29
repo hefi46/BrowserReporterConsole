@@ -1,20 +1,20 @@
-# BrowserReporter Bootstrap Script
-# Deploy to: \\dc\netlogon\BrowserReporter.ps1
+# BrowserGuardian Bootstrap Script
+# Deploy to: \\dc\netlogon\BrowserGuardian.ps1
 #
 # GPO Scheduled Task:
 #   Trigger: At log on
-#   Action:  powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserReporter.ps1
+#   Action:  powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserGuardian.ps1
 #
 # This script checks the console for updates, downloads the agent .exe and
 # config only when a new version is available, then runs the agent silently.
 # Traffic per login is ~50 bytes (version check) unless an update is needed.
 
 # --- CONFIGURE THIS ---
-$server = "http://browserreporter.yourdomain.local:8000"
+$server = "http://browserguardian.yourdomain.local:8000"
 # ----------------------
 
-$dir     = "$env:LOCALAPPDATA\BrowserReporter"
-$exe     = "$dir\BrowserReporter.exe"
+$dir     = "$env:LOCALAPPDATA\BrowserGuardian"
+$exe     = "$dir\BrowserGuardian.exe"
 $cfg     = "$dir\secureconfig.json"
 $verFile = "$dir\version.txt"
 

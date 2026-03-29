@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Data Retention Management Script
-Implements 90-day retention policy for BrowserReporterConsole
+Implements 90-day retention policy for BrowserGuardianConsole
 
 Three-tier data lifecycle:
 1. Active data (0-90 days): Kept in visits table with full indexing
@@ -23,9 +23,9 @@ import os
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "port": int(os.getenv("DB_PORT", "5432")),
-    "user": os.getenv("DB_USER", "browser_reporter"),
-    "password": os.getenv("DB_PASSWORD", "browser_reporter"),
-    "database": os.getenv("DB_NAME", "browser_reporter"),
+    "user": os.getenv("DB_USER", "browser_guardian"),
+    "password": os.getenv("DB_PASSWORD", "browser_guardian"),
+    "database": os.getenv("DB_NAME", "browser_guardian"),
 }
 
 # Retention policy settings (in days)
@@ -334,7 +334,7 @@ class DataRetentionManager:
     async def run(self):
         """Execute full data retention workflow"""
         print("=" * 70)
-        print("🔧 BrowserReporterConsole Data Retention Manager")
+        print("🔧 BrowserGuardianConsole Data Retention Manager")
         print(f"📅 Run date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("=" * 70)
 

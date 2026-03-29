@@ -1,7 +1,7 @@
 # Test-Bootstrap.ps1 — run from PowerShell on this machine
 $server = "http://localhost:8000"
-$dir    = "$env:LOCALAPPDATA\BrowserReporter\test"
-$exe    = "$dir\BrowserReporter.exe"
+$dir    = "$env:LOCALAPPDATA\BrowserGuardian\test"
+$exe    = "$dir\BrowserGuardian.exe"
 $cfg    = "$dir\secureconfig.json"
 
 # Clean slate

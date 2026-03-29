@@ -5,7 +5,7 @@
 set -e
 
 CERT_DIR="/certs"
-HOSTNAME="${SERVER_HOSTNAME:-browserreporter}"
+HOSTNAME="${SERVER_HOSTNAME:-browserguardian}"
 
 if [ -f "$CERT_DIR/ca.crt" ] && [ -f "$CERT_DIR/server.crt" ]; then
     echo "[cert-init] Certificates already exist, skipping generation."
@@ -18,7 +18,7 @@ echo "[cert-init] Generating CA and server certificates for hostname: $HOSTNAME"
 openssl genrsa -out "$CERT_DIR/ca.key" 4096 2>/dev/null
 openssl req -new -x509 -days 3650 -key "$CERT_DIR/ca.key" \
     -out "$CERT_DIR/ca.crt" \
-    -subj "/C=AU/ST=Victoria/O=BrowserReporter/CN=BrowserReporter CA"
+    -subj "/C=AU/ST=Victoria/O=BrowserGuardian/CN=BrowserGuardian CA"
 
 # 2. Generate server private key
 openssl genrsa -out "$CERT_DIR/server.key" 2048 2>/dev/null
@@ -34,7 +34,7 @@ req_extensions = v3_req
 [dn]
 C = AU
 ST = Victoria
-O = BrowserReporter
+O = BrowserGuardian
 CN = $HOSTNAME
 
 [v3_req]

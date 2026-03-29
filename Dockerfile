@@ -26,7 +26,7 @@ USER appuser
 
 # Default environment values (can be overridden in compose or with -e)
 ENV SESSION_SECRET=changeme-session-secret \
-    DATABASE_URL=postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
+    DATABASE_URL=postgresql+asyncpg://browser_guardian:browser_guardian@db:5432/browser_guardian
 
 EXPOSE 8000
 

@@ -15,7 +15,7 @@ pytestmark = pytest.mark.skipif(
 async def test_login_page_renders(client):
     resp = await client.get("/login")
     assert resp.status_code == 200
-    assert "Browser Reporter" in resp.text
+    assert "Browser Guardian" in resp.text
 
 
 # ── POST /login ─────────────────────────────────────────────────────────

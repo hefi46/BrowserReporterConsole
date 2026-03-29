@@ -14,10 +14,10 @@ import sys
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
-logger = logging.getLogger("browser_reporter_agent")
+logger = logging.getLogger("browser_guardian_agent")
 
 # Must match backend/utils.py line 47
-_MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY", "BrowserReporter2024!MasterKey").encode()
+_MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY", "BrowserGuardian2024!MasterKey").encode()
 _AES_KEY = hashlib.sha256(_MASTER_KEY).digest()  # 32-byte key for AES-256
 
 # Default config values

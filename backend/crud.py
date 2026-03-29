@@ -84,7 +84,7 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
                         )
         except Exception:
             import logging
-            logging.getLogger("browser_reporter").debug(
+            logging.getLogger("browser_guardian").debug(
                 "AD enrichment skipped for '%s'", info.Username, exc_info=True
             )
 

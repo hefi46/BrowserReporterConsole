@@ -7,7 +7,7 @@ from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://browser_reporter:browser_reporter@localhost/browser_reporter",
+    "postgresql+asyncpg://browser_guardian:browser_guardian@localhost/browser_guardian",
 )
 
 # Optimized engine configuration for high-volume workloads (800+ users)
@@ -25,7 +25,7 @@ engine = create_async_engine(
     connect_args={
         "statement_cache_size": 0,  # Disable prepared statement cache (better for varied queries)
         "server_settings": {
-            "application_name": "browser_reporter_backend",
+            "application_name": "browser_guardian_backend",
             "jit": "off",  # Disable JIT for simpler queries (reduces overhead)
         },
     },

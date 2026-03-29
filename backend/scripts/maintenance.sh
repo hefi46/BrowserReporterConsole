@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Database Maintenance Script for BrowserReporterConsole
+# Database Maintenance Script for BrowserGuardianConsole
 #
 # Performs routine database maintenance tasks:
 # - VACUUM: Reclaims storage space from deleted records
@@ -21,9 +21,9 @@ set -e
 set -u
 
 # Configuration
-CONTAINER_NAME="browserreporterconsole-db-1"
-DB_NAME="browser_reporter"
-DB_USER="browser_reporter"
+CONTAINER_NAME="browserguardianconsole-db-1"
+DB_NAME="browser_guardian"
+DB_USER="browser_guardian"
 
 # Parse command line arguments
 VACUUM_FULL=false
@@ -312,7 +312,7 @@ show_post_maintenance_stats() {
 # Main execution
 main() {
     echo "================================================================================"
-    echo " BrowserReporterConsole Database Maintenance"
+    echo " BrowserGuardianConsole Database Maintenance"
     echo " $(date '+%Y-%m-%d %H:%M:%S')"
     echo "================================================================================"
     echo ""

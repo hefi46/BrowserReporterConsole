@@ -78,7 +78,7 @@ def _build_popup_html(config: dict) -> str:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BrowserReporter</title>
+  <title>BrowserGuardian</title>
   <style>
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
@@ -145,7 +145,7 @@ def _build_popup_html(config: dict) -> str:
 
 def _build_background_js(config: dict) -> str:
     """Generate background.js with server URL and time restrictions."""
-    server_url = config.get("server_url", "http://browserreporter:8000").rstrip("/")
+    server_url = config.get("server_url", "http://browserguardian:8000").rstrip("/")
     start_time = config.get("reporting_start_time", "00:00")
     end_time = config.get("reporting_end_time", "23:59")
     active_days = config.get("reporting_days", [0, 1, 2, 3, 4, 5, 6])
@@ -182,15 +182,15 @@ function isWithinReportingWindow() { return true; }
 
     return f"""\
 /**
- * BrowserReporter - Background Service Worker
- * Collects page visits and batches them to the BrowserReporter server.
+ * BrowserGuardian - Background Service Worker
+ * Collects page visits and batches them to the BrowserGuardian server.
  */
 
 const SERVER_URL = '{server_url}';
 const REPORT_ENDPOINT = `${{SERVER_URL}}/api/reports/data`;
 
 // Send any queued visits every 1 minute
-const ALARM_NAME = 'browserreporter_send';
+const ALARM_NAME = 'browserguardian_send';
 const ALARM_INTERVAL_MINUTES = 1;
 
 // Also flush immediately if the queue reaches this size
@@ -307,14 +307,14 @@ async function sendVisits() {{
     if (response.ok) {{
       await chrome.storage.local.set({{ visitQueue: [] }});
       console.log(
-        `[BrowserReporter] Sent ${{visitQueue.length}} visits for ${{email}} from ${{deviceName}}.`
+        `[BrowserGuardian] Sent ${{visitQueue.length}} visits for ${{email}} from ${{deviceName}}.`
       );
     }} else {{
       const errorText = await response.text();
-      console.warn(`[BrowserReporter] Server returned ${{response.status}}: ${{errorText}}`);
+      console.warn(`[BrowserGuardian] Server returned ${{response.status}}: ${{errorText}}`);
     }}
   }} catch (err) {{
-    console.warn('[BrowserReporter] Could not reach server, will retry:', err.message);
+    console.warn('[BrowserGuardian] Could not reach server, will retry:', err.message);
   }}
 }}
 
@@ -324,7 +324,7 @@ async function getUserInfo() {{
   const result = await new Promise((resolve) => {{
     chrome.identity.getProfileUserInfo({{ accountStatus: 'ANY' }}, (userInfo) => {{
       if (chrome.runtime.lastError || !userInfo.email) {{
-        console.warn('[BrowserReporter] getProfileUserInfo failed:',
+        console.warn('[BrowserGuardian] getProfileUserInfo failed:',
           chrome.runtime.lastError?.message || 'empty email');
         resolve({{
           email: 'unknown@schools.vic.edu.au',
@@ -342,7 +342,7 @@ async function getUserInfo() {{
   }});
 
   await chrome.storage.local.set({{ resolvedIdentity: result }});
-  console.log(`[BrowserReporter] Identity: ${{result.source}} → ${{result.email}}`);
+  console.log(`[BrowserGuardian] Identity: ${{result.source}} → ${{result.email}}`);
   return result;
 }}
 
@@ -560,11 +560,11 @@ def build_extension(config: dict, pem_key: str,
         (crx_bytes, extension_id, update_xml)
     """
     version = config.get("version", "1.0.0")
-    server_url = config.get("server_url", "http://browserreporter:8000").rstrip("/")
+    server_url = config.get("server_url", "http://browserguardian:8000").rstrip("/")
 
     # Generate extension files
     manifest = MANIFEST_TEMPLATE.format(
-        name=config.get("school_name", "BrowserReporter"),
+        name=config.get("school_name", "BrowserGuardian"),
         version=version,
         description=config.get("notice_text",
             "School internet activity reporting for managed Chromebooks."),

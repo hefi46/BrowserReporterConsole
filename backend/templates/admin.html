@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Panel - Browser Reporter{% endblock %}
+{% block title %}Admin Panel - Browser Guardian{% endblock %}
 
 {% block body %}
 <div class="container my-4">
@@ -328,7 +328,7 @@
                                             </div>
                                             <div class="mb-3 ldap-auth-only">
                                                 <label for="ldapAdminGroupDn" class="form-label">Admin Group DN <small class="text-muted">(optional)</small></label>
-                                                <input type="text" class="form-control" id="ldapAdminGroupDn" placeholder="CN=BrowserReporter-Admins,OU=Groups,DC=school,DC=local">
+                                                <input type="text" class="form-control" id="ldapAdminGroupDn" placeholder="CN=BrowserGuardian-Admins,OU=Groups,DC=school,DC=local">
                                                 <div class="form-text">Members of this AD group get the <strong>admin</strong> role automatically</div>
                                             </div>
                                             <div class="mb-3 ldap-auth-only">

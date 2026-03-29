@@ -32,8 +32,8 @@
    ```bash
    sudo apt-get install python3-distutils-extra   #Needed for Ubuntu 24.04
    sudo apt-get install docker-compose git python3-distutils
-   git clone https://github.com/hefi46/BrowserReporterConsole
-   cd BrowserReporterConsole
+   git clone https://github.com/hefi46/BrowserGuardianConsole
+   cd BrowserGuardianConsole
    ```
 
 2. **Start the application:**
@@ -42,8 +42,8 @@
    ```
 
 3. **Access the dashboard:**
-   -Add DNS record for BrowserReporter pointing to your server
-   - Open http://browserreporter:8000  
+   -Add DNS record for BrowserGuardian pointing to your server
+   - Open http://browserguardian:8000  
    - Login with default admin credentials: `admin` / `admin`
    - click admin panel in top bar and create users or upload users with CSV
 

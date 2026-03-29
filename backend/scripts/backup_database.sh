@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Database Backup Script for BrowserReporterConsole
+# Database Backup Script for BrowserGuardianConsole
 #
 # This script creates daily backups of the PostgreSQL database
 # Keeps backups for 7 days by default
@@ -19,9 +19,9 @@ set -u  # Exit on undefined variable
 BACKUP_DIR="${1:-/backups/postgres}"
 RETENTION_DAYS="${2:-7}"
 DATE=$(date +%Y%m%d_%H%M%S)
-CONTAINER_NAME="browserreporterconsole-db-1"
-DB_NAME="browser_reporter"
-DB_USER="browser_reporter"
+CONTAINER_NAME="browserguardianconsole-db-1"
+DB_NAME="browser_guardian"
+DB_USER="browser_guardian"
 
 # Colors for output
 RED='\033[0;31m'
@@ -154,7 +154,7 @@ calculate_total_size() {
 # Main execution
 main() {
     echo "================================================================================"
-    echo " BrowserReporterConsole Database Backup"
+    echo " BrowserGuardianConsole Database Backup"
     echo " $(date '+%Y-%m-%d %H:%M:%S')"
     echo "================================================================================"
     echo ""
@@ -198,7 +198,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo ""
     echo "Restore a backup:"
     echo "  gunzip -c /backups/postgres/backup_YYYYMMDD_HHMMSS.sql.gz | \\"
-    echo "    docker exec -i browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter"
+    echo "    docker exec -i browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian"
     exit 0
 fi
 

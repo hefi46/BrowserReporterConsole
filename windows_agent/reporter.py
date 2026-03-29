@@ -1,4 +1,4 @@
-"""HTTP reporter — sends collected visits to the BrowserReporterConsole API."""
+"""HTTP reporter — sends collected visits to the BrowserGuardianConsole API."""
 
 import logging
 from typing import List, Optional
@@ -12,7 +12,7 @@ except ImportError:
     from browsers import Visit
     from version import __version__
 
-logger = logging.getLogger("browser_reporter_agent")
+logger = logging.getLogger("browser_guardian_agent")
 
 _TIMEOUT = 30  # seconds
 

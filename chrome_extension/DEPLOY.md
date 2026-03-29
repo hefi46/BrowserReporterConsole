@@ -1,4 +1,4 @@
-# BrowserReporter Extension - Deployment Guide
+# BrowserGuardian Extension - Deployment Guide
 
 This guide covers packaging the extension and deploying it to managed Chromebooks via the Google Admin Console.
 
@@ -35,24 +35,24 @@ Create a file named `update.xml` with the following content. Replace `EXT_ID` wi
 <?xml version='1.0' encoding='UTF-8'?>
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
   <app appid='EXT_ID'>
-    <updatecheck codebase='http://browserreporter:8000/extension/extension.crx' version='1.0.0' />
+    <updatecheck codebase='http://browserguardian:8000/extension/extension.crx' version='1.0.0' />
   </app>
 </gupdate>
 ```
 
 ### 2b. Serve the files
 
-Place both files in a location accessible to all Chromebooks on your network. A simple option is to serve them directly from the BrowserReporter server by copying them into the backend's static folder:
+Place both files in a location accessible to all Chromebooks on your network. A simple option is to serve them directly from the BrowserGuardian server by copying them into the backend's static folder:
 
 ```
-BrowserReporterConsole/backend/static/extension/
+BrowserGuardianConsole/backend/static/extension/
   extension.crx
   update.xml
 ```
 
 They will then be available at:
-- `http://browserreporter:8000/static/extension/extension.crx`
-- `http://browserreporter:8000/static/extension/update.xml`
+- `http://browserguardian:8000/static/extension/extension.crx`
+- `http://browserguardian:8000/static/extension/update.xml`
 
 Update the `codebase` URL in `update.xml` to match.
 
@@ -68,7 +68,7 @@ Update the `codebase` URL in `update.xml` to match.
 6. Set the **Installation policy** to **Force install**
 7. In the **Update URL** field, enter the URL to your `update.xml` file:
    ```
-   http://browserreporter:8000/static/extension/update.xml
+   http://browserguardian:8000/static/extension/update.xml
    ```
 8. **Important - set the managed policy** (see step 3a below)
 9. Click **Save**
@@ -79,7 +79,7 @@ Chrome will push the extension to all Chromebooks in that OU within 24 hours, or
 
 This step is what allows the extension to know who is logged in. Google Admin Console injects the signed-in user's email and name automatically using policy variables.
 
-In the same Apps & extensions entry for BrowserReporter, find the **Policy for extensions** field (sometimes shown as a JSON editor or text box) and paste the following:
+In the same Apps & extensions entry for BrowserGuardian, find the **Policy for extensions** field (sometimes shown as a JSON editor or text box) and paste the following:
 
 ```json
 {
@@ -98,8 +98,8 @@ Google will substitute `${USER_EMAIL}` with the actual signed-in user's email (e
 
 On a managed Chromebook:
 1. Sign in with a `@schools.vic.edu.au` account
-2. Open `chrome://extensions` - the BrowserReporter extension should appear as **Installed by your administrator** with no option to remove it
-3. Browse a few pages, then check the BrowserReporter dashboard to confirm visits are appearing
+2. Open `chrome://extensions` - the BrowserGuardian extension should appear as **Installed by your administrator** with no option to remove it
+3. Browse a few pages, then check the BrowserGuardian dashboard to confirm visits are appearing
 
 ---
 
@@ -115,7 +115,7 @@ On a managed Chromebook:
 
 ## Configuration Notes
 
-The server URL is currently hardcoded as `http://browserreporter:8000` in `background.js`.
+The server URL is currently hardcoded as `http://browserguardian:8000` in `background.js`.
 
 If you need to change the server URL:
 - Edit `background.js` - update the `SERVER_URL` constant at the top

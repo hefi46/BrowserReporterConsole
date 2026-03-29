@@ -39,7 +39,7 @@ from ..ldap_auth import (
 from ..utils import encrypt_secure_config, decrypt_secure_config, get_password_hash
 from .deps import require_login, require_admin
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 router = APIRouter()
 
 templates: Jinja2Templates = None  # type: ignore[assignment]

@@ -8,7 +8,7 @@ from typing import cast, Any
 
 from passlib.context import CryptContext
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -44,7 +44,7 @@ except ImportError as e:  # pragma: no cover
 
 # Master key – loaded from environment variable for security.
 # The Windows collector must use the same key.
-_MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY", "BrowserReporter2024!MasterKey").encode()
+_MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY", "BrowserGuardian2024!MasterKey").encode()
 _AES_KEY = hashlib.sha256(_MASTER_KEY).digest()  # 32-byte key for AES-256
 
 

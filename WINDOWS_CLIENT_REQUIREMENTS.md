@@ -1,4 +1,4 @@
-# Windows Browser Reporter Client - Comprehensive Requirements
+# Windows Browser Guardian Client - Comprehensive Requirements
 
 ## Project Overview
 
@@ -97,7 +97,7 @@ Create a Windows 10/11 24H2 compatible browser monitoring client that runs silen
 
 The client must decrypt AES-256-CBC encrypted configuration using:
 
-**Master Key**: `BrowserReporter2024!MasterKey` (hard-coded in client)
+**Master Key**: `BrowserGuardian2024!MasterKey` (hard-coded in client)
 **Derivation**: SHA-256 hash of master key = 32-byte AES key
 **Mode**: AES-256-CBC with PKCS7 padding
 **IV**: 16 bytes, provided in config JSON
@@ -330,7 +330,7 @@ string urlHash = SHA256(url + "|" + visit_time_ms);
 3. After successful server report, insert `urlHash` into cache
 4. Periodically clean cache (keep last 7 days of records)
 
-**Cache Location**: `%LOCALAPPDATA%\BrowserReporter\cache.db`
+**Cache Location**: `%LOCALAPPDATA%\BrowserGuardian\cache.db`
 
 ---
 
@@ -339,7 +339,7 @@ string urlHash = SHA256(url + "|" + visit_time_ms);
 ### 6.1 Startup Sequence
 
 1. **Initialize Logging**
-   - Create log directory: `%LOCALAPPDATA%\BrowserReporter\logs\`
+   - Create log directory: `%LOCALAPPDATA%\BrowserGuardian\logs\`
    - Initialize rolling file logger with configured size/count limits
 
 2. **Download Configuration**
@@ -419,11 +419,11 @@ The application should run indefinitely until:
 
 ### 7.1 Log Configuration
 
-- **Location**: `%LOCALAPPDATA%\BrowserReporter\logs\BrowserReporter.log`
+- **Location**: `%LOCALAPPDATA%\BrowserGuardian\logs\BrowserGuardian.log`
 - **Format**: Rolling file logger
 - **Max Size**: From config `log_max_mb` (default: 5 MB)
 - **Rotation Count**: From config `log_roll_count` (default: 3 files)
-- **Rotated Names**: `BrowserReporter.1.log`, `BrowserReporter.2.log`, etc.
+- **Rotated Names**: `BrowserGuardian.1.log`, `BrowserGuardian.2.log`, etc.
 
 ### 7.2 Log Levels & Content
 
@@ -572,7 +572,7 @@ Test coverage for:
 ### 11.1 Project Organization
 
 ```
-BrowserReporterClient/
+BrowserGuardianClient/
 ├── Program.cs                    // Entry point
 ├── Configuration/
 │   ├── ConfigManager.cs          // Download & decrypt config
@@ -654,16 +654,16 @@ Output: Single EXE file in `bin/Release/net8.0/win-x64/publish/`
 ### 12.2 Domain Deployment Steps
 
 **Option 1: Group Policy Logon Script**
-1. Copy `BrowserReporterClient.exe` to network share (e.g., `\\domain\NETLOGON\BrowserReporter\`)
+1. Copy `BrowserGuardianClient.exe` to network share (e.g., `\\domain\NETLOGON\BrowserGuardian\`)
 2. Create GPO: User Configuration → Windows Settings → Scripts → Logon
-3. Add script: `\\domain\NETLOGON\BrowserReporter\BrowserReporterClient.exe`
+3. Add script: `\\domain\NETLOGON\BrowserGuardian\BrowserGuardianClient.exe`
 4. Link GPO to target OUs
 
 **Option 2: Startup Task (Task Scheduler)**
 1. Copy executable to local path via GPO file deployment
 2. Create scheduled task via GPO
 3. Trigger: At log on of any user
-4. Action: Start program `C:\Program Files\BrowserReporter\BrowserReporterClient.exe`
+4. Action: Start program `C:\Program Files\BrowserGuardian\BrowserGuardianClient.exe`
 5. Run whether user is logged on or not: No (must run as logged-in user)
 
 ### 12.3 Server Configuration
@@ -681,12 +681,12 @@ Output: Single EXE file in `bin/Release/net8.0/win-x64/publish/`
 
 **Check client is running**:
 ```powershell
-Get-Process BrowserReporterClient
+Get-Process BrowserGuardianClient
 ```
 
 **Check logs**:
 ```powershell
-Get-Content "$env:LOCALAPPDATA\BrowserReporter\logs\BrowserReporter.log" -Tail 50
+Get-Content "$env:LOCALAPPDATA\BrowserGuardian\logs\BrowserGuardian.log" -Tail 50
 ```
 
 **Check database for submissions**:
@@ -696,7 +696,7 @@ Get-Content "$env:LOCALAPPDATA\BrowserReporter\logs\BrowserReporter.log" -Tail 5
 
 ---
 
-## 13. Differences from Old BrowserReporterService
+## 13. Differences from Old BrowserGuardianService
 
 ### What to REMOVE:
 - ❌ System tray icon and UI
@@ -803,8 +803,8 @@ If multiple profiles needed in future:
 
 ## 17. Reference Links
 
-- **Server Repository**: `/home/hefi/BrowserReporterConsole/`
-- **Old Client Reference**: https://github.com/hefi46/BrowserReporterService
+- **Server Repository**: `/home/hefi/BrowserGuardianConsole/`
+- **Old Client Reference**: https://github.com/hefi46/BrowserGuardianService
 - **Server API Documentation**: See `backend/main.py` lines 136-141
 - **Encryption Implementation**: See `backend/utils.py` lines 46-74
 - **Database Models**: See `backend/models.py` and `backend/schemas.py`

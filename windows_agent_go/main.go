@@ -84,7 +84,7 @@ func main() {
 	}
 
 	serverURL := strings.TrimRight(cfg.ServerURL, "/")
-	logger.Printf("INFO BrowserReporter Agent v%s starting (daemon mode)", Version)
+	logger.Printf("INFO BrowserGuardian Agent v%s starting (daemon mode)", Version)
 
 	// Graceful shutdown on SIGTERM / SIGINT / console close
 	sigChan := make(chan os.Signal, 1)

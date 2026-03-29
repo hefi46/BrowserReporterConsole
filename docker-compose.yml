@@ -3,9 +3,9 @@ services:
     image: postgres:15
     restart: unless-stopped
     environment:
-      POSTGRES_USER: browser_reporter
-      POSTGRES_PASSWORD: browser_reporter
-      POSTGRES_DB: browser_reporter
+      POSTGRES_USER: browser_guardian
+      POSTGRES_PASSWORD: browser_guardian
+      POSTGRES_DB: browser_guardian
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
@@ -40,7 +40,7 @@ services:
       - certs:/certs
       - ./caddy/generate-certs.sh:/generate-certs.sh:ro
     environment:
-      SERVER_HOSTNAME: ${SERVER_HOSTNAME:-browserreporter}
+      SERVER_HOSTNAME: ${SERVER_HOSTNAME:-browserguardian}
     entrypoint: ["/bin/sh", "/generate-certs.sh"]
 
   caddy:
@@ -68,7 +68,7 @@ services:
       - certs:/certs:ro
     environment:
       SESSION_SECRET: ${SESSION_SECRET:-changeme-session-secret}
-      DATABASE_URL: postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
+      DATABASE_URL: postgresql+asyncpg://browser_guardian:browser_guardian@db:5432/browser_guardian
       # LDAP / Active Directory (optional — leave LDAP_ENABLED unset to disable)
       LDAP_ENABLED: ${LDAP_ENABLED:-false}
       LDAP_SERVER: ${LDAP_SERVER:-}

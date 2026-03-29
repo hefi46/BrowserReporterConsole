@@ -1,13 +1,13 @@
 /**
- * BrowserReporter - Background Service Worker
- * Collects page visits and batches them to the BrowserReporter server.
+ * BrowserGuardian - Background Service Worker
+ * Collects page visits and batches them to the BrowserGuardian server.
  */
 
-const SERVER_URL = 'http://browserreporter:8000';
+const SERVER_URL = 'http://browserguardian:8000';
 const REPORT_ENDPOINT = `${SERVER_URL}/api/reports/data`;
 
 // Send any queued visits every 1 minute
-const ALARM_NAME = 'browserreporter_send';
+const ALARM_NAME = 'browserguardian_send';
 const ALARM_INTERVAL_MINUTES = 1;
 
 // Also flush immediately if the queue reaches this size
@@ -140,15 +140,15 @@ async function sendVisits() {
       // Clear the queue only on a confirmed successful delivery
       await chrome.storage.local.set({ visitQueue: [] });
       console.log(
-        `[BrowserReporter] Sent ${visitQueue.length} visits for ${email} from ${deviceName}.`
+        `[BrowserGuardian] Sent ${visitQueue.length} visits for ${email} from ${deviceName}.`
       );
     } else {
       const errorText = await response.text();
-      console.warn(`[BrowserReporter] Server returned ${response.status}: ${errorText}`);
+      console.warn(`[BrowserGuardian] Server returned ${response.status}: ${errorText}`);
     }
   } catch (err) {
     // Network error - keep the queue and retry on the next alarm cycle
-    console.warn('[BrowserReporter] Could not reach server, will retry:', err.message);
+    console.warn('[BrowserGuardian] Could not reach server, will retry:', err.message);
   }
 }
 
@@ -164,7 +164,7 @@ async function getUserInfo() {
   const result = await new Promise((resolve) => {
     chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
       if (chrome.runtime.lastError || !userInfo.email) {
-        console.warn('[BrowserReporter] getProfileUserInfo failed:',
+        console.warn('[BrowserGuardian] getProfileUserInfo failed:',
           chrome.runtime.lastError?.message || 'empty email');
         resolve({
           email: 'unknown@schools.vic.edu.au',
@@ -182,7 +182,7 @@ async function getUserInfo() {
   });
 
   await chrome.storage.local.set({ resolvedIdentity: result });
-  console.log(`[BrowserReporter] Identity: ${result.source} → ${result.email}`);
+  console.log(`[BrowserGuardian] Identity: ${result.source} → ${result.email}`);
   return result;
 }
 

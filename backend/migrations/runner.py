@@ -8,7 +8,7 @@ from pathlib import Path
 
 import asyncpg
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 
 def get_db_config() -> dict:
@@ -16,9 +16,9 @@ def get_db_config() -> dict:
     return {
         "host": os.getenv("DB_HOST", "db"),
         "port": int(os.getenv("DB_PORT", "5432")),
-        "user": os.getenv("DB_USER", "browser_reporter"),
-        "password": os.getenv("DB_PASSWORD", "browser_reporter"),
-        "database": os.getenv("DB_NAME", "browser_reporter"),
+        "user": os.getenv("DB_USER", "browser_guardian"),
+        "password": os.getenv("DB_PASSWORD", "browser_guardian"),
+        "database": os.getenv("DB_NAME", "browser_guardian"),
     }
 
 

@@ -12,7 +12,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from typing import List, NamedTuple
 
-logger = logging.getLogger("browser_reporter_agent")
+logger = logging.getLogger("browser_guardian_agent")
 
 # Chrome/Edge use WebKit timestamps: microseconds since 1601-01-01 00:00:00 UTC
 _WEBKIT_EPOCH_DIFF = 11644473600  # seconds between 1601-01-01 and 1970-01-01

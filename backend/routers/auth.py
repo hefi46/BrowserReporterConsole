@@ -15,7 +15,7 @@ from ..models import DashboardUser, DashboardRoleEnum
 from ..utils import verify_password, get_password_hash
 from .deps import get_current_dashboard_user
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 router = APIRouter()
 
 # Templates are set from main.py via configure()

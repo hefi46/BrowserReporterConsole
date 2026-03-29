@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Mock Data Generator for Browser Reporter
+Mock Data Generator for Browser Guardian
 Generates realistic browsing data for 540 users across 18 homegroups (1A-6C)
 """
 
@@ -330,7 +330,7 @@ def send_user_data(user_info: Dict, visits: List[Dict]) -> bool:
 
 def main():
     """Generate and send load test data for all users"""
-    print("🚀 Browser Reporter Load Test Data Generator")
+    print("🚀 Browser Guardian Load Test Data Generator")
     print("=" * 60)
     print(f"📊 Generating data for {len(HOMEGROUPS) * USERS_PER_GROUP} users")
     print(f"🏢 Homegroups: {len(HOMEGROUPS)} groups ({USERS_PER_GROUP} users each)")

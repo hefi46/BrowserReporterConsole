@@ -2,7 +2,7 @@
 
 ## Context
 
-The BrowserReporterConsole currently has a Chrome extension for Chromebooks that collects browsing data. We need a **Windows agent** (.exe) that does the same thing for domain-joined Windows devices — collecting Chrome/Edge browsing history and reporting it to the server. The agent runs on user login via a scheduled task pointing to a network share, making updates seamless (replace .exe on share, computers pick it up next login).
+The BrowserGuardianConsole currently has a Chrome extension for Chromebooks that collects browsing data. We need a **Windows agent** (.exe) that does the same thing for domain-joined Windows devices — collecting Chrome/Edge browsing history and reporting it to the server. The agent runs on user login via a scheduled task pointing to a network share, making updates seamless (replace .exe on share, computers pick it up next login).
 
 The server already handles AD attribute enrichment via its existing LDAP integration, so the agent just needs to send the domain username — the server maps department to homegroups and resolves group membership.
 
@@ -56,7 +56,7 @@ windows_agent/
 ### `config.py` — Config Decryption
 
 Must exactly replicate `backend/utils.py:78-121`:
-- **Default master key**: `"BrowserReporter2024!MasterKey"` (or from env `ENCRYPTION_MASTER_KEY`)
+- **Default master key**: `"BrowserGuardian2024!MasterKey"` (or from env `ENCRYPTION_MASTER_KEY`)
 - **Key derivation**: `hashlib.sha256(master_key.encode()).digest()` → 32-byte AES-256 key
 - **Decryption**: AES-256-CBC, base64-decode `encrypted_data` and `iv`, unpad PKCS7, verify SHA-256 checksum
 - **Config file location**: `os.path.dirname(sys.executable)` when frozen (PyInstaller), `os.path.dirname(__file__)` in dev
@@ -64,7 +64,7 @@ Must exactly replicate `backend/utils.py:78-121`:
 Existing config fields from client_config page:
 ```json
 {
-  "server_url": "http://browserreporter:8000",
+  "server_url": "http://browserguardian:8000",
   "collection_interval_minutes": 5,
   "max_history_days": 30,
   "monitored_start_time": "08:00",
@@ -127,7 +127,7 @@ Server-side LDAP enrichment handles Department→homegroup mapping automatically
 
 ### `state.py` — Persistence
 
-State file at `%LOCALAPPDATA%\BrowserReporter\state.json`:
+State file at `%LOCALAPPDATA%\BrowserGuardian\state.json`:
 ```json
 {
   "last_sent_chrome": 13350000000000000,
@@ -143,9 +143,9 @@ __version__ = "1.0.0"
 
 ### Build Command
 ```bash
-pyinstaller --onefile --noconsole --name BrowserReporter agent.py
+pyinstaller --onefile --noconsole --name BrowserGuardian agent.py
 ```
-Produces `dist/BrowserReporter.exe`.
+Produces `dist/BrowserGuardian.exe`.
 
 ---
 
@@ -166,8 +166,8 @@ Produces `dist/BrowserReporter.exe`.
 
 Following `backend/extension_builder.py` pattern:
 - Store agent metadata in `app_settings` table with key `"agent_config"`
-- Config: `{"current_version": "1.0.0", "last_uploaded_at": "...", "exe_filename": "BrowserReporter.exe", "exe_sha256": "..."}`
-- `.exe` stored at `backend/static/agent/BrowserReporter.exe`
+- Config: `{"current_version": "1.0.0", "last_uploaded_at": "...", "exe_filename": "BrowserGuardian.exe", "exe_sha256": "..."}`
+- `.exe` stored at `backend/static/agent/BrowserGuardian.exe`
 - Package function: creates zip of .exe + secureconfig.json (generated from current client config)
 
 ### `backend/main.py` — Registration
@@ -201,10 +201,10 @@ Admin page with:
 
 ### `windows_agent/bootstrap.ps1` — Drop in `\\dc\netlogon\`
 ```powershell
-# BrowserReporter Bootstrap — GPO Logon Script
-$server  = "http://browserreporter.yourdomain.local:8000"
-$dir     = "$env:LOCALAPPDATA\BrowserReporter"
-$exe     = "$dir\BrowserReporter.exe"
+# BrowserGuardian Bootstrap — GPO Logon Script
+$server  = "http://browserguardian.yourdomain.local:8000"
+$dir     = "$env:LOCALAPPDATA\BrowserGuardian"
+$exe     = "$dir\BrowserGuardian.exe"
 $verFile = "$dir\version.txt"
 
 New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -236,7 +236,7 @@ if (Test-Path $exe) {
 1. Place `bootstrap.ps1` in `\\dc\netlogon\`
 2. Group Policy → Computer Config → Preferences → Scheduled Tasks
 3. Trigger: At log on
-4. Action: `powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserReporter.ps1`
+4. Action: `powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserGuardian.ps1`
 
 ### Build & Test
 1. Build .exe on a Windows machine: `cd windows_agent && pip install -r requirements.txt && pyinstaller agent.spec`
@@ -247,7 +247,7 @@ if (Test-Path $exe) {
    - Agent runs and exits cleanly
    - Browsing data appears in console
    - Username is enriched via server-side LDAP (department → homegroup)
-   - Logs written to `%LOCALAPPDATA%\BrowserReporter\agent.log`
+   - Logs written to `%LOCALAPPDATA%\BrowserGuardian\agent.log`
    - Subsequent logins skip download (version matches)
 
 ---

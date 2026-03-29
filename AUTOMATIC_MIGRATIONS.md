@@ -157,9 +157,9 @@ The auto-migration function uses these environment variables (with sensible defa
 ```bash
 DB_HOST=db              # Database host ('db' in Docker, 'localhost' outside)
 DB_PORT=5432            # PostgreSQL port
-DB_USER=browser_reporter
-DB_PASSWORD=browser_reporter
-DB_NAME=browser_reporter
+DB_USER=browser_guardian
+DB_PASSWORD=browser_guardian
+DB_NAME=browser_guardian
 ```
 
 **No configuration needed** - defaults work for standard Docker Compose setup.
@@ -171,7 +171,7 @@ DB_NAME=browser_reporter
 ### Check Applied Migrations
 
 ```bash
-docker exec browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter \
+docker exec browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian \
   -c "SELECT migration_name, applied_at, execution_time_seconds FROM schema_migrations;"
 ```
 
@@ -229,7 +229,7 @@ python3 backend/migrations/apply_migration.py
 ls -lh backend/migrations/*.sql
 
 # Verify database connectivity
-docker exec browserreporterconsole-db-1 psql -U browser_reporter -d browser_reporter -c "SELECT 1;"
+docker exec browserguardianconsole-db-1 psql -U browser_guardian -d browser_guardian -c "SELECT 1;"
 
 # Check startup logs
 docker compose logs backend | head -50

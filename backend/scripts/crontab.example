@@ -1,12 +1,12 @@
-# BrowserReporterConsole - Automated Database Management Cron Jobs
+# BrowserGuardianConsole - Automated Database Management Cron Jobs
 #
 # This file contains recommended cron schedules for database maintenance tasks.
 # Adjust timings based on your server's timezone and low-traffic periods.
 #
 # Installation:
-#   1. Copy this file: cp crontab.example ~/browser_reporter_cron
+#   1. Copy this file: cp crontab.example ~/browser_guardian_cron
 #   2. Edit paths to match your installation directory
-#   3. Install: crontab ~/browser_reporter_cron
+#   3. Install: crontab ~/browser_guardian_cron
 #   4. Verify: crontab -l
 #
 # Note: All scripts should be executable (chmod +x script_name.sh)
@@ -14,11 +14,11 @@
 # Environment variables (adjust paths to your installation)
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-SCRIPTS_DIR=/home/hefi/BrowserReporterConsole/backend/scripts
-LOG_DIR=/var/log/browser_reporter
+SCRIPTS_DIR=/home/hefi/BrowserGuardianConsole/backend/scripts
+LOG_DIR=/var/log/browser_guardian
 
 # Create log directory if it doesn't exist
-# mkdir -p /var/log/browser_reporter
+# mkdir -p /var/log/browser_guardian
 
 # ============================================================================
 # DAILY TASKS

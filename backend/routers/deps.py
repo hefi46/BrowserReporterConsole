@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import DashboardUser, DashboardRoleEnum
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 
 def get_current_dashboard_user(request: Request) -> str | None:

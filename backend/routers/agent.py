@@ -14,7 +14,7 @@ from ..database import get_db
 from ..agent_manager import get_agent_version, get_exe_path
 from .deps import require_admin
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 router = APIRouter()
 templates: Jinja2Templates | None = None
@@ -60,7 +60,7 @@ async def agent_exe_download():
     return FileResponse(
         str(exe_path),
         media_type="application/octet-stream",
-        filename="BrowserReporter.exe",
+        filename="BrowserGuardian.exe",
     )
 
 

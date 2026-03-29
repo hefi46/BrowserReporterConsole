@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Windows Agent - Browser Reporter{% endblock %}
+{% block title %}Windows Agent - Browser Guardian{% endblock %}
 
 {% block body %}
 <div class="container my-4">
@@ -12,7 +12,7 @@
         </div>
         <div class="card-body">
             <p class="text-muted mb-3">
-                The BrowserReporter Windows agent runs as a daemon on domain-joined Windows PCs
+                The BrowserGuardian Windows agent runs as a daemon on domain-joined Windows PCs
                 for the life of each user session, collecting Chrome/Edge browsing history on a configurable interval
                 and reporting it to this console.
             </p>
@@ -31,8 +31,8 @@
                     <h6 class="text-muted mb-3"><i class="fas fa-server me-2"></i>Server Settings</h6>
                     <div class="mb-3">
                         <label for="serverUrl" class="form-label">Server URL</label>
-                        <input type="url" class="form-control" id="serverUrl" value="http://browserreporter:8000">
-                        <div class="form-text">Full URL where the BrowserReporter server is accessible</div>
+                        <input type="url" class="form-control" id="serverUrl" value="http://browserguardian:8000">
+                        <div class="form-text">Full URL where the BrowserGuardian server is accessible</div>
                     </div>
                     <h6 class="text-muted mb-3 mt-4"><i class="fas fa-clock me-2"></i>Collection Settings</h6>
                     <div class="mb-3">
@@ -118,13 +118,13 @@
         <div class="card-body">
             <div class="d-flex align-items-center gap-3 mb-3">
                 <a href="/api/agent/exe" class="btn btn-primary">
-                    <i class="fas fa-download me-1"></i>BrowserReporter.exe
+                    <i class="fas fa-download me-1"></i>BrowserGuardian.exe
                 </a>
                 <small class="text-muted" id="agentMeta"></small>
             </div>
             <div class="d-flex align-items-center gap-3">
                 <button class="btn btn-outline-primary" onclick="downloadBootstrap()">
-                    <i class="fas fa-download me-1"></i>BrowserReporter.ps1
+                    <i class="fas fa-download me-1"></i>BrowserGuardian.ps1
                 </button>
                 <small class="text-muted">Bootstrap script with server URL pre-configured</small>
             </div>
@@ -161,7 +161,7 @@
                     <li>Create a new Scheduled Task with:
                         <ul>
                             <li><strong>Trigger:</strong> At log on</li>
-                            <li><strong>Action:</strong> <code>powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserReporter.ps1</code></li>
+                            <li><strong>Action:</strong> <code>powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserGuardian.ps1</code></li>
                         </ul>
                     </li>
                 </ol>
@@ -230,7 +230,7 @@ async function loadCurrentConfig(event = null) {
 }
 
 function populateFormFromConfig(config) {
-    document.getElementById('serverUrl').value = config.server_url || 'http://browserreporter:8000';
+    document.getElementById('serverUrl').value = config.server_url || 'http://browserguardian:8000';
     document.getElementById('intervalMinutes').value = config.collection_interval_minutes || config.sync_interval_minutes || 5;
     document.getElementById('maxHistoryDays').value = config.max_history_days || Math.floor((config.max_history_age_hours || 720) / 24);
 
@@ -255,7 +255,7 @@ function populateFormFromConfig(config) {
 }
 
 function resetToDefaults() {
-    document.getElementById('serverUrl').value = 'http://browserreporter:8000';
+    document.getElementById('serverUrl').value = 'http://browserguardian:8000';
     document.getElementById('intervalMinutes').value = '5';
     document.getElementById('maxHistoryDays').value = '30';
     document.getElementById('monitorAllDay').checked = true;
@@ -312,8 +312,8 @@ async function loadMeta() {
 
 function getBootstrapScript() {
     const serverUrl = document.getElementById('serverUrl').value.replace(/\/+$/, '');
-    return `# BrowserReporter Bootstrap Script
-# Deploy to: \\\\dc\\netlogon\\BrowserReporter.ps1
+    return `# BrowserGuardian Bootstrap Script
+# Deploy to: \\\\dc\\netlogon\\BrowserGuardian.ps1
 #
 # The agent runs as a daemon for the user's session. This bootstrap:
 #   1. Checks for version updates (~50 bytes)
@@ -323,12 +323,12 @@ function getBootstrapScript() {
 #
 # GPO Scheduled Task:
 #   Trigger: At log on
-#   Action:  powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\\\dc\\netlogon\\BrowserReporter.ps1
+#   Action:  powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\\\dc\\netlogon\\BrowserGuardian.ps1
 
 $server = "${serverUrl}"
 
-$dir     = "$env:LOCALAPPDATA\\BrowserReporter"
-$exe     = "$dir\\BrowserReporter.exe"
+$dir     = "$env:LOCALAPPDATA\\BrowserGuardian"
+$exe     = "$dir\\BrowserGuardian.exe"
 $cfg     = "$dir\\secureconfig.json"
 $verFile = "$dir\\version.txt"
 
@@ -351,7 +351,7 @@ try {
 } catch { }
 
 # Skip if daemon already running
-$running = Get-Process -Name "BrowserReporter" -ErrorAction SilentlyContinue
+$running = Get-Process -Name "BrowserGuardian" -ErrorAction SilentlyContinue
 if ($running) { exit 0 }
 
 # Start daemon hidden
@@ -375,7 +375,7 @@ function downloadBootstrap() {
     const blob = new Blob([getBootstrapScript()], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'BrowserReporter.ps1';
+    a.download = 'BrowserGuardian.ps1';
     a.click();
     URL.revokeObjectURL(a.href);
 }

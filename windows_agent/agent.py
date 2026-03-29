@@ -1,4 +1,4 @@
-"""BrowserReporter Windows Agent — main entry point.
+"""BrowserGuardian Windows Agent — main entry point.
 
 Runs once per invocation (not a daemon). Designed to be launched by a
 GPO scheduled task on user login via the PowerShell bootstrap script.
@@ -25,7 +25,7 @@ except ImportError:
 
 _LOG_DIR = os.path.join(
     os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
-    "BrowserReporter",
+    "BrowserGuardian",
 )
 
 
@@ -44,7 +44,7 @@ def _setup_logging(config: dict) -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
     ))
 
-    root = logging.getLogger("browser_reporter_agent")
+    root = logging.getLogger("browser_guardian_agent")
     root.setLevel(logging.INFO)
     root.addHandler(handler)
     # Also log to stderr when running interactively
@@ -72,13 +72,13 @@ def _in_time_window(config: dict) -> bool:
 
 
 def main() -> None:
-    logger = logging.getLogger("browser_reporter_agent")
+    logger = logging.getLogger("browser_guardian_agent")
 
     # 1. Load config
     config = load_config()
     _setup_logging(config)
 
-    logger.info("BrowserReporter Agent v%s starting", __version__)
+    logger.info("BrowserGuardian Agent v%s starting", __version__)
 
     server_url = config.get("server_url", "http://localhost:8000").rstrip("/")
 

@@ -1,4 +1,4 @@
-"""BrowserReporterConsole — FastAPI application entry-point.
+"""BrowserGuardianConsole — FastAPI application entry-point.
 
 All route handlers live in backend/routers/.  This file is responsible only
 for creating the app, wiring middleware, and running startup tasks.
@@ -43,7 +43,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 # ── Startup ──────────────────────────────────────────────────────────────
 
@@ -147,7 +147,7 @@ async def lifespan(app: FastAPI):
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_urlsafe(32))
 
-app = FastAPI(title="Browser Reporter Server", lifespan=lifespan)
+app = FastAPI(title="Browser Guardian Server", lifespan=lifespan)
 
 
 # ── Security headers middleware ────────────────────────────────────────────

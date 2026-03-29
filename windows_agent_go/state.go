@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 )
 
-// stateDir returns %LOCALAPPDATA%\BrowserReporter.
+// stateDir returns %LOCALAPPDATA%\BrowserGuardian.
 func stateDir() string {
 	base := os.Getenv("LOCALAPPDATA")
 	if base == "" {
 		base, _ = os.UserHomeDir()
 	}
-	return filepath.Join(base, "BrowserReporter")
+	return filepath.Join(base, "BrowserGuardian")
 }
 
 func stateFilePath() string {

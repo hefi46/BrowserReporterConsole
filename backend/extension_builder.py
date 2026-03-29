@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import AppSetting
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 SETTINGS_KEY = "extension_config"
 
@@ -180,7 +180,7 @@ def _inject_background_js(build_dir: str, config: dict) -> None:
         content = f.read()
 
     # Replace server URL
-    server_url = config.get("server_url", "http://browserreporter:8000")
+    server_url = config.get("server_url", "http://browserguardian:8000")
     content = re.sub(
         r"const SERVER_URL\s*=\s*'[^']*'",
         f"const SERVER_URL = '{server_url}'",
@@ -213,7 +213,7 @@ def _inject_background_js(build_dir: str, config: dict) -> None:
         email_check = """
   // Monitored email filter
   if (MONITORED_EMAILS.length > 0 && !MONITORED_EMAILS.includes(email.toLowerCase())) {
-    console.log('[BrowserReporter] User not in monitored list, skipping send.');
+    console.log('[BrowserGuardian] User not in monitored list, skipping send.');
     await chrome.storage.local.set({ visitQueue: [] });
     return;
   }
@@ -268,7 +268,7 @@ def _inject_manifest_json(build_dir: str, config: dict) -> None:
 
     manifest["version"] = config.get("current_version", "1.0.0")
 
-    server_url = config.get("server_url", "http://browserreporter:8000")
+    server_url = config.get("server_url", "http://browserguardian:8000")
     # Ensure trailing /* for host permission
     base = server_url.rstrip("/")
     manifest["host_permissions"] = [f"{base}/*"]

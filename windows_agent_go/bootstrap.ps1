@@ -1,9 +1,9 @@
-# BrowserReporter Bootstrap Script
-# Deploy to: \\dc\netlogon\BrowserReporter.ps1
+# BrowserGuardian Bootstrap Script
+# Deploy to: \\dc\netlogon\BrowserGuardian.ps1
 #
 # GPO Scheduled Task:
 #   Trigger: At log on
-#   Action:  powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserReporter.ps1
+#   Action:  powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \\dc\netlogon\BrowserGuardian.ps1
 #
 # The agent runs as a daemon for the life of the user's session, collecting
 # and reporting browser history on a configurable interval. This bootstrap:
@@ -14,11 +14,11 @@
 #   5. Starts the daemon hidden in the background
 
 # --- CONFIGURE THIS ---
-$server = "http://browserreporter:8000"
+$server = "http://browserguardian:8000"
 # ----------------------
 
-$dir     = "$env:LOCALAPPDATA\BrowserReporter"
-$exe     = "$dir\BrowserReporter.exe"
+$dir     = "$env:LOCALAPPDATA\BrowserGuardian"
+$exe     = "$dir\BrowserGuardian.exe"
 $cfg     = "$dir\secureconfig.json"
 $verFile = "$dir\version.txt"
 
@@ -46,7 +46,7 @@ try {
 }
 
 # Check if daemon is already running — don't spawn duplicates
-$running = Get-Process -Name "BrowserReporter" -ErrorAction SilentlyContinue
+$running = Get-Process -Name "BrowserGuardian" -ErrorAction SilentlyContinue
 if ($running) { exit 0 }
 
 # Start the daemon hidden

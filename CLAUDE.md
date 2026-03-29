@@ -31,7 +31,7 @@ python generate_mock_data.py
 ### Database Operations
 ```bash
 # Access PostgreSQL directly
-docker exec -it $(docker compose ps -q db) psql -U browser_reporter -d browser_reporter
+docker exec -it $(docker compose ps -q db) psql -U browser_guardian -d browser_guardian
 
 # Reset database (removes all data)
 docker compose down -v
@@ -92,9 +92,9 @@ Required environment variables:
 - `SESSION_SECRET`: Session encryption key (auto-generated if not set)
 
 Default database credentials (development):
-- Username: `browser_reporter`
-- Password: `browser_reporter`
-- Database: `browser_reporter`
+- Username: `browser_guardian`
+- Password: `browser_guardian`
+- Database: `browser_guardian`
 
 Default admin credentials:
 - Username: `admin`

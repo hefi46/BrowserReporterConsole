@@ -1,6 +1,6 @@
 """Persistent state tracking for last-sent timestamps.
 
-State is stored per-browser in %LOCALAPPDATA%\\BrowserReporter\\state.json
+State is stored per-browser in %LOCALAPPDATA%\\BrowserGuardian\\state.json
 using Chrome WebKit timestamps (microseconds since 1601-01-01) for direct
 comparison in SQLite queries.
 """
@@ -9,9 +9,9 @@ import json
 import logging
 import os
 
-logger = logging.getLogger("browser_reporter_agent")
+logger = logging.getLogger("browser_guardian_agent")
 
-_STATE_DIR = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "BrowserReporter")
+_STATE_DIR = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "BrowserGuardian")
 _STATE_FILE = os.path.join(_STATE_DIR, "state.json")
 
 

@@ -1,4 +1,4 @@
-# PyInstaller spec for BrowserReporter Windows Agent
+# PyInstaller spec for BrowserGuardian Windows Agent
 # Build: pyinstaller agent.spec
 
 a = Analysis(
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='BrowserReporter',
+    name='BrowserGuardian',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

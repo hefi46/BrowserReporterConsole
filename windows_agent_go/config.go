@@ -50,7 +50,7 @@ type secureConfigEnvelope struct {
 func deriveKey() []byte {
 	masterKey := os.Getenv("ENCRYPTION_MASTER_KEY")
 	if masterKey == "" {
-		masterKey = "BrowserReporter2024!MasterKey"
+		masterKey = "BrowserGuardian2024!MasterKey"
 	}
 	h := sha256.Sum256([]byte(masterKey))
 	return h[:]

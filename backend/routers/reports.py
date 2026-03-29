@@ -22,7 +22,7 @@ from .deps import (
     pagination_meta,
 )
 
-logger = logging.getLogger("browser_reporter")
+logger = logging.getLogger("browser_guardian")
 
 
 def _url_username(username: str) -> str:

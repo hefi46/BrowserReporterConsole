@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "BrowserReporter",
+  "name": "BrowserGuardian",
   "version": "1.0.0",
   "description": "School internet activity reporting for managed Chromebooks.",
 
@@ -33,6 +33,6 @@
   ],
 
   "host_permissions": [
-    "http://browserreporter:8000/*"
+    "http://browserguardian:8000/*"
   ]
 }

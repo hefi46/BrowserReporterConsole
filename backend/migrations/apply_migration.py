@@ -70,7 +70,7 @@ async def check_database_stats(conn: asyncpg.Connection) -> None:
 
 async def main() -> None:
     print("=" * 70)
-    print("BrowserReporterConsole — Database Migration Tool")
+    print("BrowserGuardianConsole — Database Migration Tool")
     print("=" * 70)
 
     # CLI runs outside Docker by default
