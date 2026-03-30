@@ -73,11 +73,48 @@ func parseTimeMinutes(parts []string) int {
 	return h*60 + m
 }
 
+const configRetryInterval = 5 * time.Minute
+
+// loadConfigWithRetry attempts LoadConfig and retries every 5 minutes on failure.
+// Returns successfully loaded config, or error if shutdown signal received.
+func loadConfigWithRetry(sigChan <-chan os.Signal) (Config, error) {
+	cfg, err := LoadConfig()
+	if err == nil {
+		return cfg, nil
+	}
+
+	logger.Printf("ERROR config unavailable: %v", err)
+	logger.Printf("INFO entering dormant mode, will retry every %v", configRetryInterval)
+
+	for {
+		select {
+		case <-sigChan:
+			logger.Println("INFO received shutdown signal during dormant mode")
+			return Config{}, fmt.Errorf("shutdown during config retry")
+		case <-time.After(configRetryInterval):
+			cfg, err = LoadConfig()
+			if err == nil {
+				logger.Println("INFO config now available, resuming normal operation")
+				return cfg, nil
+			}
+			logger.Printf("WARN config still unavailable: %v", err)
+		}
+	}
+}
+
 func main() {
 	// Temporary logger until config is loaded
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 
-	cfg := LoadConfig()
+	// Graceful shutdown on SIGTERM / SIGINT / console close
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+
+	cfg, err := loadConfigWithRetry(sigChan)
+	if err != nil {
+		return
+	}
+
 	logFile := setupLogging(cfg)
 	if logFile != nil {
 		defer logFile.Close()
@@ -85,10 +122,6 @@ func main() {
 
 	serverURL := strings.TrimRight(cfg.ServerURL, "/")
 	logger.Printf("INFO BrowserReporter Agent v%s starting (daemon mode)", Version)
-
-	// Graceful shutdown on SIGTERM / SIGINT / console close
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
 	intervalSec := cfg.CollectionIntervalMin * 60
 	if intervalSec < 60 {

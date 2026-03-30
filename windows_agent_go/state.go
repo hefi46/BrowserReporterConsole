@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // stateDir returns %LOCALAPPDATA%\BrowserReporter.
@@ -58,4 +59,25 @@ func SetLastSent(browser string, webkitTS int64) {
 	state := loadState()
 	state["last_sent_"+browser] = webkitTS
 	saveState(state)
+}
+
+func cachedServerPath() string {
+	return filepath.Join(stateDir(), "cached_server.txt")
+}
+
+// CacheServerURL persists the last known working server URL for config recovery.
+func CacheServerURL(serverURL string) {
+	os.MkdirAll(stateDir(), 0o755)
+	if err := os.WriteFile(cachedServerPath(), []byte(serverURL), 0o644); err != nil {
+		logger.Printf("WARN failed to cache server URL: %v", err)
+	}
+}
+
+// GetCachedServerURL returns the last known working server URL, or "" if unavailable.
+func GetCachedServerURL() string {
+	data, err := os.ReadFile(cachedServerPath())
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
 }

@@ -24,10 +24,10 @@ type Config struct {
 	LogRollCount             int    `json:"log_roll_count"`
 }
 
-// DefaultConfig returns sensible defaults matching the server's client_config page.
+// DefaultConfig returns sensible defaults for non-URL fields.
+// ServerURL is intentionally empty — it must come from secureconfig.json.
 func DefaultConfig() Config {
 	return Config{
-		ServerURL:             "http://localhost:8000",
 		CollectionIntervalMin: 5,
 		MaxHistoryDays:        30,
 		MonitoredStartTime:    "08:00",
@@ -125,29 +125,59 @@ func exeDir() string {
 	return filepath.Dir(exe)
 }
 
-// LoadConfig reads and decrypts secureconfig.json from the exe directory.
-// Falls back to defaults if the file is missing or decryption fails.
-func LoadConfig() Config {
+// loadConfigFromDisk reads and decrypts secureconfig.json from the exe directory.
+func loadConfigFromDisk() (Config, error) {
 	configPath := filepath.Join(exeDir(), "secureconfig.json")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		logger.Printf("WARN secureconfig.json not found at %s, using defaults", configPath)
-		return DefaultConfig()
+		return Config{}, fmt.Errorf("secureconfig.json not found at %s: %w", configPath, err)
 	}
 
 	var envelope secureConfigEnvelope
 	if err := json.Unmarshal(data, &envelope); err != nil {
-		logger.Printf("ERROR parsing secureconfig.json: %v — using defaults", err)
-		return DefaultConfig()
+		return Config{}, fmt.Errorf("parsing secureconfig.json: %w", err)
 	}
 
 	cfg, err := decryptSecureConfig(envelope)
 	if err != nil {
-		logger.Printf("ERROR decrypting config: %v — using defaults", err)
-		return DefaultConfig()
+		return Config{}, fmt.Errorf("decrypting config: %w", err)
 	}
 
-	logger.Println("INFO config loaded and decrypted successfully")
-	return cfg
+	return cfg, nil
+}
+
+// LoadConfig attempts to load config from disk, and if that fails, tries to
+// recover by re-downloading from the last known server URL. Returns an error
+// if all attempts fail — the agent should enter dormant mode.
+func LoadConfig() (Config, error) {
+	// Attempt 1: load from disk
+	cfg, err := loadConfigFromDisk()
+	if err == nil {
+		CacheServerURL(cfg.ServerURL)
+		logger.Println("INFO config loaded and decrypted successfully")
+		return cfg, nil
+	}
+	logger.Printf("WARN primary config load failed: %v", err)
+
+	// Attempt 2: re-download using cached server URL
+	cachedURL := GetCachedServerURL()
+	if cachedURL == "" {
+		return Config{}, fmt.Errorf("config load failed and no cached server URL available: %w", err)
+	}
+
+	logger.Printf("INFO attempting config recovery from cached server: %s", cachedURL)
+	if dlErr := FetchConfig(cachedURL); dlErr != nil {
+		return Config{}, fmt.Errorf("config recovery download failed: %w", dlErr)
+	}
+
+	// Retry disk load after download
+	cfg, err = loadConfigFromDisk()
+	if err != nil {
+		return Config{}, fmt.Errorf("config recovery: downloaded but still can't load: %w", err)
+	}
+
+	CacheServerURL(cfg.ServerURL)
+	logger.Println("INFO config recovered from server")
+	return cfg, nil
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -111,8 +113,7 @@ func SendVisits(serverURL, username, computerName string, visits []Visit) bool {
 	return true
 }
 
-// FetchConfig downloads secureconfig.json from the server and overwrites the local copy.
-// Called by bootstrap flow, but also available for the daemon to refresh on startup.
+// FetchConfig downloads secureconfig.json from the server and saves it to the exe directory.
 func FetchConfig(serverURL string) error {
 	resp, err := httpClient.Get(serverURL + "/api/agent/config")
 	if err != nil {
@@ -124,7 +125,15 @@ func FetchConfig(serverURL string) error {
 		return fmt.Errorf("fetch config returned %d", resp.StatusCode)
 	}
 
-	// We don't overwrite from the daemon — this is a helper if needed.
-	// The bootstrap.ps1 handles config download.
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read config response: %w", err)
+	}
+
+	configPath := filepath.Join(exeDir(), "secureconfig.json")
+	if err := os.WriteFile(configPath, body, 0o644); err != nil {
+		return fmt.Errorf("write secureconfig.json: %w", err)
+	}
+
 	return nil
 }
