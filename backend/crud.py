@@ -22,12 +22,22 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
         email=info.Email,
         last_seen_at=datetime.now(timezone.utc),
     )
-    stmt = pg_insert(User).values(**values).on_conflict_do_update(
+    insert_stmt = pg_insert(User).values(**values)
+    insert_stmt = insert_stmt.on_conflict_do_update(
         index_elements=[User.username],
-        set_={k: v for k, v in values.items() if k != "username"},
+        set_={
+            # Always update activity/identity fields
+            "display_name": insert_stmt.excluded.display_name,
+            "email": insert_stmt.excluded.email,
+            "last_seen_at": insert_stmt.excluded.last_seen_at,
+            # Preserve existing enrichment if incoming value is NULL
+            "first_name": func.coalesce(insert_stmt.excluded.first_name, User.first_name),
+            "last_name": func.coalesce(insert_stmt.excluded.last_name, User.last_name),
+            "homegroup": func.coalesce(insert_stmt.excluded.homegroup, User.homegroup),
+        }
     ).returning(User.id)
 
-    result = await db.execute(stmt)
+    result = await db.execute(insert_stmt)
     user_id = result.scalar_one()
 
     # Apply student enrichment if available (for Chrome extension users who only send email)
