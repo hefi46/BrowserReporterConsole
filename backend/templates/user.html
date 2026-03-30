@@ -94,7 +94,7 @@
             const tstr = `${ts.toLocaleDateString()} ${ts.toLocaleTimeString()}`;
             const safeUrl = escapeHtml(v.url);
             const sourceBadge = v.source ? (v.source.includes('edge') ? 'bg-info' : v.source.includes('windows') ? 'bg-primary' : 'bg-success') : 'bg-secondary';
-            const sourceLabel = v.source ? v.source.replace('windows_agent_edge', 'Edge Agent').replace('windows_agent', 'Chrome').replace('chrome_extension', 'Extension') : '';
+            const sourceLabel = v.source ? v.source.replace('windows_agent_edge', 'Edge').replace('windows_agent', 'Chrome').replace('chrome_extension', 'Extension') : '';
             const isWindows = v.source && v.source.startsWith('windows_');
             const winIcon = isWindows ? '<i class="fab fa-windows me-1"></i>' : '';
             return `<tr>
