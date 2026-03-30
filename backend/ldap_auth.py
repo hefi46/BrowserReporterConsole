@@ -40,6 +40,7 @@ _DEFAULT_LDAP_CONFIG = {
     "default_role": "user",
     "enrichment_enabled": False,
     "homegroup_attribute": "department",
+    "enrichment_base_dn": "",
 }
 
 
@@ -60,6 +61,7 @@ def get_env_ldap_config() -> dict:
         "default_role": os.getenv("LDAP_DEFAULT_ROLE", "user"),
         "enrichment_enabled": os.getenv("LDAP_ENRICHMENT_ENABLED", "").lower() == "true",
         "homegroup_attribute": os.getenv("LDAP_HOMEGROUP_ATTRIBUTE", "department"),
+        "enrichment_base_dn": os.getenv("LDAP_ENRICHMENT_BASE_DN", ""),
     }
 
 
@@ -226,7 +228,7 @@ def lookup_user_details(username: str, config: dict) -> dict | None:
     from ldap3 import Server, Connection, ALL, SUBTREE  # noqa: WPS433
 
     server_url = config.get("server", "")
-    base_dn = config.get("base_dn", "")
+    base_dn = config.get("enrichment_base_dn") or config.get("base_dn", "")
     if not server_url or not base_dn:
         return None
 
