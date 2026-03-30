@@ -28,7 +28,7 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
         set_={
             # Always update activity/identity fields
             "display_name": insert_stmt.excluded.display_name,
-            "email": insert_stmt.excluded.email,
+            "email": func.coalesce(insert_stmt.excluded.email, User.email),
             "last_seen_at": insert_stmt.excluded.last_seen_at,
             # Preserve existing enrichment if incoming value is NULL
             "first_name": func.coalesce(insert_stmt.excluded.first_name, User.first_name),
