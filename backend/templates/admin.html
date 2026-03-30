@@ -297,7 +297,13 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label for="ldapBaseDn" class="form-label">Base DN</label>
-                                                <input type="text" class="form-control" id="ldapBaseDn" placeholder="DC=school,DC=local">
+                                                <input type="text" class="form-control" id="ldapBaseDn" placeholder="OU=Staff,DC=school,DC=local">
+                                                <div class="form-text">Scope for login authentication (e.g. a Staff OU)</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="ldapEnrichmentBaseDn" class="form-label">Enrichment Base DN <small class="text-muted">(optional)</small></label>
+                                                <input type="text" class="form-control" id="ldapEnrichmentBaseDn" placeholder="DC=school,DC=local">
+                                                <div class="form-text">Broader scope for user detail lookups (e.g. domain root to include students). Falls back to Base DN if empty.</div>
                                             </div>
                                             <div class="mb-3">
                                                 <label for="ldapBindDn" class="form-label">Bind DN (Service Account)</label>
@@ -803,6 +809,7 @@
             document.getElementById('ldapEnrichmentEnabled').checked = config.enrichment_enabled || false;
             document.getElementById('ldapServer').value = config.server || '';
             document.getElementById('ldapBaseDn').value = config.base_dn || '';
+            document.getElementById('ldapEnrichmentBaseDn').value = config.enrichment_base_dn || '';
             document.getElementById('ldapBindDn').value = config.bind_dn || '';
             document.getElementById('ldapBindPassword').value = '';
             document.getElementById('ldapSearchFilter').value = config.user_search_filter || '(&(objectClass=user)(sAMAccountName={username}))';
@@ -848,6 +855,7 @@
                 enrichment_enabled: document.getElementById('ldapEnrichmentEnabled').checked,
                 server: document.getElementById('ldapServer').value,
                 base_dn: document.getElementById('ldapBaseDn').value,
+                enrichment_base_dn: document.getElementById('ldapEnrichmentBaseDn').value,
                 bind_dn: document.getElementById('ldapBindDn').value,
                 bind_password: document.getElementById('ldapBindPassword').value,
                 user_search_filter: document.getElementById('ldapSearchFilter').value,
