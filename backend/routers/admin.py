@@ -35,6 +35,7 @@ from ..ldap_auth import (
     get_default_config as get_default_ldap_config,
     save_ldap_config_to_db,
     test_ldap_connection,
+    lookup_user_details,
 )
 from ..utils import encrypt_secure_config, decrypt_secure_config, get_password_hash
 from .deps import require_login, require_admin
@@ -675,6 +676,84 @@ async def admin_test_ldap(
 
     result = test_ldap_connection(config)
     return result
+
+
+# ── Bulk LDAP re-enrichment ──────────────────────────────────────────────
+
+@router.post("/api/admin/ldap-enrich-all")
+async def admin_ldap_enrich_all(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Re-enrich all users from AD. Overwrites existing data with fresh lookups."""
+    await require_admin(request, db)
+
+    ldap_config = await get_effective_ldap_config(db)
+    if not ldap_config.get("enabled") and not ldap_config.get("enrichment_enabled"):
+        raise HTTPException(400, "LDAP is not enabled")
+
+    # Fetch all users
+    result = await db.execute(select(User))
+    users = result.scalars().all()
+
+    updated = 0
+    skipped = 0
+    failed = 0
+
+    for user in users:
+        # Derive the lookup name from email or username
+        email = user.email or user.username or ""
+        if "@" in email:
+            lookup_name = email.split("@")[0].upper()
+        else:
+            lookup_name = (user.username or "").split("@")[0].upper()
+
+        if not lookup_name:
+            skipped += 1
+            continue
+
+        try:
+            ad_info = lookup_user_details(lookup_name, ldap_config)
+            update_vals = {"ad_enriched_at": datetime.now(timezone.utc)}
+
+            if ad_info:
+                if ad_info.get("first_name"):
+                    update_vals["first_name"] = ad_info["first_name"]
+                if ad_info.get("last_name"):
+                    update_vals["last_name"] = ad_info["last_name"]
+                if ad_info.get("department"):
+                    update_vals["homegroup"] = ad_info["department"]
+                if ad_info.get("display_name"):
+                    update_vals["display_name"] = ad_info["display_name"]
+                if ad_info.get("email"):
+                    update_vals["email"] = ad_info["email"]
+
+                from sqlalchemy import update as sa_update
+                await db.execute(
+                    sa_update(User).where(User.id == user.id).values(**update_vals)
+                )
+                updated += 1
+            else:
+                # User not found in AD — still stamp the attempt time
+                from sqlalchemy import update as sa_update
+                await db.execute(
+                    sa_update(User).where(User.id == user.id).values(**update_vals)
+                )
+                skipped += 1
+        except Exception:
+            logger.warning("LDAP enrich failed for '%s'", lookup_name, exc_info=True)
+            failed += 1
+
+    await db.commit()
+
+    logger.info("Bulk LDAP enrichment complete: %d updated, %d skipped, %d failed", updated, skipped, failed)
+    return {
+        "success": True,
+        "message": f"Enrichment complete: {updated} updated, {skipped} not found in AD, {failed} failed",
+        "updated": updated,
+        "skipped": skipped,
+        "failed": failed,
+    }
 
 
 # ── Template pages ───────────────────────────────────────────────────────

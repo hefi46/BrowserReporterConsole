@@ -354,9 +354,13 @@
                                     <button type="button" class="btn btn-outline-info" id="testLdapBtn">
                                         <i class="fas fa-plug me-2"></i>Test Connection
                                     </button>
+                                    <button type="button" class="btn btn-outline-warning" id="enrichAllBtn">
+                                        <i class="fas fa-sync-alt me-2"></i>Run Enrichment for All Users
+                                    </button>
                                 </div>
                             </form>
                             <div id="ldapTestResult" class="mt-3" style="display: none;"></div>
+                            <div id="enrichAllResult" class="mt-3" style="display: none;"></div>
                         </div>
                     </div>
                 </div>
@@ -782,6 +786,7 @@
 
     document.getElementById('refreshLdapBtn').addEventListener('click', loadLdapConfig);
     document.getElementById('testLdapBtn').addEventListener('click', testLdapConnection);
+    document.getElementById('enrichAllBtn').addEventListener('click', enrichAllUsers);
     document.getElementById('ldapEnabled').addEventListener('change', toggleLdapFields);
     document.getElementById('ldapEnrichmentEnabled').addEventListener('change', toggleLdapFields);
 
@@ -905,6 +910,37 @@
                 resultDiv.innerHTML = `<div class="alert alert-success mb-0"><i class="fas fa-check-circle me-2"></i>${escapeHtml(result.message)}</div>`;
             } else {
                 resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-times-circle me-2"></i>${escapeHtml(result.message)}</div>`;
+            }
+        } catch (error) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-times-circle me-2"></i>${escapeHtml(error.message)}</div>`;
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function enrichAllUsers() {
+        const btn = document.getElementById('enrichAllBtn');
+        const resultDiv = document.getElementById('enrichAllResult');
+        const originalText = btn.innerHTML;
+
+        if (!confirm('This will re-lookup ALL users against Active Directory and update their details. Continue?')) return;
+
+        try {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Running enrichment...';
+            btn.disabled = true;
+
+            const response = await fetch('/api/admin/ldap-enrich-all', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const result = await response.json();
+            resultDiv.style.display = 'block';
+            if (result.success) {
+                resultDiv.innerHTML = `<div class="alert alert-success mb-0"><i class="fas fa-check-circle me-2"></i>${escapeHtml(result.message)}</div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-times-circle me-2"></i>${escapeHtml(result.message || 'Enrichment failed')}</div>`;
             }
         } catch (error) {
             resultDiv.style.display = 'block';
