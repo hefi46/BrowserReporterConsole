@@ -66,13 +66,14 @@ async def upsert_user(db: AsyncSession, info: UserInfoIn) -> int:
             from .ldap_auth import get_effective_ldap_config, lookup_user_details
             ldap_config = await get_effective_ldap_config(db)
             if ldap_config.get("enabled") or ldap_config.get("enrichment_enabled"):
-                # Check if we already attempted enrichment for this user
+                # Re-attempt if never tried OR if prior attempt left fields empty
                 check_result = await db.execute(
-                    select(User.ad_enriched_at).where(User.id == user_id)
+                    select(User.ad_enriched_at, User.first_name).where(User.id == user_id)
                 )
-                last_attempt = check_result.scalar_one_or_none()
+                row = check_result.one()
+                last_attempt, existing_first = row
 
-                if last_attempt is None:  # only attempt once per user
+                if last_attempt is None or existing_first is None:
                     lookup_name = email.split("@")[0].upper() if "@" in email else (info.Username or "").upper()
                     if lookup_name:
                         ad_info = lookup_user_details(lookup_name, ldap_config)
