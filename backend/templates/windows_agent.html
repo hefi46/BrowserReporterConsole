@@ -36,9 +36,9 @@
                     </div>
                     <h6 class="text-muted mb-3 mt-4"><i class="fas fa-clock me-2"></i>Collection Settings</h6>
                     <div class="mb-3">
-                        <label for="intervalMinutes" class="form-label">Collection Interval (minutes)</label>
-                        <input type="number" class="form-control" id="intervalMinutes" value="5" min="1" max="60">
-                        <div class="form-text">How often to collect browser data (1-60 minutes)</div>
+                        <label for="intervalSeconds" class="form-label">Collection Interval (seconds)</label>
+                        <input type="number" class="form-control" id="intervalSeconds" value="60" min="30" max="300">
+                        <div class="form-text">How often to collect browser data (30-300 seconds)</div>
                     </div>
                     <div class="mb-3">
                         <label for="maxHistoryDays" class="form-label">Max History Days</label>
@@ -186,7 +186,7 @@ const baseUrl = window.location.origin;
 
 // ── Config form wiring ─────────────────────────────────────────────────
 
-const configInputs = ['serverUrl', 'intervalMinutes', 'maxHistoryDays',
+const configInputs = ['serverUrl', 'intervalSeconds', 'maxHistoryDays',
     'monitorStartTime', 'monitorEndTime', 'logMaxMb', 'logRollCount'];
 configInputs.forEach(id => {
     document.getElementById(id).addEventListener('input', updateConfigJson);
@@ -231,7 +231,7 @@ async function loadCurrentConfig(event = null) {
 
 function populateFormFromConfig(config) {
     document.getElementById('serverUrl').value = config.server_url || 'http://browserreporter:8000';
-    document.getElementById('intervalMinutes').value = config.collection_interval_minutes || config.sync_interval_minutes || 5;
+    document.getElementById('intervalSeconds').value = config.collection_interval_seconds || (config.collection_interval_minutes && config.collection_interval_minutes * 60) || config.sync_interval_minutes && (config.sync_interval_minutes * 60) || 60;
     document.getElementById('maxHistoryDays').value = config.max_history_days || Math.floor((config.max_history_age_hours || 720) / 24);
 
     const start = config.monitored_start_time || (config.monitored_hours && config.monitored_hours.start) || '00:00';
@@ -256,7 +256,7 @@ function populateFormFromConfig(config) {
 
 function resetToDefaults() {
     document.getElementById('serverUrl').value = 'http://browserreporter:8000';
-    document.getElementById('intervalMinutes').value = '5';
+    document.getElementById('intervalSeconds').value = '60';
     document.getElementById('maxHistoryDays').value = '30';
     document.getElementById('monitorAllDay').checked = true;
     document.getElementById('monitorStartTime').value = '00:00';
@@ -273,7 +273,7 @@ function resetToDefaults() {
 function updateConfigJson() {
     const config = {
         server_url: document.getElementById('serverUrl').value,
-        collection_interval_minutes: parseInt(document.getElementById('intervalMinutes').value),
+        collection_interval_seconds: parseInt(document.getElementById('intervalSeconds').value),
         max_history_days: parseInt(document.getElementById('maxHistoryDays').value),
         monitored_start_time: document.getElementById('monitorStartTime').value,
         monitored_end_time: document.getElementById('monitorEndTime').value,

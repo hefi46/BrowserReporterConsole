@@ -14,35 +14,69 @@ import (
 // logger is the package-level logger used by all files.
 var logger *log.Logger
 
+// logState holds the active log file handle and config for runtime rotation.
+var logState struct {
+	file     *os.File
+	path     string
+	maxBytes int64
+	rollCnt  int
+}
+
 func setupLogging(cfg Config) *os.File {
 	logDir := stateDir()
 	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "WARN cannot create log dir: %v\n", err)
 	}
 
-	logPath := filepath.Join(logDir, "agent.log")
+	logState.path = filepath.Join(logDir, "agent.log")
+	logState.maxBytes = int64(cfg.LogMaxMB) * 1024 * 1024
+	logState.rollCnt = cfg.LogRollCount
 
-	// Rotate if log exceeds max size
-	maxBytes := int64(cfg.LogMaxMB) * 1024 * 1024
-	if info, err := os.Stat(logPath); err == nil && info.Size() > maxBytes {
-		// Simple rotation: rename current → .1, drop older
-		for i := cfg.LogRollCount; i > 1; i-- {
-			old := fmt.Sprintf("%s.%d", logPath, i-1)
-			new := fmt.Sprintf("%s.%d", logPath, i)
-			os.Rename(old, new)
-		}
-		os.Rename(logPath, logPath+".1")
-	}
+	rotateIfNeeded()
 
-	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(logState.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "WARN cannot open log file: %v\n", err)
 		logger = log.New(os.Stderr, "", log.LstdFlags)
 		return nil
 	}
 
+	logState.file = f
 	logger = log.New(f, "", log.LstdFlags)
 	return f
+}
+
+// rotateIfNeeded checks the log file size and rotates if it exceeds the limit.
+func rotateIfNeeded() {
+	if logState.path == "" {
+		return
+	}
+	info, err := os.Stat(logState.path)
+	if err != nil || info.Size() <= logState.maxBytes {
+		return
+	}
+
+	// Close current file before rotating
+	if logState.file != nil {
+		logState.file.Close()
+	}
+
+	for i := logState.rollCnt; i > 1; i-- {
+		old := fmt.Sprintf("%s.%d", logState.path, i-1)
+		newPath := fmt.Sprintf("%s.%d", logState.path, i)
+		os.Rename(old, newPath)
+	}
+	os.Rename(logState.path, logState.path+".1")
+
+	// Reopen the log file
+	f, err := os.OpenFile(logState.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		logger = log.New(os.Stderr, "", log.LstdFlags)
+		logState.file = nil
+		return
+	}
+	logState.file = f
+	logger = log.New(f, "", log.LstdFlags)
 }
 
 // inTimeWindow checks if the current time is within the configured monitoring window.
@@ -123,9 +157,11 @@ func main() {
 	serverURL := strings.TrimRight(cfg.ServerURL, "/")
 	logger.Printf("INFO BrowserReporter Agent v%s starting (daemon mode)", Version)
 
-	intervalSec := cfg.CollectionIntervalMin * 60
-	if intervalSec < 60 {
-		intervalSec = 60 // minimum 1 minute
+	intervalSec := cfg.CollectionIntervalSec
+	if intervalSec < 30 {
+		intervalSec = 30 // minimum 30 seconds
+	} else if intervalSec > 300 {
+		intervalSec = 300 // maximum 5 minutes
 	}
 
 	username := os.Getenv("USERNAME")
@@ -140,8 +176,12 @@ func main() {
 
 	// Main daemon loop
 	cycle := 0
+	outsideWindowLogged := false
 	for {
 		cycle++
+
+		// Check log rotation each cycle
+		rotateIfNeeded()
 
 		// Check for shutdown signal (non-blocking)
 		select {
@@ -160,10 +200,14 @@ func main() {
 
 		// Time window check — sleep and retry if outside hours (don't exit)
 		if !inTimeWindow(cfg) {
-			logger.Printf("INFO outside monitoring window (%s-%s), sleeping", cfg.MonitoredStartTime, cfg.MonitoredEndTime)
+			if !outsideWindowLogged {
+				logger.Printf("INFO outside monitoring window (%s-%s), sleeping", cfg.MonitoredStartTime, cfg.MonitoredEndTime)
+				outsideWindowLogged = true
+			}
 			sleepWithSignal(sigChan, time.Duration(intervalSec)*time.Second)
 			continue
 		}
+		outsideWindowLogged = false
 
 		// Collect browser history
 		var browsers []string
@@ -190,18 +234,14 @@ func main() {
 			}
 		}
 
-		if len(allVisits) == 0 {
-			logger.Printf("INFO cycle %d: no new visits", cycle)
-		} else {
-			logger.Printf("INFO cycle %d: %d visits to send", cycle, len(allVisits))
-
+		if len(allVisits) > 0 {
 			if SendVisits(serverURL, username, computerName, allVisits) {
 				for browser, ts := range maxWebkit {
 					SetLastSent(browser, ts)
 				}
-				logger.Printf("INFO cycle %d: state updated", cycle)
+				logger.Printf("INFO sent %d visits", len(allVisits))
 			} else {
-				logger.Printf("WARN cycle %d: send failed, will retry next cycle", cycle)
+				logger.Printf("WARN send failed (%d visits), will retry next cycle", len(allVisits))
 			}
 		}
 

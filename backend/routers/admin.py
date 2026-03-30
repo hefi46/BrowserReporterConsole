@@ -327,7 +327,7 @@ async def admin_get_current_config(request: Request, db: AsyncSession = Depends(
     if not os.path.exists(SECURECONFIG_PATH):
         return {
             "server_url": "http://localhost:8000",
-            "sync_interval_minutes": 5,
+            "collection_interval_seconds": 60,
             "max_history_age_hours": 24,
             "monitored_users_group": "",
             "monitored_users": [],

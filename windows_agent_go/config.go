@@ -14,7 +14,7 @@ import (
 // Config holds the decrypted agent configuration.
 type Config struct {
 	ServerURL                string `json:"server_url"`
-	CollectionIntervalMin    int    `json:"collection_interval_minutes"`
+	CollectionIntervalSec    int    `json:"collection_interval_seconds"`
 	MaxHistoryDays           int    `json:"max_history_days"`
 	MonitoredStartTime       string `json:"monitored_start_time"`
 	MonitoredEndTime         string `json:"monitored_end_time"`
@@ -28,7 +28,7 @@ type Config struct {
 // ServerURL is intentionally empty — it must come from secureconfig.json.
 func DefaultConfig() Config {
 	return Config{
-		CollectionIntervalMin: 5,
+		CollectionIntervalSec: 60,
 		MaxHistoryDays:        30,
 		MonitoredStartTime:    "08:00",
 		MonitoredEndTime:      "23:59",
