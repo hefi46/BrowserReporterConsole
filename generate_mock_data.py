@@ -181,6 +181,16 @@ WEBSITES = {
     ]
 }
 
+# Source tags matching real Windows agent client values
+BROWSER_SETUPS = [
+    # (label, sources, weight)
+    ("chrome_only", ["windows_agent"], 40),
+    ("edge_only", ["windows_agent_edge"], 30),
+    ("both", ["windows_agent", "windows_agent_edge"], 30),
+]
+
+BROWSER_PROFILES = ["Default", "Profile 1", "Profile 2", "Profile 3"]
+
 COMPUTER_NAMES = [
     "DESKTOP-ABC123", "LAPTOP-XYZ789", "WORKSTATION-001", "PC-OFFICE-01",
     "DEV-MACHINE-02", "ANALYST-PC", "ADMIN-LAPTOP", "RESEARCHER-01",
@@ -236,7 +246,14 @@ def generate_browsing_pattern() -> List[str]:
     ]
     return random.choice(patterns)
 
-def generate_visits(user_info: Dict, num_visits: int) -> List[Dict]:
+def pick_browser_setup() -> tuple:
+    """Pick a browser setup (chrome-only, edge-only, or both) based on weights"""
+    labels, sources_list, weights = zip(*BROWSER_SETUPS)
+    chosen = random.choices(range(len(BROWSER_SETUPS)), weights=weights, k=1)[0]
+    return labels[chosen], sources_list[chosen]
+
+
+def generate_visits(user_info: Dict, num_visits: int, browser_sources: List[str]) -> List[Dict]:
     """Generate realistic browsing visits for a user"""
     visits = []
     browsing_pattern = generate_browsing_pattern()
@@ -244,6 +261,12 @@ def generate_visits(user_info: Dict, num_visits: int) -> List[Dict]:
     # Users may use multiple computers
     primary_computer = random.choice(COMPUTER_NAMES)
     use_multiple_computers = random.random() < 0.3  # 30% chance of using multiple computers
+
+    # Browser profile — most users on Default, some with extra profiles
+    if random.random() < 0.15:
+        user_profiles = random.sample(BROWSER_PROFILES, k=random.randint(2, 3))
+    else:
+        user_profiles = ["Default"]
 
     # Generate visits over the last 90 days for more spread
     end_time = datetime.now()
@@ -304,7 +327,9 @@ def generate_visits(user_info: Dict, num_visits: int) -> List[Dict]:
             "Url": url,
             "Title": title,
             "VisitTime": int(random_time.timestamp() * 1000),  # Convert to milliseconds
-            "ComputerName": computer_name
+            "ComputerName": computer_name,
+            "Source": random.choice(browser_sources),
+            "BrowserProfile": random.choice(user_profiles),
         })
     
     # Sort visits by time
@@ -334,6 +359,7 @@ def main():
     print("=" * 60)
     print(f"📊 Generating data for {len(HOMEGROUPS) * USERS_PER_GROUP} users")
     print(f"🏢 Homegroups: {len(HOMEGROUPS)} groups ({USERS_PER_GROUP} users each)")
+    print(f"🖥️  Sources: windows_agent (Chrome), windows_agent_edge (Edge)")
     print(f"🌐 API Endpoint: {API_URL}")
     print(f"📈 Target: 500-1500 visits per user (randomized)")
     print()
@@ -341,6 +367,7 @@ def main():
     total_users = 0
     successful_uploads = 0
     total_visits = 0
+    source_counts = {"chrome_only": 0, "edge_only": 0, "both": 0}
     start_time = time.time()
 
     for group_index, homegroup in enumerate(HOMEGROUPS):
@@ -355,9 +382,13 @@ def main():
             # Generate user data with unique names per homegroup
             user_info = generate_user_data(user_index, homegroup, used_names_in_group)
 
+            # Assign browser setup for this user
+            browser_label, browser_sources = pick_browser_setup()
+            source_counts[browser_label] += 1
+
             # Random number of visits for variety (500-1500)
             num_visits = random.randint(500, 1500)
-            visits = generate_visits(user_info, num_visits)
+            visits = generate_visits(user_info, num_visits, browser_sources)
 
             # Send data
             if send_user_data(user_info, visits):
@@ -385,6 +416,10 @@ def main():
     print(f"   📊 Average visits per user: {total_visits / successful_uploads if successful_uploads > 0 else 0:.0f}")
     print(f"   🏢 Homegroups: {len(HOMEGROUPS)} (1A-6C)")
     print(f"   👤 Users per homegroup: {USERS_PER_GROUP}")
+    print(f"   🖥️  Source distribution:")
+    print(f"      Chrome only (windows_agent): {source_counts['chrome_only']} users")
+    print(f"      Edge only (windows_agent_edge): {source_counts['edge_only']} users")
+    print(f"      Both browsers: {source_counts['both']} users")
     print(f"   ⏱️  Total time: {duration:.1f} seconds ({duration/60:.1f} minutes)")
     print(f"   🚀 Upload rate: {successful_uploads / duration:.2f} users/second")
     print(f"   📈 Data rate: {total_visits / duration:.0f} visits/second")
