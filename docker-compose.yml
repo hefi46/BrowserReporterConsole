@@ -69,6 +69,7 @@ services:
     environment:
       SESSION_SECRET: ${SESSION_SECRET:-changeme-session-secret}
       DATABASE_URL: postgresql+asyncpg://browser_reporter:browser_reporter@db:5432/browser_reporter
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:?Set ENCRYPTION_MASTER_KEY in .env or environment}
       # LDAP / Active Directory (optional — leave LDAP_ENABLED unset to disable)
       LDAP_ENABLED: ${LDAP_ENABLED:-false}
       LDAP_SERVER: ${LDAP_SERVER:-}

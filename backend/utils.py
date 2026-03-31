@@ -42,10 +42,17 @@ except ImportError as e:  # pragma: no cover
     unpad = None  # type: ignore
     logger.warning("PyCryptodome not installed. Secure config encryption will fail.")
 
-# Master key – loaded from environment variable for security.
-# The Windows collector must use the same key.
-_MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY", "BrowserReporter2024!MasterKey").encode()
-_AES_KEY = hashlib.sha256(_MASTER_KEY).digest()  # 32-byte key for AES-256
+# Master key – REQUIRED via environment variable.
+# The Windows agent must use the exact same key to decrypt config.
+_MASTER_KEY_STR = os.getenv("ENCRYPTION_MASTER_KEY", "")
+if not _MASTER_KEY_STR:
+    logger.critical(
+        "ENCRYPTION_MASTER_KEY is not set! "
+        "Config encryption/decryption will fail. "
+        "Set this in docker-compose.yml or your environment."
+    )
+_MASTER_KEY = _MASTER_KEY_STR.encode() if _MASTER_KEY_STR else b""
+_AES_KEY = hashlib.sha256(_MASTER_KEY).digest() if _MASTER_KEY else b""
 
 
 def encrypt_secure_config(plain_config: dict) -> dict:

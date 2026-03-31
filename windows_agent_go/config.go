@@ -47,13 +47,14 @@ type secureConfigEnvelope struct {
 }
 
 // deriveKey replicates backend/utils.py: SHA-256 of master key string → 32-byte AES key.
-func deriveKey() []byte {
+// ENCRYPTION_MASTER_KEY env var is required — no hardcoded default.
+func deriveKey() ([]byte, error) {
 	masterKey := os.Getenv("ENCRYPTION_MASTER_KEY")
 	if masterKey == "" {
-		masterKey = "BrowserReporter2024!MasterKey"
+		return nil, fmt.Errorf("ENCRYPTION_MASTER_KEY environment variable is not set")
 	}
 	h := sha256.Sum256([]byte(masterKey))
-	return h[:]
+	return h[:], nil
 }
 
 // pkcs7Unpad removes PKCS#7 padding.
@@ -75,7 +76,10 @@ func pkcs7Unpad(data []byte, blockSize int) ([]byte, error) {
 
 // decryptSecureConfig decrypts AES-256-CBC encrypted config, matching backend/utils.py.
 func decryptSecureConfig(envelope secureConfigEnvelope) (Config, error) {
-	key := deriveKey()
+	key, err := deriveKey()
+	if err != nil {
+		return Config{}, fmt.Errorf("derive key: %w", err)
+	}
 
 	ct, err := base64.StdEncoding.DecodeString(envelope.EncryptedData)
 	if err != nil {

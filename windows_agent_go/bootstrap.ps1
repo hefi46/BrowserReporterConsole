@@ -13,9 +13,10 @@
 #   4. Skips launch if the daemon is already running (prevents duplicates)
 #   5. Starts the daemon hidden in the background
 
-# --- CONFIGURE THIS ---
-$server = "http://browserreporter:8000"
-# ----------------------
+# --- CONFIGURE THESE ---
+$server        = "http://browserreporter:8000"
+$encryptionKey = "CHANGE-ME"
+# -----------------------
 
 $dir     = "$env:LOCALAPPDATA\BrowserReporter"
 $exe     = "$dir\BrowserReporter.exe"
@@ -49,7 +50,8 @@ try {
 $running = Get-Process -Name "BrowserReporter" -ErrorAction SilentlyContinue
 if ($running) { exit 0 }
 
-# Start the daemon hidden
+# Start daemon with encryption key (process-level env var, no admin needed)
 if (Test-Path $exe) {
+    $env:ENCRYPTION_MASTER_KEY = $encryptionKey
     Start-Process $exe -WindowStyle Hidden
 }

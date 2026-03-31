@@ -312,6 +312,7 @@ async function loadMeta() {
 
 function getBootstrapScript() {
     const serverUrl = document.getElementById('serverUrl').value.replace(/\/+$/, '');
+    const encryptionKey = {{ encryption_key | tojson }};
     return `# BrowserReporter Bootstrap Script
 # Deploy to: \\\\dc\\netlogon\\BrowserReporter.ps1
 #
@@ -354,8 +355,9 @@ try {
 $running = Get-Process -Name "BrowserReporter" -ErrorAction SilentlyContinue
 if ($running) { exit 0 }
 
-# Start daemon hidden
+# Start daemon with encryption key (process-level env var, no admin needed)
 if (Test-Path $exe) {
+    $env:ENCRYPTION_MASTER_KEY = "${encryptionKey}"
     Start-Process $exe -WindowStyle Hidden
 }`;
 }

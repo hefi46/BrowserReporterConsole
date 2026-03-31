@@ -36,7 +36,11 @@ def configure(t: Jinja2Templates, secureconfig_path: str) -> None:
 @router.get("/windows-agent", response_class=HTMLResponse)
 async def windows_agent_page(request: Request, db: AsyncSession = Depends(get_db)):
     await require_admin(request, db)
-    return templates.TemplateResponse("windows_agent.html", {"request": request})
+    encryption_key = os.getenv("ENCRYPTION_MASTER_KEY", "")
+    return templates.TemplateResponse("windows_agent.html", {
+        "request": request,
+        "encryption_key": encryption_key,
+    })
 
 
 # ── Public endpoints (called by bootstrap.ps1 and agent) ───────────────
